@@ -71,23 +71,64 @@ DAEMON=/usr/bin/etcd
 # and status_of_proc is working.
 . /lib/lsb/init-functions
 
+. /etc/clearwater/config
+
 #
 # Function to join/create an etcd cluster based on the `etcd_cluster` variable
 #
 join_or_create_cluster()
 {
+    export ETCD_NAME=${local_ip//./-}
+
+    if [[ $etcd_cluster =~ (^|,)$local_ip(,|$) ]]
+    then
+        # Creating a new cluster
+        echo Creating new cluster...
+
+        # Build the initial cluster view string based on the IP addresses in
+        # $etcd_cluster.  Each entry looks like <name>=<peer url>.
+        export ETCD_INITIAL_CLUSTER=
+        OLD_IFS=$IFS
+        IFS=,
+        for server in $etcd_cluster
+        do
+            server_name=${server%:*}
+            server_name=${server_name//./-}
+            ETCD_INITIAL_CLUSTER="${server_name}=http://$server:2380,$ETCD_INITIAL_CLUSTER"
+        done
+        IFS=$OLD_IFS
+        
+        export ETCD_INITIAL_CLUSTER_STATE=new
+    else
+        # Joining existing cluster
+        echo Joining existing cluster...
+
+        # We need a temp file to deal with the environment variables.
         TEMP_FILE=$(mktemp)
 
-        # Tell the cluster we're joining, this prints useful environment variables to .
-        ETCD_NAME=${local_ip//./-}
-        /usr/bin/etcdctl -C $etcd_cluster member add $ETCD_NAME http://$local_ip:2380 | grep -v "Added member" >> $TEMP_FILE
+        # Build the client list based on $etcd_cluster, each entry is simply
+        # <IP>:<port> using the client port.
+        export ETCDCTL_PEERS=
+        OLD_IFS=$IFS
+        IFS=,
+        for server in $etcd_cluster
+        do
+            ETCD_INITIAL_CLUSTER="$server:4000,$ETCDCTL_PEERS"
+        done
+        IFS=$OLD_IFS
+        
+        # Tell the cluster we're joining, this prints useful environment
+        # variables to stdout but also prints a success message so strip that
+        # out before saving the variables to the temp file.
+        /usr/bin/etcdctl member add $ETCD_NAME http://$local_ip:2380 | grep -v "Added member" >> $TEMP_FILE
         if [[ $? != 0 ]]
         then
           echo "Failed to add local node to cluster"
           exit 2
         fi
 
-        cat $TEMP_FILE
+        # Load the environment variables back into the local shell and export
+        # them so ./etcd can see them when it starts up.
         . $TEMP_FILE
         export ETCD_NAME ETCD_INITIAL_CLUSTER ETCD_INITIAL_CLUSTER_STATE
 
@@ -96,13 +137,9 @@ join_or_create_cluster()
         ulimit -Sn 10000
         ulimit -c unlimited
 
-        DAEMON_ARGS="--listen-client-urls http://$local_ip:4000
-                     --advertise-client-urls http://$local_ip:4000
-                     --listen-peer-urls http://$local_ip:2380
-                     --initial-advertise-peer-urls http://$local_ip:2380
-                     --data-dir $DATA_DIR/$local_ip"
-
+        # Tidy up
         rm $TEMP_FILE
+    fi
 }
 
 #
@@ -117,22 +154,28 @@ do_start()
         start-stop-daemon --start --quiet --pidfile $PIDFILE --name $NAME --exec $DAEMON --test > /dev/null \
                 || return 1
 
-        . /etc/clearwater/config
-
         if [[ -d $DATA_DIR/$local_ip ]]
         then
           # We'll start normally using the data we saved off on our last boot.
-          DAEMON_ARGS="--data_dir $DATA_DIR/$local_ip"
+          echo "Rejoining cluster..."
         else
           join_or_create_cluster
         fi
+
+        # Standard ports
+        DAEMON_ARGS="--listen-client-urls http://$local_ip:4000
+                     --advertise-client-urls http://$local_ip:4000
+                     --listen-peer-urls http://$local_ip:2380
+                     --initial-advertise-peer-urls http://$local_ip:2380
+                     --initial-cluster-token $home_domain
+                     --data-dir $DATA_DIR/$local_ip"
 
         start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --exec $DAEMON --chuid $NAME -- $DAEMON_ARGS \
                 || return 2
 
         # Wait for etcd to come up.
         while true; do
-          if nc -z $local_ip 4001; then
+          if nc -z $local_ip 4000; then
             break;
           else
             sleep 1
@@ -150,7 +193,7 @@ do_stop()
         #   1 if daemon was already stopped
         #   2 if daemon could not be stopped
         #   other if a failure occurred
-        start-stop-daemon --stop --quiet --retry=TERM/30/KILL/5 --pidfile $PIDFILE --name $NAME
+        start-stop-daemon --stop --quiet --retry=TERM/30/KILL/5 --pidfile $PIDFILE --exec $DAEMON
         RETVAL="$?"
         [ "$RETVAL" = 2 ] && return 2
         # Wait for children to finish too if this is a daemon that forks
@@ -179,12 +222,56 @@ do_abort()
         #   1 if daemon was already stopped
         #   2 if daemon could not be stopped
         #   other if a failure occurred
-        start-stop-daemon --stop --quiet --retry=ABRT/60/KILL/5 --pidfile $PIDFILE --name $NAME
+        start-stop-daemon --stop --retry=ABRT/60/KILL/5 --pidfile $PIDFILE --exec $DAEMON
         RETVAL="$?"
         [ "$RETVAL" = 2 ] && return 2
         # Many daemons don't delete their pidfiles when they exit.
         rm -f $PIDFILE
         return "$RETVAL"
+}
+
+#
+# Function that decomissions an etcd instance
+#
+# This function should be used to permanently remove an etcd instance from the
+# cluster.  Note that after this has been done, the operator may need to update
+# the $etcd_cluster attribute before attempting to rejoin the cluster.
+#
+do_decomission()
+{
+        # Return
+        #   0 if successful
+        #   2 on error
+        export ETCDCTL_PEERS=$local_ip:4000
+        health=$(/usr/bin/etcdctl cluster-health)
+        if [[ $health =~ unhealthy && $health =~ healthy ]]
+        then
+          echo Cannot decommision while cluster is unhealthy
+          return 2
+        fi
+
+        id=$(/usr/bin/etcdctl member list | grep ${local_ip//./-} | cut -f 1 -d :)
+        if [[ -z $id ]]
+        then
+          echo Local node does not appear in the cluster
+          return 2
+        fi
+
+        /usr/bin/etcdctl member remove $id
+        if [[ $? != 0 ]]
+        then
+          echo Failed to remove instance from cluster
+          return 2
+        fi
+
+        start-stop-daemon --stop --retry=USR2/60/KILL/5 --pidfile $PIDFILE --exec $DAEMON
+        RETVAL=$?
+        [[ $RETVAL == 2 ]] && return 2
+
+        rm -f $PIDFILE
+
+        # Decomissioned so destroy the data directory
+        [[ -n $DATA_DIR ]] && [[ -n $local_ip ]] && rm -rf $DATA_DIR/$local_ip
 }
 
 #
@@ -254,6 +341,10 @@ case "$1" in
   abort)
         log_daemon_msg "Aborting $DESC" "$NAME"
         do_abort
+        ;;
+  decomission)
+        log_daemon_msg "Decomissioning $DESC" "$NAME"
+        do_decomission
         ;;
   abort-restart)
         log_daemon_msg "Abort-Restarting $DESC" "$NAME"
