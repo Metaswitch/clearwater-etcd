@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/bash
 
 # @file clearwater-etcd.init.d
 #
@@ -72,6 +72,40 @@ DAEMON=/usr/bin/etcd
 . /lib/lsb/init-functions
 
 #
+# Function to join/create an etcd cluster based on the `etcd_cluster` variable
+#
+join_or_create_cluster()
+{
+        TEMP_FILE=$(mktemp)
+
+        # Tell the cluster we're joining, this prints useful environment variables to .
+        ETCD_NAME=${local_ip//./-}
+        /usr/bin/etcdctl -C $etcd_cluster member add $ETCD_NAME http://$local_ip:2380 | grep -v "Added member" >> $TEMP_FILE
+        if [[ $? != 0 ]]
+        then
+          echo "Failed to add local node to cluster"
+          exit 2
+        fi
+
+        cat $TEMP_FILE
+        . $TEMP_FILE
+        export ETCD_NAME ETCD_INITIAL_CLUSTER ETCD_INITIAL_CLUSTER_STATE
+
+        # daemon is not running, so attempt to start it.
+        ulimit -Hn 10000
+        ulimit -Sn 10000
+        ulimit -c unlimited
+
+        DAEMON_ARGS="--listen-client-urls http://$local_ip:4000
+                     --advertise-client-urls http://$local_ip:4000
+                     --listen-peer-urls http://$local_ip:2380
+                     --initial-advertise-peer-urls http://$local_ip:2380
+                     --data-dir $DATA_DIR/$local_ip"
+
+        rm $TEMP_FILE
+}
+
+#
 # Function that starts the daemon/service
 #
 do_start()
@@ -85,28 +119,13 @@ do_start()
 
         . /etc/clearwater/config
 
-        # Tell the cluster we're joining.
-        /usr/bin/etcdctl -C $remote_etcd_ip:4001 member add $local_ip http://$local_ip:2380
-
-        # These exports should be based on the response to the previous command,
-        # but first some work needs to be done to trim " from that response.
-        export ETCD_NAME=$local_ip
-        export ETCD_INITIAL_CLUSTER="$remote_etcd_ip=http://$remote_etcd_ip:2380,$local_ip=http://$local_ip:2380"
-        export ETCD_INITIAL_CLUSTER_STATE="existing"
-
-        # daemon is not running, so attempt to start it.
-        ulimit -Hn 10000
-        ulimit -Sn 10000
-        ulimit -c unlimited
-
-        DAEMON_ARGS="--listen-client-urls http://$local_ip:4001
-                     --advertise-client-urls http://$local_ip:4001
-                     --listen-peer-urls http://$local_ip:2380
-                     --initial-advertise-peer-urls http://$local_ip:2380
-                     --data-dir $DATA_DIR/$local_ip"
-
-        # No idea why this sleep is necessary, but it is necessary.
-        sleep 10
+        if [[ -d $DATA_DIR/$local_ip ]]
+        then
+          # We'll start normally using the data we saved off on our last boot.
+          DAEMON_ARGS="--data_dir $DATA_DIR/$local_ip"
+        else
+          join_or_create_cluster
+        fi
 
         start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --exec $DAEMON --chuid $NAME -- $DAEMON_ARGS \
                 || return 2
