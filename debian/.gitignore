@@ -1,0 +1,8 @@
+/clearwater-etcd/
+
+/copyright
+/*.debhelper
+/*.debhelper.log
+/*.substvars
+/docs
+/files
