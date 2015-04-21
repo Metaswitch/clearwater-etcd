@@ -1,6 +1,7 @@
 /clearwater-etcd/
 
 /copyright
+/changelog
 /*.debhelper
 /*.debhelper.log
 /*.substvars
