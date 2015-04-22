@@ -1,3 +1,38 @@
 # clearwater-etcd
 
-This package contains packaging wrappers around [`etcd` ](https://github.com/coreos/etcd) that allow for easy installation, clustering and management of an `etcd` cluster.
+This package contains packaging wrappers around [`etcd`
+](https://github.com/coreos/etcd) that allow for easy installation, clustering
+and management of an `etcd` cluster.
+
+## Configuration
+
+Configuration for the `clearwater-etcd` cluster is done through the standard
+`/etc/clearwater/config` file, the following values must be provided:
+
+ * `etcd_cluster` - See below
+ * `local_ip` - The local IP address
+ * `home_domain` - Used as a unique identity
+
+## Creating a Cluster
+
+`clearwater-etcd` forms a cluster across your nodes to allow configuration to be easily shared.  Most of the extra function added by the `clearwater-etcd` wrapper is to simplify the management of the cluster.  The operations that can be performed are:
+
+ * Create a new cluster
+ * Join an existing cluster
+ * Decommission a node (remove it permanently from the cluster)
+
+### Create a Cluster
+
+Creating a cluster is as easy as determining the list of nodes that will be in the cluster and populating the `etcd_cluster` configuration parameter with the comma-separated list of nodes:
+
+    etcd_cluster=10.0.0.1,10.0.0.2,10.0.0.3
+
+When you now install `clearwater-etcd` on each of these nodes, the cluster will automatically form.
+
+### Join an Existing Cluster
+
+Joining an existing cluster requires determining the list of nodes that are currently in the cluster and providing that list in the `etcd_cluster`.  Note that the newly added node MUST NOT be included in this list (otherwise we'll attempt to form the cluster from scratch).
+
+### Decommissioning
+
+To decommission a node run `sudo service clearwater-etcd decommission` which will gracefully remove the local node, stop the local `etcd` service and destroy the node's state.  At this point, the `etcd` service can be re-attached to that (or another) `etcd` cluster by updating `etcd_cluster` and starting the `clearwater-etcd` service.
