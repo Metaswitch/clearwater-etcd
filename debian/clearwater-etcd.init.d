@@ -97,7 +97,7 @@ join_or_create_cluster()
             ETCD_INITIAL_CLUSTER="${server_name}=http://$server:2380,$ETCD_INITIAL_CLUSTER"
         done
         IFS=$OLD_IFS
-        
+
         export ETCD_INITIAL_CLUSTER_STATE=new
     else
         # Joining existing cluster
@@ -113,10 +113,10 @@ join_or_create_cluster()
         IFS=,
         for server in $etcd_cluster
         do
-            ETCD_INITIAL_CLUSTER="$server:4000,$ETCDCTL_PEERS"
+            ETCDCTL_PEERS="$server:4000,$ETCDCTL_PEERS"
         done
         IFS=$OLD_IFS
-        
+
         # Tell the cluster we're joining, this prints useful environment
         # variables to stdout but also prints a success message so strip that
         # out before saving the variables to the temp file.
