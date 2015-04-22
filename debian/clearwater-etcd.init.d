@@ -231,13 +231,13 @@ do_abort()
 }
 
 #
-# Function that decomissions an etcd instance
+# Function that decommissions an etcd instance
 #
 # This function should be used to permanently remove an etcd instance from the
 # cluster.  Note that after this has been done, the operator may need to update
 # the $etcd_cluster attribute before attempting to rejoin the cluster.
 #
-do_decomission()
+do_decommission()
 {
         # Return
         #   0 if successful
@@ -270,7 +270,7 @@ do_decomission()
 
         rm -f $PIDFILE
 
-        # Decomissioned so destroy the data directory
+        # Decommissioned so destroy the data directory
         [[ -n $DATA_DIR ]] && [[ -n $local_ip ]] && rm -rf $DATA_DIR/$local_ip
 }
 
@@ -342,9 +342,9 @@ case "$1" in
         log_daemon_msg "Aborting $DESC" "$NAME"
         do_abort
         ;;
-  decomission)
-        log_daemon_msg "Decomissioning $DESC" "$NAME"
-        do_decomission
+  decommission)
+        log_daemon_msg "Decommissioning $DESC" "$NAME"
+        do_decommission
         ;;
   abort-restart)
         log_daemon_msg "Abort-Restarting $DESC" "$NAME"
