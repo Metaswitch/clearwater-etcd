@@ -419,7 +419,7 @@ case "$1" in
         echo "* created a working one-node cluster to begin the recovery process"
         echo "* backed up the data"
         echo "Do you want to proceed with this decommission? [y/N]"
-        read -r
+        read -r REPLY
         if [[ $REPLY = "y" ]]
         then
           log_daemon_msg "Continuing to forcibly decommission $DESC" "$NAME"
@@ -434,7 +434,7 @@ case "$1" in
         echo "* confirmed that the etcd_cluster setting in /etc/clearwater/config ($etcd_cluster) is correct"
         echo "* backed up the data"
         echo "Do you want to proceed with this rebuild? [y/N]"
-        read -r
+        read -r REPLY
         if [[ $REPLY = "y" ]]
         then
           log_daemon_msg "Continuing to forcibly recreate cluster for $DESC" "$NAME"
