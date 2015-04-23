@@ -416,7 +416,7 @@ case "$1" in
         log_daemon_msg "Forcibly decommissioning $DESC (this is very dangerous so you have 10 seconds to Ctrl-C)" "$NAME"
         sleep 10
         log_daemon_msg "Continuing to forcibly decommission $DESC" "$NAME"
-        do_decommission
+        do_force_decommission
         ;;
   force-new-cluster)
         log_daemon_msg "Forcibly creating a new one-node cluster of $DESC (this is very dangerous so you have 10 seconds to Ctrl-C)" "$NAME"
