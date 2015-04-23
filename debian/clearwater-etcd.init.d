@@ -148,8 +148,20 @@ join_or_create_cluster()
     then
       create_cluster
    else
-     join_cluster
+      join_cluster
    fi
+}
+
+wait_for_etcd()
+{
+        # Wait for etcd to come up.
+        while true; do
+          if nc -z $local_ip 4000; then
+            break;
+          else
+            sleep 1
+          fi
+        done
 }
 
 #
@@ -183,14 +195,7 @@ do_start()
         start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --exec $DAEMON --chuid $NAME -- $DAEMON_ARGS \
                 || return 2
 
-        # Wait for etcd to come up.
-        while true; do
-          if nc -z $local_ip 4000; then
-            break;
-          else
-            sleep 1
-          fi
-        done
+        wait_for_etcd
 }
 
 do_rebuild()
@@ -200,7 +205,7 @@ do_rebuild()
         #   1 if daemon was already running
         #   2 if daemon could not be started
         start-stop-daemon --start --quiet --pidfile $PIDFILE --name $NAME --exec $DAEMON --test > /dev/null \
-                || return 1
+                || (echo "Cannot recreate cluster while etcd is running; stop it first" && return 1)
 
         create_cluster
 
@@ -216,14 +221,7 @@ do_rebuild()
         start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --exec $DAEMON --chuid $NAME -- $DAEMON_ARGS \
                 || return 2
 
-        # Wait for etcd to come up.
-        while true; do
-          if nc -z $local_ip 4000; then
-            break;
-          else
-            sleep 1
-          fi
-        done
+        wait_for_etcd
 }
 
 
@@ -413,16 +411,36 @@ case "$1" in
         do_decommission
         ;;
   force-decommission)
-        log_daemon_msg "Forcibly decommissioning $DESC (this is very dangerous so you have 10 seconds to Ctrl-C)" "$NAME"
-        sleep 10
-        log_daemon_msg "Continuing to forcibly decommission $DESC" "$NAME"
-        do_force_decommission
+        echo "Forcibly decommissioning $DESC on $public_hostname."
+        echo
+        echo "This should only be done when following the documented disaster recovery process. It deletes data from this node, so you should make sure you have:"
+        echo
+        echo "* confirmed that the etcd_cluster setting in /etc/clearwater/config ($etcd_cluster) is correct"
+        echo "* created a working one-node cluster to begin the recovery process"
+        echo "* backed up the data"
+        echo "Do you want to proceed with this decommission? [y/N]"
+        read -r
+        if [[ $REPLY = "y" ]]
+        then
+          log_daemon_msg "Continuing to forcibly decommission $DESC" "$NAME"
+          do_force_decommission
+        fi
         ;;
   force-new-cluster)
-        log_daemon_msg "Forcibly creating a new one-node cluster of $DESC (this is very dangerous so you have 10 seconds to Ctrl-C)" "$NAME"
-        sleep 10
-        log_daemon_msg "Continuing to forcibly recreate cluster for $DESC" "$NAME"
-        do_rebuild
+        echo "Forcibly recreating a cluster for $DESC on $public_hostname."
+        echo
+        echo "This should only be done when following the documented disaster recovery process. It deletes the cluster configuration from this node, so you should make sure you have:"
+        echo
+        echo "* confirmed that the etcd_cluster setting in /etc/clearwater/config ($etcd_cluster) is correct"
+        echo "* backed up the data"
+        echo "Do you want to proceed with this rebuild? [y/N]"
+        read -r
+        if [[ $REPLY = "y" ]]
+        then
+          log_daemon_msg "Continuing to forcibly recreate cluster for $DESC" "$NAME"
+          do_rebuild
+        fi
+
         ;;
   abort-restart)
         log_daemon_msg "Abort-Restarting $DESC" "$NAME"
