@@ -73,15 +73,8 @@ DAEMON=/usr/bin/etcd
 
 . /etc/clearwater/config
 
-#
-# Function to join/create an etcd cluster based on the `etcd_cluster` variable
-#
-join_or_create_cluster()
+create_cluster()
 {
-    export ETCD_NAME=${local_ip//./-}
-
-    if [[ $etcd_cluster =~ (^|,)$local_ip(,|$) ]]
-    then
         # Creating a new cluster
         echo Creating new cluster...
 
@@ -98,8 +91,11 @@ join_or_create_cluster()
         done
         IFS=$OLD_IFS
 
-        export ETCD_INITIAL_CLUSTER_STATE=new
-    else
+        export ETCD_INITIAL_CLUSTER_STATE=new 
+}
+
+join_cluster()
+{
         # Joining existing cluster
         echo Joining existing cluster...
 
@@ -138,8 +134,22 @@ join_or_create_cluster()
         ulimit -c unlimited
 
         # Tidy up
-        rm $TEMP_FILE
-    fi
+        rm $TEMP_FILE 
+}
+
+#
+# Function to join/create an etcd cluster based on the `etcd_cluster` variable
+#
+join_or_create_cluster()
+{
+    export ETCD_NAME=${local_ip//./-}
+
+    if [[ $etcd_cluster =~ (^|,)$local_ip(,|$) ]]
+    then
+      create_cluster
+   else
+     join_cluster
+   fi
 }
 
 #
@@ -182,6 +192,40 @@ do_start()
           fi
         done
 }
+
+do_rebuild()
+{
+        # Return
+        #   0 if daemon has been started
+        #   1 if daemon was already running
+        #   2 if daemon could not be started
+        start-stop-daemon --start --quiet --pidfile $PIDFILE --name $NAME --exec $DAEMON --test > /dev/null \
+                || return 1
+
+        create_cluster
+
+        # Standard ports
+        DAEMON_ARGS="--listen-client-urls http://$local_ip:4000
+                     --advertise-client-urls http://$local_ip:4000
+                     --listen-peer-urls http://$local_ip:2380
+                     --initial-advertise-peer-urls http://$local_ip:2380
+                     --initial-cluster-token $home_domain
+                     --data-dir $DATA_DIR/$local_ip
+                     --force-new-cluster"
+
+        start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --exec $DAEMON --chuid $NAME -- $DAEMON_ARGS \
+                || return 2
+
+        # Wait for etcd to come up.
+        while true; do
+          if nc -z $local_ip 4000; then
+            break;
+          else
+            sleep 1
+          fi
+        done
+}
+
 
 #
 # Function that stops the daemon/service
@@ -275,6 +319,28 @@ do_decommission()
 }
 
 #
+# Function that decommissions an etcd instance
+#
+# This function should be used to permanently and forcibly remove an etcd instance from a broken
+# cluster.
+#
+do_force_decommission()
+{
+        # Return
+        #   0 if successful
+        #   2 on error
+        start-stop-daemon --stop --retry=USR2/60/KILL/5 --pidfile $PIDFILE --exec $DAEMON
+        RETVAL=$?
+        [[ $RETVAL == 2 ]] && return 2
+
+        rm -f $PIDFILE
+
+        # Decommissioned so destroy the data directory
+        [[ -n $DATA_DIR ]] && [[ -n $local_ip ]] && rm -rf $DATA_DIR/$local_ip
+}
+
+
+#
 # Function that sends a SIGHUP to the daemon/service
 #
 do_reload() {
@@ -346,6 +412,18 @@ case "$1" in
         log_daemon_msg "Decommissioning $DESC" "$NAME"
         do_decommission
         ;;
+  force-decommission)
+        log_daemon_msg "Forcibly decommissioning $DESC (this is very dangerous so you have 10 seconds to Ctrl-C)" "$NAME"
+        sleep 10
+        log_daemon_msg "Continuing to forcibly decommission $DESC" "$NAME"
+        do_decommission
+        ;;
+  force-new-cluster)
+        log_daemon_msg "Forcibly creating a new one-node cluster of $DESC (this is very dangerous so you have 10 seconds to Ctrl-C)" "$NAME"
+        sleep 10
+        log_daemon_msg "Continuing to forcibly recreate cluster for $DESC" "$NAME"
+        do_rebuild
+        ;;
   abort-restart)
         log_daemon_msg "Abort-Restarting $DESC" "$NAME"
         do_abort
@@ -365,8 +443,7 @@ case "$1" in
         esac
         ;;
   *)
-        #echo "Usage: $SCRIPTNAME {start|stop|restart|reload|force-reload}" >&2
-        echo "Usage: $SCRIPTNAME {start|stop|status|restart|force-reload}" >&2
+        echo "Usage: $SCRIPTNAME {start|stop|status|restart|force-reload|decommission|force-decommission|force-new-cluster}" >&2
         exit 3
         ;;
 esac
