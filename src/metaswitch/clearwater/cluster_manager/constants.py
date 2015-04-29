@@ -8,6 +8,7 @@ LEAVE_PENDING = "leave pending"
 STARTED_LEAVING = "started leaving"
 LEAVING_CONFIG_CHANGING = "leaving, config changing"
 LEAVING_RESYNCING = "leaving, resyncing"
+FINISHED_LEAVING = "finished leaving"
 
 # Node states
 WAITING_TO_JOIN = "waiting to join"

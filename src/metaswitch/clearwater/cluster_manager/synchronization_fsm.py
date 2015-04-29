@@ -1,4 +1,5 @@
 from time import sleep
+from .constants import *
 
 class FakeEtcdSynchronizer(object):
   def __init__(self, plugin, ip):
@@ -7,7 +8,7 @@ class FakeEtcdSynchronizer(object):
   def main(self):
     cluster = {"10.0.0.1": "NORMAL", "10.0.0.2": "NORMAL"}
     while True:
-      self._fsm.next("NORMAL", "stable", cluster)
+      self._fsm.next("NORMAL", STABLE, cluster)
       sleep(10)
 
 class TooLongAlarm(object):
@@ -31,11 +32,11 @@ class SyncFSM(object):
     self._running = True
 
   def _switch_all_to_joining(self, cluster_view):
-    return {k: ("JOINING" if v == "WAITING_TO_JOIN" else v)
+    return {k: (JOINING if v == WAITING_TO_JOIN else v)
             for k, v in cluster_view.iteritems()}
 
   def _switch_all_to_leaving(self, cluster_view):
-    return {k: ("LEAVING" if v == "WAITING_TO_LEAVE" else v)
+    return {k: (LEAVING if v == WAITING_TO_LEAVE else v)
             for k, v in cluster_view.iteritems()}
 
   def _switch_myself_to(self, new_state, cluster_view):
@@ -48,105 +49,105 @@ class SyncFSM(object):
   def next(self, local_state, cluster_state, cluster_view):
     assert(self._running)
 
-    if cluster_state == "stable":
-      if local_state == "NORMAL":
+    if cluster_state == STABLE:
+      if local_state == NORMAL:
         # Cancel 15-minute timer
         self._plugin.on_stable_cluster(cluster_view)
         return None
       elif local_state is None:
-        return self._switch_myself_to("WAITING_TO_JOIN", cluster_view)
+        return self._switch_myself_to(WAITING_TO_JOIN, cluster_view)
 
     # States for joining a cluster
     
-    elif cluster_state == "join_pending":
-      if local_state == "WAITING_TO_JOIN":
+    elif cluster_state == JOIN_PENDING:
+      if local_state == WAITING_TO_JOIN:
         sleep(30)
         return self._switch_all_to_joining(cluster_view)
-      elif local_state == "NORMAL":
+      elif local_state == NORMAL:
         return None
       elif local_state is None:
-        return self._switch_myself_to("WAITING_TO_JOIN", cluster_view)
+        return self._switch_myself_to(WAITING_TO_JOIN, cluster_view)
     
     
-    elif cluster_state == "started_joining":
-      if local_state in ["JOINING_ACKNOWLEDGED_CHANGE", "NORMAL_ACKNOWLEDGED_CHANGE"]:
+    elif cluster_state == STARTED_JOINING:
+      if local_state in [JOINING_ACKNOWLEDGED_CHANGE, NORMAL_ACKNOWLEDGED_CHANGE]:
         return None
-      elif local_state == "NORMAL":
+      elif local_state == NORMAL:
         # Start 15-minute timer
-        return self._switch_myself_to("NORMAL_ACKNOWLEDGED_CHANGE", cluster_view)
-      elif local_state == "JOINING":
+        return self._switch_myself_to(NORMAL_ACKNOWLEDGED_CHANGE, cluster_view)
+      elif local_state == JOINING:
         # Start 15-minute timer
         self._plugin.on_joining_cluster(cluster_view)
-        return self._switch_myself_to("JOINING_ACKNOWLEDGED_CHANGE", cluster_view)
+        return self._switch_myself_to(JOINING_ACKNOWLEDGED_CHANGE, cluster_view)
     
     
-    elif cluster_state == "joining_config_changing":
-      if local_state in ["JOINING_CONFIG_CHANGED", "NORMAL_CONFIG_CHANGED"]:
+    elif cluster_state == JOINING_CONFIG_CHANGING:
+      if local_state in [JOINING_CONFIG_CHANGED, NORMAL_CONFIG_CHANGED]:
         return None
-      elif local_state == "NORMAL_ACKNOWLEDGED_CHANGE":
+      elif local_state == NORMAL_ACKNOWLEDGED_CHANGE:
         self._plugin.on_new_members(cluster_view)
-        return self._switch_myself_to("NORMAL_CONFIG_CHANGED", cluster_view)
-      elif local_state == "JOINING_ACKNOWLEDGED_CHANGE":
+        return self._switch_myself_to(NORMAL_CONFIG_CHANGED, cluster_view)
+      elif local_state == JOINING_ACKNOWLEDGED_CHANGE:
         self._plugin.on_new_members(cluster_view)
-        return self._switch_myself_to("JOINING_CONFIG_CHANGED", cluster_view)
+        return self._switch_myself_to(JOINING_CONFIG_CHANGED, cluster_view)
     
     
-    elif cluster_state == "joining_resyncing":
-      if local_state == "NORMAL":
+    elif cluster_state == JOINING_RESYNCING:
+      if local_state == NORMAL:
         return None
-      elif local_state == "JOINING_CONFIG_CHANGED":
+      elif local_state == JOINING_CONFIG_CHANGED:
         self._plugin.on_all_config_updated(cluster_view)
-        return self._switch_myself_to("NORMAL", cluster_view)
-      elif local_state == "NORMAL_CONFIG_CHANGED":
+        return self._switch_myself_to(NORMAL, cluster_view)
+      elif local_state == NORMAL_CONFIG_CHANGED:
         self._plugin.on_all_config_updated(cluster_view)
-        return self._switch_myself_to("NORMAL", cluster_view)
+        return self._switch_myself_to(NORMAL, cluster_view)
 
     # States for leaving a cluster
 
-    elif cluster_state == "leave_pending":
-      if local_state == "WAITING_TO_LEAVE":
+    elif cluster_state == LEAVE_PENDING:
+      if local_state == WAITING_TO_LEAVE:
         sleep(30)
         return switch_all_to_leaving(cluster_view)
-      elif local_state == "NORMAL":
+      elif local_state == NORMAL:
         return None
     
     
-    elif cluster_state == "started_leaving":
-      if local_state in ["LEAVING_ACKNOWLEDGED_CHANGE", "NORMAL_ACKNOWLEDGED_CHANGE"]:
+    elif cluster_state == STARTED_LEAVING:
+      if local_state in [LEAVING_ACKNOWLEDGED_CHANGE, NORMAL_ACKNOWLEDGED_CHANGE]:
         return None
-      elif local_state == "NORMAL":
+      elif local_state == NORMAL:
         # Start 15-minute timer
-        return self._switch_myself_to("NORMAL_ACKNOWLEDGED_CHANGE", cluster_view)
-      elif local_state == "LEAVING":
+        return self._switch_myself_to(NORMAL_ACKNOWLEDGED_CHANGE, cluster_view)
+      elif local_state == LEAVING:
         # Start 15-minute timer
-        return self._switch_myself_to("LEAVING_ACKNOWLEDGED_CHANGE", cluster_view)
+        return self._switch_myself_to(LEAVING_ACKNOWLEDGED_CHANGE, cluster_view)
     
     
-    elif cluster_state == "leaving_config_changing":
-      if local_state in ["LEAVING_CONFIG_CHANGED", "NORMAL_CONFIG_CHANGED"]:
+    elif cluster_state == LEAVING_CONFIG_CHANGING:
+      if local_state in [LEAVING_CONFIG_CHANGED, NORMAL_CONFIG_CHANGED]:
         return None
-      elif local_state == "NORMAL_ACKNOWLEDGED_CHANGE":
+      elif local_state == NORMAL_ACKNOWLEDGED_CHANGE:
         self._plugin.on_new_members(cluster_view)
-        return self._switch_myself_to("NORMAL_CONFIG_CHANGED", cluster_view)
-      elif local_state == "LEAVING_ACKNOWLEDGED_CHANGE":
+        return self._switch_myself_to(NORMAL_CONFIG_CHANGED, cluster_view)
+      elif local_state == LEAVING_ACKNOWLEDGED_CHANGE:
         self._plugin.on_new_members(cluster_view)
-        return self._switch_myself_to("LEAVING_CONFIG_CHANGED", cluster_view)
+        return self._switch_myself_to(LEAVING_CONFIG_CHANGED, cluster_view)
     
     
-    elif cluster_state == "leaving_resyncing":
-      if local_state == "NORMAL":
+    elif cluster_state == LEAVING_RESYNCING:
+      if local_state == NORMAL:
         return None
-      elif local_state == "JOINING_CONFIG_CHANGED":
+      elif local_state == JOINING_CONFIG_CHANGED:
         self._plugin.on_all_config_updated(cluster_view)
-        return self._switch_myself_to("NORMAL", cluster_view)
-      elif local_state == "NORMAL_CONFIG_CHANGED":
+        return self._switch_myself_to(NORMAL, cluster_view)
+      elif local_state == NORMAL_CONFIG_CHANGED:
         self._plugin.on_all_config_updated(cluster_view)
-        return self._switch_myself_to("NORMAL", cluster_view)
+        return self._switch_myself_to(NORMAL, cluster_view)
  
-    elif cluster_state == "finished_leaving":
-      if local_state == "NORMAL":
+    elif cluster_state == FINISHED_LEAVING:
+      if local_state == NORMAL:
         return None
-      if local_state == "FINISHED":
+      if local_state == FINISHED:
         self._plugin.on_left_cluster(cluster_view)
         self._running = False
         return self._delete_myself(cluster_view)
@@ -156,6 +157,6 @@ class SyncFSM(object):
 def test():
   plg = DummyPlugin()
   fsm = SyncFSM(plg, "10.0.0.2")
-  cluster = {"10.0.0.1": "NORMAL", "10.0.0.2": "WAITING_TO_JOIN"}
-  print fsm.next("WAITING_TO_JOIN", "join_pending", cluster)
+  cluster = {"10.0.0.1": "normal", "10.0.0.2": "waiting to join"}
+  print fsm.next("waiting to join", "join pending", cluster)
 
