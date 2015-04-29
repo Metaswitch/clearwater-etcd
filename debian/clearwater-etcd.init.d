@@ -142,14 +142,14 @@ join_cluster()
 #
 join_or_create_cluster()
 {
-    export ETCD_NAME=${local_ip//./-}
+	export ETCD_NAME=${local_ip//./-}
 
-    if [[ $etcd_cluster =~ (^|,)$local_ip(,|$) ]]
-    then
-      create_cluster
-   else
-      join_cluster
-   fi
+	if [[ $etcd_cluster =~ (^|,)$local_ip(,|$) ]]
+	then
+	  create_cluster
+	else
+	  join_cluster
+	fi
 }
 
 wait_for_etcd()
@@ -181,6 +181,13 @@ do_start()
           # We'll start normally using the data we saved off on our last boot.
           echo "Rejoining cluster..."
         else
+          # Exit if the etcd_cluster value hasn't been set
+          if [ -z "$etcd_cluster" ]
+          then
+            echo "Can't start clearwater-etcd without a etcd_cluster setting in /etc/clearwater/config"
+            return 2
+          fi
+
           join_or_create_cluster
         fi
 
