@@ -142,19 +142,19 @@ class EtcdSynchronizer(object):
     # cluster that we haven't previously seen. This may mean waiting for a
     # change.
     def read_from_etcd(self):
+        cluster_view = {}
         try:
             if self._index is None:
                 result = self._client.get(self._key)
             else:
                 result = self._client.eternal_watch(self._key,
-                                                    index=self._index)
-                cluster_view = json.loads(result.value)
-                self._index = result.modifiedIndex
+                                                    index=self._index+1)
+            cluster_view = json.loads(result.value)
+            self._index = result.modifiedIndex
         except KeyError:
             # If the key doesn't exist in etcd then there is currently no
             # cluster.
             self._index = None
-            cluster_view = {}
 
         return cluster_view
 
