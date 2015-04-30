@@ -4,6 +4,7 @@ import etcd
 import json
 
 from .constants import *
+from .synchronization_fsm import SyncFSM
 
 
 class EtcdSynchronizer(object):
@@ -18,7 +19,7 @@ class EtcdSynchronizer(object):
 
     def main(self):
         # Continue looping while the FSM is running.
-        while self._fsm.is_running:
+        while self._fsm.is_running():
             # This blocks on changes to the cluster in etcd.
             cluster_view = self.read_from_etcd()
             cluster_state = self.calculate_cluster_state(cluster_view)
@@ -66,30 +67,32 @@ class EtcdSynchronizer(object):
                   state == WAITING_TO_JOIN) for state in node_states):
             # All nodes in NORMAL or WAITING_TO_JOIN state.
             return JOIN_PENDING
-        elif all((state == JOINING or
+        elif (all((state == JOINING or
                   state == JOINING_ACKNOWLEDGED_CHANGE or
                   state == NORMAL_ACKNOWLEDGED_CHANGE or
-                  state == NORMAL) for state in node_states):
+                  state == NORMAL) for state in node_states) and
+              (JOINING in node_states or
+               NORMAL in node_states)):
             # All nodes in JOINING, JOINING_ACKNOWLEDGED_CHANGE
             # NORMAL_ACKNOWLEDGED_CHANGE or NORMAL state.
             return STARTED_JOINING
         elif (all((state == JOINING_ACKNOWLEDGED_CHANGE or
                    state == NORMAL_ACKNOWLEDGED_CHANGE or
-                   state == JOINING_CHANGED_CONFIGURATION or
-                   state == NORMAL_CHANGED_CONFIGURATION)
+                   state == JOINING_CONFIG_CHANGED or
+                   state == NORMAL_CONFIG_CHANGED)
                   for state in node_states) and
               (JOINING_ACKNOWLEDGED_CHANGE in node_states or
                NORMAL_ACKNOWLEDGED_CHANGE in node_states)):
             # At least one node in either JOINING_ACKNOWLEDGED_CHANGE or
             # NORMAL_ACKNOWLEDGED_CHANGE, all other nodes in
-            # JOINING_CHANGED_CONFIGURATION or NORMAL_CHANGED_CONFIGURATION
+            # JOINING_CONFIG_CHANGED or NORMAL_CONFIG_CHANGED
             # state.
             return JOINING_CONFIG_CHANGING
-        elif all((state == JOINING_CHANGED_CONFIGURATION or
-                  state == NORMAL_CHANGED_CONFIGURATION or
+        elif all((state == JOINING_CONFIG_CHANGED or
+                  state == NORMAL_CONFIG_CHANGED or
                   state == NORMAL) for state in node_states):
-            # All nodes in JOINING_CHANGED_CONFIGURATION,
-            # NORMAL_CHANGED_CONFIGURATION or NORMAL state.
+            # All nodes in JOINING_CONFIG_CHANGED,
+            # NORMAL_CONFIG_CHANGED or NORMAL state.
             return JOINING_RESYNCING
         elif all((state == NORMAL or
                   state == WAITING_TO_LEAVE) for state in node_states):
@@ -104,22 +107,22 @@ class EtcdSynchronizer(object):
             return STARTED_LEAVING
         elif (all((state == LEAVING_ACKNOWLEDGED_CHANGE or
                    state == NORMAL_ACKNOWLEDGED_CHANGE or
-                   state == LEAVING_CHANGED_CONFIGURATION or
-                   state == NORMAL_CHANGED_CONFIGURATION)
+                   state == LEAVING_CONFIG_CHANGED or
+                   state == NORMAL_CONFIG_CHANGED)
                   for state in node_states) and
-              (LEAVING_CHANGED_CONFIGURATION in node_states or
-               NORMAL_CHANGED_CONFIGURATION in node_states)):
+              (LEAVING_CONFIG_CHANGED in node_states or
+               NORMAL_CONFIG_CHANGED in node_states)):
             # At least one node in either LEAVING_ACKNOWLEDGED_CHANGE or
             # NORMAL_ACKNOWLEDGED_CHANGE, all other nodes in
-            # LEAVING_CHANGED_CONFIGURATION or NORMAL_CHANGED_CONFIGURATION
+            # LEAVING_CONFIG_CHANGED or NORMAL_CONFIG_CHANGED
             # state.
             return LEAVING_CONFIG_CHANGING
-        elif all((state == LEAVING_CHANGED_CONFIGURATION or
-                  state == NORMAL_CHANGED_CONFIGURATION or
+        elif all((state == LEAVING_CONFIG_CHANGED or
+                  state == NORMAL_CONFIG_CHANGED or
                   state == FINISHED or
                   state == NORMAL) for state in node_states):
-            # All nodes in LEAVING_CHANGED_CONFIGURATION,
-            # NORMAL_CHANGED_CONFIGURATION, FINISHED or NORMAL state.
+            # All nodes in LEAVING_CONFIG_CHANGED,
+            # NORMAL_CONFIG_CHANGED, FINISHED or NORMAL state.
             return LEAVING_RESYNCING
         elif all((state == NORMAL or
                   state == FINISHED) for state in node_states):
