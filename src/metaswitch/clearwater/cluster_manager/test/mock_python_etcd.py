@@ -1,45 +1,53 @@
 from threading import Condition
+import etcd
 from etcd import EtcdResult
+
+allowed_key = '/test'
+global_data = "{}"
+global_index = 0
+global_condvar = Condition()
 
 class MockEtcdClient(object):
     def __init__(self, _host, _port):
-        self._allowed_key = '/test'
-        self._data = {}
-        self._index = 0
-        self._condvar = Condition()
+        pass
 
     def fake_result(self):
         r = EtcdResult(None, {})
-        r.value = self._data
+        print "Returning data %s" % global_data
+        r.value = global_data
         r.createdIndex = 1
-        r.modifiedIndex = self._index
+        r.modifiedIndex = global_index
         return r
 
     def get(self, key):
-        assert(key == self._allowed_key)
-        if self._index == 0:
-            raise etcd.KeyError()
+        assert(key == allowed_key)
+        if global_index == 0:
+            raise etcd.EtcdKeyError()
         return self.fake_result()
 
     def write(self, key, value, prevIndex=0, prevExist=None):
-        assert(key == self._allowed_key)
-        if (prevIndex != self._index) and (prevIndex != 0):
+        global global_index
+        global global_data
+        assert(key == allowed_key)
+        if (prevIndex != global_index) and (prevIndex != 0):
             raise ValueError()
-        if prevExist and self._index != 0:
+        if prevExist and global_index != 0:
             raise ValueError()
-        self._condvar.acquire()
-        self._data = value
-        self._index += 1
-        self._condvar.notify_all()
-        self._condvar.release()
+        global_condvar.acquire()
+        print "%s successfully written" % value
+        global_data = value
+        global_index += 1
+        global_condvar.notify_all()
+        global_condvar.release()
         return self.fake_result()
 
     def watch(self, key, index=None, timeout=None):
-        assert(key == self._allowed_key)
-        self._condvar.acquire()
-        if index > self._index:
-            self._condvar.wait(timeout)
-        self._condvar.release()
+        print "watch for index %s, index is %s" % (index, global_index)
+        assert(key == allowed_key)
+        global_condvar.acquire()
+        if index > global_index:
+            global_condvar.wait(timeout)
+        global_condvar.release()
         return self.fake_result()
 
     def eternal_watch(self, key, index=None):

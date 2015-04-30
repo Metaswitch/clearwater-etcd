@@ -19,6 +19,8 @@ class FakeEtcdSynchronizer(object):
 
 
 class SyncFSM(object):
+    DELAY = 30
+
     def __init__(self, plugin, local_ip):
         self._plugin = plugin
         self._id = local_ip
@@ -74,7 +76,7 @@ class SyncFSM(object):
 
         elif cluster_state == JOIN_PENDING:
             if local_state == WAITING_TO_JOIN:
-                sleep(30)
+                sleep(SyncFSM.DELAY)
                 return self._switch_all_to_joining(cluster_view)
             elif local_state == NORMAL:
                 return None
@@ -135,7 +137,7 @@ class SyncFSM(object):
 
         elif cluster_state == LEAVE_PENDING:
             if local_state == WAITING_TO_LEAVE:
-                sleep(30)
+                sleep(SyncFSM.DELAY)
                 return switch_all_to_leaving(cluster_view)
             elif local_state == NORMAL:
                 return None
