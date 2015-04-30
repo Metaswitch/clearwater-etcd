@@ -39,7 +39,11 @@ class SyncFSM(object):
         return {k: v for k, v in a.iteritems() if k != self._id}
 
     def next(self, local_state, cluster_state, cluster_view):
-        print cluster_view
+        _log.debug("Entered state mchine for {} with local state {}, "
+                   "cluster state {} and cluster view {}".format(
+                   local_state,
+                   cluster_state,
+                   cluster_view))
         assert(self._running)
         if local_state == NORMAL:
             self._alarm.cancel()
@@ -48,7 +52,14 @@ class SyncFSM(object):
 
         if cluster_state == STABLE:
             if local_state == NORMAL:
-                self._plugin.on_stable_cluster(cluster_view)
+                try:
+                    self._plugin.on_stable_cluster(cluster_view)
+                except Exception as e:
+                    _log.error("Call to on_stable_cluster method of {} "
+                               "with cluster {} caused exception {}".format(
+                               self._plugin,
+                               cluster_view,
+                               e))
                 return None
             elif local_state is None:
                 return self._switch_myself_to(WAITING_TO_JOIN, cluster_view)
@@ -77,21 +88,42 @@ class SyncFSM(object):
             if local_state in [JOINING_CONFIG_CHANGED, NORMAL_CONFIG_CHANGED]:
                 return None
             elif local_state == NORMAL_ACKNOWLEDGED_CHANGE:
-                self._plugin.on_new_members(cluster_view)
-                return self._switch_myself_to(NORMAL_CONFIG_CHANGED, cluster_view)
+                 try:
+                    self._plugin.on_cluster_changing(cluster_view)
+                    return self._switch_myself_to(NORMAL_CONFIG_CHANGED, cluster_view)
+                except Exception as e:
+                    _log.error("Call to on_cluster_changing method of {} "
+                               "with cluster {} caused exception {}".format(
+                               self._plugin,
+                               cluster_view,
+                               e))
+                    return None
             elif local_state == JOINING_ACKNOWLEDGED_CHANGE:
-                self._plugin.on_new_members(cluster_view)
-                return self._switch_myself_to(JOINING_CONFIG_CHANGED, cluster_view)
+                try:
+                    self._plugin.on_cluster_changing(cluster_view)
+                    return self._switch_myself_to(JOINING_CONFIG_CHANGED, cluster_view)
+                except Exception as e:
+                    _log.error("Call to on_cluster_changing method of {} "
+                               "with cluster {} caused exception {}".format(
+                               self._plugin,
+                               cluster_view,
+                               e))
+                    return None
 
         elif cluster_state == JOINING_RESYNCING:
             if local_state == NORMAL:
                 return None
-            elif local_state == JOINING_CONFIG_CHANGED:
-                self._plugin.on_all_config_updated(cluster_view)
-                return self._switch_myself_to(NORMAL, cluster_view)
-            elif local_state == NORMAL_CONFIG_CHANGED:
-                self._plugin.on_all_config_updated(cluster_view)
-                return self._switch_myself_to(NORMAL, cluster_view)
+            elif local_state in [JOINING_CONFIG_CHANGED, NORMAL_CONFIG_CHANGED]
+                try:
+                    self._plugin.on_new_cluster_config_ready(cluster_view)
+                    return self._switch_myself_to(NORMAL, cluster_view)
+                except Exception as e:
+                    _log.error("Call to on_new_cluster_config_ready method of {} "
+                               "with cluster {} caused exception {}".format(
+                               self._plugin,
+                               cluster_view,
+                               e))
+                    return None
 
         # States for leaving a cluster
 
@@ -106,41 +138,85 @@ class SyncFSM(object):
             if local_state in [LEAVING_ACKNOWLEDGED_CHANGE, NORMAL_ACKNOWLEDGED_CHANGE]:
                 return None
             elif local_state == NORMAL:
-                # Start 15-minute timer
                 return self._switch_myself_to(NORMAL_ACKNOWLEDGED_CHANGE, cluster_view)
             elif local_state == LEAVING:
-                # Start 15-minute timer
                 return self._switch_myself_to(LEAVING_ACKNOWLEDGED_CHANGE, cluster_view)
 
         elif cluster_state == LEAVING_CONFIG_CHANGING:
             if local_state in [LEAVING_CONFIG_CHANGED, NORMAL_CONFIG_CHANGED]:
                 return None
             elif local_state == NORMAL_ACKNOWLEDGED_CHANGE:
-                self._plugin.on_new_members(cluster_view)
-                return self._switch_myself_to(NORMAL_CONFIG_CHANGED, cluster_view)
+                try:
+                    self._plugin.on_cluster_changing(cluster_view)
+                    return self._switch_myself_to(NORMAL_CONFIG_CHANGED, cluster_view)
+                except Exception as e:
+                    _log.error("Call to on_cluster_changing method of {} "
+                               "with cluster {} caused exception {}".format(
+                               self._plugin,
+                               cluster_view,
+                               e))
+                    return None
             elif local_state == LEAVING_ACKNOWLEDGED_CHANGE:
-                self._plugin.on_new_members(cluster_view)
-                return self._switch_myself_to(LEAVING_CONFIG_CHANGED, cluster_view)
+                 try:
+                    self._plugin.on_cluster_changing(cluster_view)
+                    return self._switch_myself_to(LEAVING_CONFIG_CHANGED, cluster_view)
+                except Exception as e:
+                    _log.error("Call to on_cluster_changing method of {} "
+                               "with cluster {} caused exception {}".format(
+                               self._plugin,
+                               cluster_view,
+                               e))
+                    return None
 
         elif cluster_state == LEAVING_RESYNCING:
             if local_state == NORMAL:
                 return None
-            elif local_state == JOINING_CONFIG_CHANGED:
-                self._plugin.on_all_config_updated(cluster_view)
-                return self._switch_myself_to(NORMAL, cluster_view)
+            elif local_state == LEAVING_CONFIG_CHANGED:
+                 try:
+                    self._plugin.on_new_cluster_config_ready(cluster_view)
+                    return self._switch_myself_to(FINISHED, cluster_view)
+                except Exception as e:
+                    _log.error("Call to on_new_cluster_config_ready method of {} "
+                               "with cluster {} caused exception {}".format(
+                               self._plugin,
+                               cluster_view,
+                               e))
+                    return None
             elif local_state == NORMAL_CONFIG_CHANGED:
-                self._plugin.on_all_config_updated(cluster_view)
-                return self._switch_myself_to(NORMAL, cluster_view)
+                  try:
+                    self._plugin.on_new_cluster_config_ready(cluster_view)
+                    return self._switch_myself_to(NORMAL, cluster_view)
+                except Exception as e:
+                    _log.error("Call to on_new_cluster_config_ready method of {} "
+                               "with cluster {} caused exception {}".format(
+                               self._plugin,
+                               cluster_view,
+                               e))
+                    return None
 
         elif cluster_state == FINISHED_LEAVING:
             if local_state == NORMAL:
                 return None
             if local_state == FINISHED:
-                self._plugin.on_left_cluster(cluster_view)
-                self._running = False
-                return self._delete_myself(cluster_view)
+                try:
+                    self._plugin.on_leaving_cluster(cluster_view)
+                    self._running = False
+                    return self._delete_myself(cluster_view)
+                except Exception as e:
+                    _log.error("Call to on_leaving_cluster method of {} "
+                               "with cluster {} caused exception {}".format(
+                               self._plugin,
+                               cluster_view,
+                               e))
+                    return None
+
 
         # Any valid state should have caused me to return by now
+         _log.error("Invalid state in state machine for {} - local state {}, "
+                    "cluster state {} and cluster view {}".format(
+                    local_state,
+                    cluster_state,
+                    cluster_view))
         return None
 
 
