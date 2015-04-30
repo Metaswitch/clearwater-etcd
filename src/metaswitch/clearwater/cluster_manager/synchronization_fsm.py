@@ -46,7 +46,7 @@ class SyncFSM(object):
         return {k: v for k, v in a.iteritems() if k != self._id}
 
     def next(self, local_state, cluster_state, cluster_view):
-        print("Entered state mchine for {} with local state {}, "
+        _log.debug("Entered state mchine for {} with local state {}, "
                    "cluster state {} and cluster view {}".format(
                    self._id,
                    local_state,
@@ -226,10 +226,3 @@ class SyncFSM(object):
                     cluster_state,
                     cluster_view))
         return None
-
-
-def test():
-    plg = DummyPlugin()
-    fsm = SyncFSM(plg, "10.0.0.2")
-    cluster = {"10.0.0.1": "normal", "10.0.0.2": "waiting to join"}
-    print fsm.next("waiting to join", "join pending", cluster)

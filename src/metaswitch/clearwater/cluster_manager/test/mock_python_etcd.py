@@ -13,7 +13,6 @@ class MockEtcdClient(object):
 
     def fake_result(self):
         r = EtcdResult(None, {})
-        print "Returning data %s" % global_data
         r.value = global_data
         r.createdIndex = 1
         r.modifiedIndex = global_index
@@ -42,7 +41,6 @@ class MockEtcdClient(object):
         return self.fake_result()
 
     def watch(self, key, index=None, timeout=None):
-        print "watch for index %s, index is %s" % (index, global_index)
         assert(key == allowed_key)
         global_condvar.acquire()
         if index > global_index:
