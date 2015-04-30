@@ -2,7 +2,9 @@ from time import sleep
 from .constants import *
 from .alarms import TooLongAlarm
 import etcd
+import logging
 
+_log = logging.getLogger("cluster_manager.fsm")
 
 class FakeEtcdSynchronizer(object):
     def __init__(self, plugin, ip):
@@ -23,6 +25,9 @@ class SyncFSM(object):
         self._running = True
         self._alarm = TooLongAlarm()
 
+    def is_running(self):
+        return self._running
+
     def _switch_all_to_joining(self, cluster_view):
         return {k: (JOINING if v == WAITING_TO_JOIN else v)
                 for k, v in cluster_view.iteritems()}
@@ -39,8 +44,9 @@ class SyncFSM(object):
         return {k: v for k, v in a.iteritems() if k != self._id}
 
     def next(self, local_state, cluster_state, cluster_view):
-        _log.debug("Entered state mchine for {} with local state {}, "
+        print("Entered state mchine for {} with local state {}, "
                    "cluster state {} and cluster view {}".format(
+                   self._id,
                    local_state,
                    cluster_state,
                    cluster_view))
@@ -88,7 +94,7 @@ class SyncFSM(object):
             if local_state in [JOINING_CONFIG_CHANGED, NORMAL_CONFIG_CHANGED]:
                 return None
             elif local_state == NORMAL_ACKNOWLEDGED_CHANGE:
-                 try:
+                try:
                     self._plugin.on_cluster_changing(cluster_view)
                     return self._switch_myself_to(NORMAL_CONFIG_CHANGED, cluster_view)
                 except Exception as e:
@@ -113,7 +119,7 @@ class SyncFSM(object):
         elif cluster_state == JOINING_RESYNCING:
             if local_state == NORMAL:
                 return None
-            elif local_state in [JOINING_CONFIG_CHANGED, NORMAL_CONFIG_CHANGED]
+            elif local_state in [JOINING_CONFIG_CHANGED, NORMAL_CONFIG_CHANGED]:
                 try:
                     self._plugin.on_new_cluster_config_ready(cluster_view)
                     return self._switch_myself_to(NORMAL, cluster_view)
@@ -157,7 +163,7 @@ class SyncFSM(object):
                                e))
                     return None
             elif local_state == LEAVING_ACKNOWLEDGED_CHANGE:
-                 try:
+                try:
                     self._plugin.on_cluster_changing(cluster_view)
                     return self._switch_myself_to(LEAVING_CONFIG_CHANGED, cluster_view)
                 except Exception as e:
@@ -172,7 +178,7 @@ class SyncFSM(object):
             if local_state == NORMAL:
                 return None
             elif local_state == LEAVING_CONFIG_CHANGED:
-                 try:
+                try:
                     self._plugin.on_new_cluster_config_ready(cluster_view)
                     return self._switch_myself_to(FINISHED, cluster_view)
                 except Exception as e:
@@ -183,7 +189,7 @@ class SyncFSM(object):
                                e))
                     return None
             elif local_state == NORMAL_CONFIG_CHANGED:
-                  try:
+                try:
                     self._plugin.on_new_cluster_config_ready(cluster_view)
                     return self._switch_myself_to(NORMAL, cluster_view)
                 except Exception as e:
@@ -212,7 +218,7 @@ class SyncFSM(object):
 
 
         # Any valid state should have caused me to return by now
-         _log.error("Invalid state in state machine for {} - local state {}, "
+        _log.error("Invalid state in state machine for {} - local state {}, "
                     "cluster state {} and cluster view {}".format(
                     local_state,
                     cluster_state,
