@@ -50,7 +50,7 @@ class EtcdSynchronizer(object):
 
         if cluster_state == STABLE:
             updated_cluster_view = self.update_cluster_view(cluster_view,
-                                                            new_state)
+                                                            WAITING_TO_LEAVE)
             self.write_to_etcd(updated_cluster_view)
         else:
             self._leaving_flag = True
@@ -98,10 +98,12 @@ class EtcdSynchronizer(object):
                   state == WAITING_TO_LEAVE) for state in node_states):
             # All nodes in NORMAL or WAITING_TO_LEAVE state.
             return LEAVE_PENDING
-        elif all((state == LEAVING or
+        elif (all((state == LEAVING or
                   state == LEAVING_ACKNOWLEDGED_CHANGE or
                   state == NORMAL_ACKNOWLEDGED_CHANGE or
-                  state == NORMAL) for state in node_states):
+                  state == NORMAL) for state in node_states) and
+              (LEAVING in node_states or
+               NORMAL in node_states)):
             # All nodes in LEAVING, LEAVING_ACKNOWLEDGED_CHANGE
             # NORMAL_ACKNOWLEDGED_CHANGE or NORMAL state.
             return STARTED_LEAVING
@@ -110,17 +112,19 @@ class EtcdSynchronizer(object):
                    state == LEAVING_CONFIG_CHANGED or
                    state == NORMAL_CONFIG_CHANGED)
                   for state in node_states) and
-              (LEAVING_CONFIG_CHANGED in node_states or
-               NORMAL_CONFIG_CHANGED in node_states)):
+              (LEAVING_ACKNOWLEDGED_CHANGE in node_states or
+               NORMAL_ACKNOWLEDGED_CHANGE in node_states)):
             # At least one node in either LEAVING_ACKNOWLEDGED_CHANGE or
             # NORMAL_ACKNOWLEDGED_CHANGE, all other nodes in
             # LEAVING_CONFIG_CHANGED or NORMAL_CONFIG_CHANGED
             # state.
             return LEAVING_CONFIG_CHANGING
-        elif all((state == LEAVING_CONFIG_CHANGED or
+        elif (all((state == LEAVING_CONFIG_CHANGED or
                   state == NORMAL_CONFIG_CHANGED or
                   state == FINISHED or
-                  state == NORMAL) for state in node_states):
+                  state == NORMAL) for state in node_states) and
+              (LEAVING_CONFIG_CHANGED in node_states or
+               NORMAL_CONFIG_CHANGED in node_states)):
             # All nodes in LEAVING_CONFIG_CHANGED,
             # NORMAL_CONFIG_CHANGED, FINISHED or NORMAL state.
             return LEAVING_RESYNCING
@@ -151,7 +155,7 @@ class EtcdSynchronizer(object):
                                                     index=self._index+1)
             cluster_view = json.loads(result.value)
             self._index = result.modifiedIndex
-        except KeyError:
+        except etcd.EtcdKeyError:
             # If the key doesn't exist in etcd then there is currently no
             # cluster.
             self._index = None

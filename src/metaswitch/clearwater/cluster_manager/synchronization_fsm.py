@@ -43,7 +43,7 @@ class SyncFSM(object):
         return cluster_view
 
     def _delete_myself(self, cluster_view):
-        return {k: v for k, v in a.iteritems() if k != self._id}
+        return {k: v for k, v in cluster_view.iteritems() if k != self._id}
 
     def next(self, local_state, cluster_state, cluster_view):
         _log.debug("Entered state mchine for {} with local state {}, "
@@ -138,7 +138,7 @@ class SyncFSM(object):
         elif cluster_state == LEAVE_PENDING:
             if local_state == WAITING_TO_LEAVE:
                 sleep(SyncFSM.DELAY)
-                return switch_all_to_leaving(cluster_view)
+                return self._switch_all_to_leaving(cluster_view)
             elif local_state == NORMAL:
                 return None
 
@@ -222,6 +222,7 @@ class SyncFSM(object):
         # Any valid state should have caused me to return by now
         _log.error("Invalid state in state machine for {} - local state {}, "
                     "cluster state {} and cluster view {}".format(
+                    self._id,
                     local_state,
                     cluster_state,
                     cluster_view))
