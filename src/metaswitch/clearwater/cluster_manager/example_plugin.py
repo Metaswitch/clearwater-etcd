@@ -27,5 +27,3 @@ class ExamplePlugin(SynchroniserPluginBase):
 
 def load_as_plugin():
     return ExamplePlugin()
-
-print load_as_plugin()
