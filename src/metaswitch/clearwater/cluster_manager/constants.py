@@ -9,6 +9,7 @@ STARTED_LEAVING = "started leaving"
 LEAVING_CONFIG_CHANGING = "leaving, config changing"
 LEAVING_RESYNCING = "leaving, resyncing"
 FINISHED_LEAVING = "finished leaving"
+INVALID_CLUSTER_STATE = "invalid cluster state"
 
 # Node states
 WAITING_TO_JOIN = "waiting to join"
