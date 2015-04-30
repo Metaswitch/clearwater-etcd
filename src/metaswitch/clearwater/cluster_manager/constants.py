@@ -24,3 +24,7 @@ LEAVING_ACKNOWLEDGED_CHANGE = "leaving, acknowledged change"
 LEAVING_CONFIG_CHANGED = "leaving, config changed"
 FINISHED = "finished"
 ERROR = "error"
+
+# Alarm entries
+RAISE_NOT_YET_CLUSTERED = "5600.4"
+CLEAR_NOT_YET_CLUSTERED = "5600.1"

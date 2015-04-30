@@ -1,5 +1,6 @@
 from time import sleep
 from .constants import *
+from .alarms import TooLongAlarm
 
 
 class FakeEtcdSynchronizer(object):
@@ -13,26 +14,12 @@ class FakeEtcdSynchronizer(object):
             sleep(10)
 
 
-class TooLongAlarm(object):
-    def alarm(self):
-        sleep(15 * 60)
-        send_alarm
-
-    def trigger(self):
-        if self._timer_thread is None:
-            self._timer_thread = Thread
-
-    def cancel(self):
-        # cancel the thread
-        self._timer_thread = None
-        # clear the alarm
-
-
 class SyncFSM(object):
     def __init__(self, plugin, local_ip):
         self._plugin = plugin
         self._id = local_ip
         self._running = True
+        self._alarm = TooLongAlarm()
 
     def _switch_all_to_joining(self, cluster_view):
         return {k: (JOINING if v == WAITING_TO_JOIN else v)
@@ -51,10 +38,13 @@ class SyncFSM(object):
 
     def next(self, local_state, cluster_state, cluster_view):
         assert(self._running)
+        if local_state == NORMAL:
+            self._alarm.clear()
+        else:
+            self._alarm.trigger()
 
         if cluster_state == STABLE:
             if local_state == NORMAL:
-                # Cancel 15-minute timer
                 self._plugin.on_stable_cluster(cluster_view)
                 return None
             elif local_state is None:
@@ -75,10 +65,8 @@ class SyncFSM(object):
             if local_state in [JOINING_ACKNOWLEDGED_CHANGE, NORMAL_ACKNOWLEDGED_CHANGE]:
                 return None
             elif local_state == NORMAL:
-                # Start 15-minute timer
                 return self._switch_myself_to(NORMAL_ACKNOWLEDGED_CHANGE, cluster_view)
             elif local_state == JOINING:
-                # Start 15-minute timer
                 self._plugin.on_joining_cluster(cluster_view)
                 return self._switch_myself_to(JOINING_ACKNOWLEDGED_CHANGE, cluster_view)
 
