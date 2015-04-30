@@ -44,7 +44,7 @@ import os.path
 import sys
 import logging
 from threading import Thread, Condition
-from .constants import RAISE_NOT_YET_CLUSTERED, CLEAR_NOT_YET_CLUSTERED
+from .constants import RAISE_TOO_LONG_CLUSTERING, CLEAR_TOO_LONG_CLUSTERING
 
 _log = logging.getLogger("metaswitch.clearwater.cluster_manager.alarms")
 
@@ -105,7 +105,7 @@ class TooLongAlarm(object):
         self._condvar.acquire()
         self._condvar.wait(self._delay)
         if self._should_alarm:
-            issue_alarm(RAISE_NOT_YET_CLUSTERED)
+            issue_alarm(RAISE_TOO_LONG_CLUSTERING)
         self._condvar.release()
 
     def trigger(self):
@@ -123,5 +123,5 @@ class TooLongAlarm(object):
         self._timer_thread = None
 
         # clear the alarm
-        issue_alarm(CLEAR_NOT_YET_CLUSTERED)
+        issue_alarm(CLEAR_TOO_LONG_CLUSTERING)
         self._condvar.release()

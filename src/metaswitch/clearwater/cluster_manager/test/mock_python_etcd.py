@@ -2,7 +2,7 @@ from threading import Condition
 from etcd import EtcdResult
 
 class MockEtcdClient(object):
-    def __init__(self):
+    def __init__(self, _host, _port):
         self._allowed_key = '/test'
         self._data = {}
         self._index = 0
@@ -17,19 +17,30 @@ class MockEtcdClient(object):
 
     def get(self, key):
         assert(key == self._allowed_key)
-        return self._data
+        if self._index == 0:
+            raise etcd.KeyError()
+        return self.fake_result()
 
-    def set(self, key, value):
+    def write(self, key, value, prevIndex=0, prevExist=None):
         assert(key == self._allowed_key)
+        if (prevIndex != self._index) and (prevIndex != 0):
+            raise ValueError()
+        if prevExist and self._index != 0:
+            raise ValueError()
         self._condvar.acquire()
         self._data = value
         self._index += 1
         self._condvar.notify_all()
         self._condvar.release()
+        return self.fake_result()
 
-    def watch(self, key, index=None, timeout=None, recursive=None):
+    def watch(self, key, index=None, timeout=None):
+        assert(key == self._allowed_key)
         self._condvar.acquire()
-        while index < self._index:
+        if index > self._index:
             self._condvar.wait(timeout)
         self._condvar.release()
-        return self._data
+        return self.fake_result()
+
+    def eternal_watch(self, key, index=None):
+        return self.watch(key, index, 36000)

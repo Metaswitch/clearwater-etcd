@@ -16,9 +16,9 @@ class TestScaleUp(unittest.TestCase):
     def test_scale_up(self):
         sync = FakeEtcdSynchronizer(DummyPlugin(), '10.0.0.3')
         mock_client = sync.client
-        mock_client.set("/test", str({'10.0.0.1': 'normal', '10.0.0.2': 'normal'}))
+        mock_client.write("/test", str({'10.0.0.1': 'normal', '10.0.0.2': 'normal'}))
         thread = Thread(target=sync.main)
         thread.start()
         sleep(2)
-        self.assertIn('10.0.0.3', mock_client.get("/test"))
+        self.assertIn('10.0.0.3', mock_client.get("/test").value)
 

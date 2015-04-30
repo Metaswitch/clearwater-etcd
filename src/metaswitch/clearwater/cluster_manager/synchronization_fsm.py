@@ -1,11 +1,13 @@
 from time import sleep
 from .constants import *
 from .alarms import TooLongAlarm
+import etcd
 
 
 class FakeEtcdSynchronizer(object):
     def __init__(self, plugin, ip):
         self._fsm = SyncFSM(plugin, ip)
+        self.client = etcd.Client(None, None)
 
     def main(self):
         cluster = {"10.0.0.1": "normal", "10.0.0.2": "normal"}
