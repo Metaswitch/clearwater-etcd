@@ -8,9 +8,9 @@ class FakeEtcdSynchronizer(object):
         self._fsm = SyncFSM(plugin, ip)
 
     def main(self):
-        cluster = {"10.0.0.1": "NORMAL", "10.0.0.2": "NORMAL"}
+        cluster = {"10.0.0.1": "normal", "10.0.0.2": "normal"}
         while True:
-            self._fsm.next("NORMAL", STABLE, cluster)
+            self._fsm.next("normal", STABLE, cluster)
             sleep(10)
 
 
@@ -37,9 +37,10 @@ class SyncFSM(object):
         return {k: v for k, v in a.iteritems() if k != self._id}
 
     def next(self, local_state, cluster_state, cluster_view):
+        print cluster_view
         assert(self._running)
         if local_state == NORMAL:
-            self._alarm.clear()
+            self._alarm.cancel()
         else:
             self._alarm.trigger()
 

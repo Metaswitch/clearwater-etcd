@@ -24,6 +24,7 @@ import logging
 import os
 from time import sleep
 from threading import Thread
+import signal
 
 LOG_LEVELS = {'0': logging.CRITICAL,
               '1': logging.ERROR,
@@ -41,7 +42,7 @@ def install_sigquit_handler(plugins):
         """
         for plugin in plugins:
             plugin.leave_cluster()
-    signal.signal(signal.SIGQUIT, sigusr1_handler)
+    signal.signal(signal.SIGQUIT, sigquit_handler)
 
 def main(args):
     _log = logging.getLogger("metaswitch.clearwater.cluster_manager.main")
@@ -64,11 +65,10 @@ def main(args):
     with open(arguments['--pidfile'], "w") as pidfile:
         pidfile.write(str(pid) + "\n")
 
-    plugin_holder = []
-    load_plugins_in_dir("/home/vagrant/python_plugins/", plugin_holder)
+    plugins = load_plugins_in_dir("/home/vagrant/python_plugins/")
     synchronizers = []
     threads = []
-    for plugin in plugin_holder:
+    for plugin in plugins:
         syncer = FakeEtcdSynchronizer(plugin, listen_ip)
         thread = Thread(target=syncer.main)
         thread.daemon = True
@@ -87,4 +87,3 @@ def main(args):
 if __name__ == '__main__':
     import sys
     main(sys.argv[1:])
-    sleep(100)

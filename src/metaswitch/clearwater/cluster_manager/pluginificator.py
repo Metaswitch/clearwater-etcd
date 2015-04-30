@@ -2,8 +2,9 @@ import imp
 import os
 
 
-def load_plugins_in_dir(dir, arbitrary_object):
+def load_plugins_in_dir(dir):
     files = os.listdir(dir)
+    plugins = []
     for filename in files:
         module_name, suffix = filename.split(".")
         if suffix == "py":
@@ -11,4 +12,5 @@ def load_plugins_in_dir(dir, arbitrary_object):
             if file:
                 mod = imp.load_module(module_name, file, pathname, description)
                 if hasattr(mod, "load_as_plugin"):
-                    mod.load_as_plugin(arbitrary_object)
+                    plugins.append(mod.load_as_plugin())
+    return plugins

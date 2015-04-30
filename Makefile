@@ -60,6 +60,11 @@ $(ENV_DIR)/bin/python:
 
 include build-infra/cw-deb.mk
 
+.PHONY: reinstall_env
+reinstall-env:
+	${ENV_DIR}/bin/python setup.py install
+
+
 .PHONY: deb
 deb: env deb-only
 

@@ -43,7 +43,7 @@ import zmq
 import os.path
 import sys
 import logging
-from threading import Thread
+from threading import Thread, Condition
 from .constants import RAISE_NOT_YET_CLUSTERED, CLEAR_NOT_YET_CLUSTERED
 
 _log = logging.getLogger("metaswitch.clearwater.cluster_manager.alarms")
@@ -95,17 +95,24 @@ def issue_alarm(identifier):
 
 
 class TooLongAlarm(object):
+    def __init__(self, delay=(15*60)):
+        self._condvar = Condition()
+        self._timer_thread = None
+        self._should_alarm = False
+        self._delay = delay
+
     def alarm(self):
         self._condvar.acquire()
-        self._should_alarm = True
-        self._condvar.wait(15 * 60)
+        self._condvar.wait(self._delay)
         if self._should_alarm:
             issue_alarm(RAISE_NOT_YET_CLUSTERED)
         self._condvar.release()
 
     def trigger(self):
+        self._should_alarm = True
         if self._timer_thread is None:
             self._timer_thread = Thread(target=self.alarm)
+            self._timer_thread.start()
 
     def cancel(self):
         self._condvar.acquire()
