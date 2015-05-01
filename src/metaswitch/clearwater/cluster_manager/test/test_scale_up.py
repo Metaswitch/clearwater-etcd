@@ -6,6 +6,7 @@ from .mock_python_etcd import MockEtcdClient, SlowMockEtcdClient
 from metaswitch.clearwater.cluster_manager.etcd_synchronizer import EtcdSynchronizer
 from metaswitch.clearwater.cluster_manager.synchronization_fsm import SyncFSM
 from .dummy_plugin import DummyPlugin
+from .contention_detecting_plugin import ContentionDetectingPlugin
 from threading import Thread
 from time import sleep
 import json
@@ -27,9 +28,9 @@ class TestScaleUp(unittest.TestCase):
             sleep(0.1)
 
 
-    def make_and_start_synchronizers(self, num):
+    def make_and_start_synchronizers(self, num, klass=DummyPlugin):
         ips = ["10.0.0.%s" % d for d in range(num)]
-        self.syncs = [EtcdSynchronizer(DummyPlugin(), ip) for ip in ips]
+        self.syncs = [EtcdSynchronizer(klass(), ip) for ip in ips]
         for s in self.syncs:
             s.start_thread()
 
@@ -41,12 +42,25 @@ class TestScaleUp(unittest.TestCase):
     @patch("metaswitch.clearwater.cluster_manager.synchronization_fsm.TooLongAlarm")
     def test_large_cluster(self, alarm):
         SyncFSM.DELAY = 0.1
-        self.make_and_start_synchronizers(20)
+        self.make_and_start_synchronizers(30)
         mock_client = self.syncs[0]._client
-        self.wait_for_all_normal(mock_client, required_number=20, tries=300)
+        self.wait_for_all_normal(mock_client, required_number=30, tries=300)
         end = json.loads(mock_client.get("/test").value)
         self.assertEqual("normal", end.get("10.0.0.3"))
         self.assertEqual("normal", end.get("10.0.0.19"))
+        self.assertEqual("normal", end.get("10.0.0.29"))
+        self.close_synchronizers()
+
+    @unittest.skip("write contention happens")
+    @patch("etcd.Client", new=SlowMockEtcdClient)
+    @patch("metaswitch.clearwater.cluster_manager.synchronization_fsm.TooLongAlarm")
+    def test_write_contention(self, alarm):
+        SyncFSM.DELAY = 0.1
+        self.make_and_start_synchronizers(3, klass=ContentionDetectingPlugin)
+        mock_client = self.syncs[0]._client
+        self.wait_for_all_normal(mock_client, required_number=3, tries=300)
+        end = json.loads(mock_client.get("/test").value)
+        self.assertEqual("normal", end.get("10.0.0.3"))
         self.close_synchronizers()
 
 

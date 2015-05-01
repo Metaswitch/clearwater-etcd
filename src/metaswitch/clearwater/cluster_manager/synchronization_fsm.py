@@ -104,6 +104,8 @@ class SyncFSM(object):
                 try:
                     self._plugin.on_cluster_changing(cluster_view)
                     return self._switch_myself_to(NORMAL_CONFIG_CHANGED, cluster_view)
+                except AssertionError:
+                    raise
                 except Exception as e:
                     _log.error("Call to on_cluster_changing method of {} "
                                "with cluster {} caused exception {}".format(
@@ -115,6 +117,8 @@ class SyncFSM(object):
                 try:
                     self._plugin.on_joining_cluster(cluster_view)
                     return self._switch_myself_to(JOINING_CONFIG_CHANGED, cluster_view)
+                except AssertionError:
+                    raise
                 except Exception as e:
                     _log.error("Call to on_joining_cluster method of {} "
                                "with cluster {} caused exception {}".format(
@@ -130,6 +134,8 @@ class SyncFSM(object):
                 try:
                     self._plugin.on_new_cluster_config_ready(cluster_view)
                     return self._switch_myself_to(NORMAL, cluster_view)
+                except AssertionError:
+                    raise
                 except Exception as e:
                     _log.error("Call to on_new_cluster_config_ready method of {} "
                                "with cluster {} caused exception {}".format(
@@ -162,6 +168,8 @@ class SyncFSM(object):
                 try:
                     self._plugin.on_cluster_changing(cluster_view)
                     return self._switch_myself_to(NORMAL_CONFIG_CHANGED, cluster_view)
+                except AssertionError:
+                    raise
                 except Exception as e:
                     _log.error("Call to on_cluster_changing method of {} "
                                "with cluster {} caused exception {}".format(
@@ -173,6 +181,8 @@ class SyncFSM(object):
                 try:
                     self._plugin.on_cluster_changing(cluster_view)
                     return self._switch_myself_to(LEAVING_CONFIG_CHANGED, cluster_view)
+                except AssertionError:
+                    raise
                 except Exception as e:
                     _log.error("Call to on_cluster_changing method of {} "
                                "with cluster {} caused exception {}".format(
@@ -188,6 +198,8 @@ class SyncFSM(object):
                 try:
                     self._plugin.on_new_cluster_config_ready(cluster_view)
                     return self._switch_myself_to(FINISHED, cluster_view)
+                except AssertionError:
+                    raise
                 except Exception as e:
                     _log.error("Call to on_new_cluster_config_ready method of {} "
                                "with cluster {} caused exception {}".format(
@@ -199,6 +211,8 @@ class SyncFSM(object):
                 try:
                     self._plugin.on_new_cluster_config_ready(cluster_view)
                     return self._switch_myself_to(NORMAL, cluster_view)
+                except AssertionError:
+                    raise
                 except Exception as e:
                     _log.error("Call to on_new_cluster_config_ready method of {} "
                                "with cluster {} caused exception {}".format(
@@ -215,6 +229,8 @@ class SyncFSM(object):
                     self._plugin.on_leaving_cluster(cluster_view)
                     self._running = False
                     return self._delete_myself(cluster_view)
+                except AssertionError:
+                    raise
                 except Exception as e:
                     _log.error("Call to on_leaving_cluster method of {} "
                                "with cluster {} caused exception {}".format(
