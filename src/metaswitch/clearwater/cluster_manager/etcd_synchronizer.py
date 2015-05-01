@@ -21,7 +21,7 @@ class EtcdSynchronizer(object):
         self._client = etcd.Client(ip, 4000)
         self._key = plugin.key()
         self._index = None
-        self._last_cluster_view = {}
+        self._last_cluster_view = None
         self._leaving_flag = False
         self._terminate_flag = False
         self.thread = Thread(target=self.main)
@@ -189,10 +189,14 @@ class EtcdSynchronizer(object):
 
         try:
             result = self._client.get(self._key)
-            cluster_view = json.loads(result.value)
+            try:
+                cluster_view = json.loads(result.value)
+            except:
+                cluster_view = {}
 
             # If the cluster view hasn't changed since we last saw it, then
             # wait for it to change before doing anything else.
+            _log.info("Read cluster view {} from etcd, comparing to last cluster view {}".format(cluster_view, self._last_cluster_view))
             if cluster_view == self._last_cluster_view:
                 while not self._terminate_flag:
                     try:
@@ -217,7 +221,10 @@ class EtcdSynchronizer(object):
                 if self._terminate_flag:
                     return
                 else:
-                    cluster_view = json.loads(result.value)
+                    try:
+                        cluster_view = json.loads(result.value)
+                    except:
+                        cluster_view = {}
 
             # Save off the index of the result we're using for when we write
             # back to etcd later.
@@ -229,7 +236,7 @@ class EtcdSynchronizer(object):
             self._index = None
             pass
 
-        self._last_cluster_view = cluster_view
+        self._last_cluster_view = cluster_view.copy()
         return cluster_view
 
     # Update the cluster view based on new state information. If new_state is a
