@@ -53,9 +53,10 @@ def write_chronos_cluster_settings(filename, cluster_view, current_server):
                if v in leaving_servers])
 
     with open(filename, 'w') as f:
-        f.write(dedent("""[cluster]
+        f.write(dedent('''\
+        [cluster]
         localhost = {current_server}
-        """).format(**locals()))
+        ''').format(**locals()))
         for node in nodes:
             f.write('node = {node}\n'.format(**locals()))
         for node in leaving:
