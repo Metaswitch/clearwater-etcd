@@ -1,6 +1,7 @@
 import logging
 import os
 import signal
+from textwrap import dedent
 from metaswitch.clearwater.cluster_manager import constants
 
 _log = logging.getLogger("memcached_plugin")
@@ -34,6 +35,30 @@ def write_cluster_settings(filename, cluster_view):
         new_file_contents))
     with open(filename, "w") as f:
         f.write(new_file_contents)
+
+
+def write_chronos_cluster_settings(filename, cluster_view, current_server):
+    current_or_joining_servers = [constants.JOINING_ACKNOWLEDGED_CHANGE,
+                                  constants.JOINING_CONFIG_CHANGED,
+                                  constants.NORMAL_ACKNOWLEDGED_CHANGE,
+                                  constants.NORMAL_CONFIG_CHANGED,
+                                  constants.NORMAL]
+    leaving_servers = [constants.LEAVING_ACKNOWLEDGED_CHANGE,
+                       constants.LEAVING_CONFIG_CHANGED]
+
+    nodes = ([k for k, v in cluster_view.iteritems()
+              if v in current_or_joining_servers])
+    leaving = ([k for k, v in cluster_view.iteritems()
+               if v in leaving_servers])
+
+    with open(filename, 'w') as f:
+        f.write(dedent("""[cluster]
+        localhost = {current_server}
+        """).format(**locals()))
+        for node in nodes:
+            f.write('node = {node}\n'.format(**locals()))
+        for node in leaving:
+            f.write('leaving = {node}\n'.format(**locals()))
 
 
 def send_sighup(pidfile):
