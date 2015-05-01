@@ -2,6 +2,7 @@
 
 import etcd
 import json
+from collections import defaultdict
 from threading import Thread
 
 from .constants import *
@@ -20,6 +21,7 @@ class EtcdSynchronizer(object):
         self._client = etcd.Client(ip, 4000)
         self._key = plugin.key()
         self._index = None
+        self._last_cluster_view = {}
         self._leaving_flag = False
         self._terminate_flag = False
         self.thread = Thread(target=self.main)
@@ -51,7 +53,9 @@ class EtcdSynchronizer(object):
                 new_state = WAITING_TO_LEAVE
             else:
                 local_state = self.calculate_local_state(cluster_view)
-                _log.debug("Feeding %s, %s, %s into FSM" % (local_state, cluster_state, cluster_view))
+                _log.debug("Feeding %s, %s, %s into FSM" % (local_state,
+                                                            cluster_state,
+                                                            cluster_view))
                 new_state = self._fsm.next(local_state,
                                            cluster_state,
                                            cluster_view)
@@ -60,7 +64,8 @@ class EtcdSynchronizer(object):
             if new_state:
                 updated_cluster_view = self.update_cluster_view(cluster_view,
                                                                 new_state)
-                _log.debug("Writing state %s into etcd" % (updated_cluster_view))
+                _log.debug("Writing state %s into etcd" %
+                           (updated_cluster_view))
                 self.write_to_etcd(updated_cluster_view)
             else:
                 _log.debug("No state change")
@@ -82,78 +87,91 @@ class EtcdSynchronizer(object):
     # Calculate the state of the cluster based on the state of all the nodes in
     # the cluster.
     def calculate_cluster_state(self, cluster_view):
+        # Create a default dictionary. The default value of any key is 0.
+        node_state_counts = defaultdict(int)
         node_states = cluster_view.values()
+        node_count = 0
 
-        if all(state == NORMAL for state in node_states):
+        # Count the number of nodes in each state. This will make working out
+        # the state of the cluster below easier.
+        for state in node_states:
+            node_state_counts[state] += 1
+
+            # Count the total number of nodes in the cluster. Ignore nodes in
+            # ERROR state.
+            if state is not ERROR:
+                node_count += 1
+
+        if node_state_counts[NORMAL] == node_count:
             # All nodes in NORMAL state.
             return STABLE
-        elif all((state == NORMAL or
-                  state == WAITING_TO_JOIN) for state in node_states):
+        elif (node_state_counts[NORMAL] +
+              node_state_counts[WAITING_TO_JOIN] == node_count):
             # All nodes in NORMAL or WAITING_TO_JOIN state.
             return JOIN_PENDING
-        elif (all((state == JOINING or
-                  state == JOINING_ACKNOWLEDGED_CHANGE or
-                  state == NORMAL_ACKNOWLEDGED_CHANGE or
-                  state == NORMAL) for state in node_states) and
-              (JOINING in node_states or
-               NORMAL in node_states)):
-            # All nodes in JOINING, JOINING_ACKNOWLEDGED_CHANGE
-            # NORMAL_ACKNOWLEDGED_CHANGE or NORMAL state.
+        elif ((node_state_counts[JOINING] +
+               node_state_counts[JOINING_ACKNOWLEDGED_CHANGE] +
+               node_state_counts[NORMAL_ACKNOWLEDGED_CHANGE] +
+               node_state_counts[NORMAL] == node_count) and
+              (node_state_counts[JOINING] > 0 or
+               node_state_counts[NORMAL] > 0)):
+            # At least one node in either JOINING or NORMAL state, all other
+            # nodes in JOINING_ACKNOWLEDGED_CHANGE or NORMAL_ACKNOWLEDGED_CHANGE
+            # state.
             return STARTED_JOINING
-        elif (all((state == JOINING_ACKNOWLEDGED_CHANGE or
-                   state == NORMAL_ACKNOWLEDGED_CHANGE or
-                   state == JOINING_CONFIG_CHANGED or
-                   state == NORMAL_CONFIG_CHANGED)
-                  for state in node_states) and
-              (JOINING_ACKNOWLEDGED_CHANGE in node_states or
-               NORMAL_ACKNOWLEDGED_CHANGE in node_states)):
+        elif ((node_state_counts[JOINING_ACKNOWLEDGED_CHANGE] +
+               node_state_counts[NORMAL_ACKNOWLEDGED_CHANGE] +
+               node_state_counts[JOINING_CONFIG_CHANGED] +
+               node_state_counts[NORMAL_CONFIG_CHANGED] == node_count) and
+              (node_state_counts[JOINING_ACKNOWLEDGED_CHANGE] > 0 or
+               node_state_counts[NORMAL_ACKNOWLEDGED_CHANGE] > 0)):
             # At least one node in either JOINING_ACKNOWLEDGED_CHANGE or
-            # NORMAL_ACKNOWLEDGED_CHANGE, all other nodes in
+            # NORMAL_ACKNOWLEDGED_CHANGE state, all other nodes in
             # JOINING_CONFIG_CHANGED or NORMAL_CONFIG_CHANGED
             # state.
             return JOINING_CONFIG_CHANGING
-        elif all((state == JOINING_CONFIG_CHANGED or
-                  state == NORMAL_CONFIG_CHANGED or
-                  state == NORMAL) for state in node_states):
-            # All nodes in JOINING_CONFIG_CHANGED,
-            # NORMAL_CONFIG_CHANGED or NORMAL state.
+        elif (node_state_counts[JOINING_CONFIG_CHANGED] +
+              node_state_counts[NORMAL_CONFIG_CHANGED] +
+              node_state_counts[NORMAL] == node_count):
+            # All nodes in JOINING_CONFIG_CHANGED, NORMAL_CONFIG_CHANGED or
+            # NORMAL state.
             return JOINING_RESYNCING
-        elif all((state == NORMAL or
-                  state == WAITING_TO_LEAVE) for state in node_states):
+        elif (node_state_counts[NORMAL] +
+              node_state_counts[WAITING_TO_LEAVE] == node_count):
             # All nodes in NORMAL or WAITING_TO_LEAVE state.
             return LEAVE_PENDING
-        elif (all((state == LEAVING or
-                  state == LEAVING_ACKNOWLEDGED_CHANGE or
-                  state == NORMAL_ACKNOWLEDGED_CHANGE or
-                  state == NORMAL) for state in node_states) and
-              (LEAVING in node_states or
-               NORMAL in node_states)):
-            # All nodes in LEAVING, LEAVING_ACKNOWLEDGED_CHANGE
-            # NORMAL_ACKNOWLEDGED_CHANGE or NORMAL state.
+        elif ((node_state_counts[LEAVING] +
+               node_state_counts[LEAVING_ACKNOWLEDGED_CHANGE] +
+               node_state_counts[NORMAL_ACKNOWLEDGED_CHANGE] +
+               node_state_counts[NORMAL] == node_count) and
+              (node_state_counts[LEAVING] > 0 or
+               node_state_counts[NORMAL] > 0)):
+            # At least one node in either LEAVING or NORMAL state, all other
+            # nodes in LEAVING_ACKNOWLEDGED_CHANGE or NORMAL_ACKNOWLEDGED_CHANGE
+            # state.
             return STARTED_LEAVING
-        elif (all((state == LEAVING_ACKNOWLEDGED_CHANGE or
-                   state == NORMAL_ACKNOWLEDGED_CHANGE or
-                   state == LEAVING_CONFIG_CHANGED or
-                   state == NORMAL_CONFIG_CHANGED)
-                  for state in node_states) and
-              (LEAVING_ACKNOWLEDGED_CHANGE in node_states or
-               NORMAL_ACKNOWLEDGED_CHANGE in node_states)):
+        elif ((node_state_counts[LEAVING_ACKNOWLEDGED_CHANGE] +
+               node_state_counts[NORMAL_ACKNOWLEDGED_CHANGE] +
+               node_state_counts[LEAVING_CONFIG_CHANGED] +
+               node_state_counts[NORMAL_CONFIG_CHANGED] == node_count) and
+              (node_state_counts[LEAVING_ACKNOWLEDGED_CHANGE] > 0 or
+               node_state_counts[NORMAL_ACKNOWLEDGED_CHANGE] > 0)):
             # At least one node in either LEAVING_ACKNOWLEDGED_CHANGE or
-            # NORMAL_ACKNOWLEDGED_CHANGE, all other nodes in
+            # NORMAL_ACKNOWLEDGED_CHANGE state, all other nodes in
             # LEAVING_CONFIG_CHANGED or NORMAL_CONFIG_CHANGED
             # state.
             return LEAVING_CONFIG_CHANGING
-        elif (all((state == LEAVING_CONFIG_CHANGED or
-                  state == NORMAL_CONFIG_CHANGED or
-                  state == FINISHED or
-                  state == NORMAL) for state in node_states) and
-              (LEAVING_CONFIG_CHANGED in node_states or
-               NORMAL_CONFIG_CHANGED in node_states)):
+        elif ((node_state_counts[LEAVING_CONFIG_CHANGED] +
+               node_state_counts[NORMAL_CONFIG_CHANGED] +
+               node_state_counts[NORMAL] +
+               node_state_counts[FINISHED] == node_count) and
+              (node_state_counts[LEAVING_CONFIG_CHANGED] > 0 or
+               node_state_counts[NORMAL_CONFIG_CHANGED] > 0)):
             # All nodes in LEAVING_CONFIG_CHANGED,
             # NORMAL_CONFIG_CHANGED, FINISHED or NORMAL state.
             return LEAVING_RESYNCING
-        elif all((state == NORMAL or
-                  state == FINISHED) for state in node_states):
+        elif (node_state_counts[NORMAL] +
+              node_state_counts[FINISHED] == node_count):
             # All nodes in NORMAL or FINISHED state.
             return FINISHED_LEAVING
         else:
@@ -165,23 +183,23 @@ class EtcdSynchronizer(object):
     def calculate_local_state(self, cluster_view):
         return cluster_view.get(self._ip)
 
-    # Read the state of the cluster from etcd. The first time we do this, we get
-    # the current state. On subsequent calls we get the most recent state of the
-    # cluster that we haven't previously seen. This may mean waiting for a
-    # change.
+    # Read the state of the cluster from etcd.
     def read_from_etcd(self):
         cluster_view = {}
+
         try:
-            if self._index is None:
-                result = self._client.get(self._key)
-            else:
+            result = self._client.get(self._key)
+            cluster_view = json.loads(result.value)
+
+            # If the cluster view hasn't changed since we last saw it, then
+            # wait for it to change before doing anything else.
+            if cluster_view == self._last_cluster_view:
                 while not self._terminate_flag:
                     try:
                         result = self._client.watch(self._key,
-                                                    index=self._index+1,
+                                                    index=result.modifiedIndex+1,
                                                     timeout=5,
                                                     recursive=False)
-                        _log.debug("result.modifiedIndex {}, self._index {}".format(result.modifiedIndex, self._index))
                         break
                     except etcd.EtcdKeyError:
                         raise
@@ -189,15 +207,29 @@ class EtcdSynchronizer(object):
                         pass
                     except urllib3.exceptions.TimeoutError:
                         pass
-            if self._terminate_flag:
-                return
-            cluster_view = json.loads(result.value)
+                    except ValueError:
+                        # The index isn't valid to watch on, probably because
+                        # there has been a snapshot between the get and the
+                        # watch. Just start the read again.
+                        self._read_from_etcd()
+
+                # Return if we're termiating.
+                if self._terminate_flag:
+                    return
+                else:
+                    cluster_view = json.loads(result.value)
+
+            # Save off the index of the result we're using for when we write
+            # back to etcd later.
             self._index = result.modifiedIndex
+
         except etcd.EtcdKeyError:
             # If the key doesn't exist in etcd then there is currently no
             # cluster.
             self._index = None
+            pass
 
+        self._last_cluster_view = cluster_view
         return cluster_view
 
     # Update the cluster view based on new state information. If new_state is a
