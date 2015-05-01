@@ -2,6 +2,7 @@
 
 import etcd
 import json
+from collections import defaultdict
 from threading import Thread
 
 from .constants import *
@@ -72,78 +73,91 @@ class EtcdSynchronizer(object):
     # Calculate the state of the cluster based on the state of all the nodes in
     # the cluster.
     def calculate_cluster_state(self, cluster_view):
+        # Create a default dictionary. The default value of any key is 0.
+        node_state_counts = defaultdict(int)
         node_states = cluster_view.values()
+        node_count = 0
 
-        if all(state == NORMAL for state in node_states):
+        # Count the number of nodes in each state. This will make working out
+        # the state of the cluster below easier.
+        for state in node_states:
+            node_state_counts[state] += 1
+
+            # Count the total number of nodes in the cluster. Ignore nodes in
+            # ERROR state.
+            if state is not ERROR:
+                node_count += 1
+
+        if node_state_counts[NORMAL] == node_count:
             # All nodes in NORMAL state.
             return STABLE
-        elif all((state == NORMAL or
-                  state == WAITING_TO_JOIN) for state in node_states):
+        elif (node_state_counts[NORMAL] +
+              node_state_counts[WAITING_TO_JOIN] == node_count):
             # All nodes in NORMAL or WAITING_TO_JOIN state.
             return JOIN_PENDING
-        elif (all((state == JOINING or
-                  state == JOINING_ACKNOWLEDGED_CHANGE or
-                  state == NORMAL_ACKNOWLEDGED_CHANGE or
-                  state == NORMAL) for state in node_states) and
-              (JOINING in node_states or
-               NORMAL in node_states)):
-            # All nodes in JOINING, JOINING_ACKNOWLEDGED_CHANGE
-            # NORMAL_ACKNOWLEDGED_CHANGE or NORMAL state.
+        elif ((node_state_counts[JOINING] +
+               node_state_counts[JOINING_ACKNOWLEDGED_CHANGE] +
+               node_state_counts[NORMAL_ACKNOWLEDGED_CHANGE] +
+               node_state_counts[NORMAL] == node_count) and
+              (node_state_counts[JOINING] > 0 or
+               node_state_counts[NORMAL] > 0)):
+            # At least one node in either JOINING or NORMAL state, all other
+            # nodes in JOINING_ACKNOWLEDGED_CHANGE or NORMAL_ACKNOWLEDGED_CHANGE
+            # state.
             return STARTED_JOINING
-        elif (all((state == JOINING_ACKNOWLEDGED_CHANGE or
-                   state == NORMAL_ACKNOWLEDGED_CHANGE or
-                   state == JOINING_CONFIG_CHANGED or
-                   state == NORMAL_CONFIG_CHANGED)
-                  for state in node_states) and
-              (JOINING_ACKNOWLEDGED_CHANGE in node_states or
-               NORMAL_ACKNOWLEDGED_CHANGE in node_states)):
+        elif ((node_state_counts[JOINING_ACKNOWLEDGED_CHANGE] +
+               node_state_counts[NORMAL_ACKNOWLEDGED_CHANGE] +
+               node_state_counts[JOINING_CONFIG_CHANGED] +
+               node_state_counts[NORMAL_CONFIG_CHANGED] == node_count) and
+              (node_state_counts[JOINING_ACKNOWLEDGED_CHANGE] > 0 or
+               node_state_counts[NORMAL_ACKNOWLEDGED_CHANGE] > 0)):
             # At least one node in either JOINING_ACKNOWLEDGED_CHANGE or
-            # NORMAL_ACKNOWLEDGED_CHANGE, all other nodes in
+            # NORMAL_ACKNOWLEDGED_CHANGE state, all other nodes in
             # JOINING_CONFIG_CHANGED or NORMAL_CONFIG_CHANGED
             # state.
             return JOINING_CONFIG_CHANGING
-        elif all((state == JOINING_CONFIG_CHANGED or
-                  state == NORMAL_CONFIG_CHANGED or
-                  state == NORMAL) for state in node_states):
-            # All nodes in JOINING_CONFIG_CHANGED,
-            # NORMAL_CONFIG_CHANGED or NORMAL state.
+        elif (node_state_counts[JOINING_CONFIG_CHANGED] +
+              node_state_counts[NORMAL_CONFIG_CHANGED] +
+              node_state_counts[NORMAL] == node_count):
+            # All nodes in JOINING_CONFIG_CHANGED, NORMAL_CONFIG_CHANGED or
+            # NORMAL state.
             return JOINING_RESYNCING
-        elif all((state == NORMAL or
-                  state == WAITING_TO_LEAVE) for state in node_states):
+        elif (node_state_counts[NORMAL] +
+              node_state_counts[WAITING_TO_LEAVE] == node_count):
             # All nodes in NORMAL or WAITING_TO_LEAVE state.
             return LEAVE_PENDING
-        elif (all((state == LEAVING or
-                  state == LEAVING_ACKNOWLEDGED_CHANGE or
-                  state == NORMAL_ACKNOWLEDGED_CHANGE or
-                  state == NORMAL) for state in node_states) and
-              (LEAVING in node_states or
-               NORMAL in node_states)):
-            # All nodes in LEAVING, LEAVING_ACKNOWLEDGED_CHANGE
-            # NORMAL_ACKNOWLEDGED_CHANGE or NORMAL state.
+        elif ((node_state_counts[LEAVING] +
+               node_state_counts[LEAVING_ACKNOWLEDGED_CHANGE] +
+               node_state_counts[NORMAL_ACKNOWLEDGED_CHANGE] +
+               node_state_counts[NORMAL] == node_count) and
+              (node_state_counts[LEAVING] > 0 or
+               node_state_counts[NORMAL] > 0)):
+            # At least one node in either LEAVING or NORMAL state, all other
+            # nodes in LEAVING_ACKNOWLEDGED_CHANGE or NORMAL_ACKNOWLEDGED_CHANGE
+            # state.
             return STARTED_LEAVING
-        elif (all((state == LEAVING_ACKNOWLEDGED_CHANGE or
-                   state == NORMAL_ACKNOWLEDGED_CHANGE or
-                   state == LEAVING_CONFIG_CHANGED or
-                   state == NORMAL_CONFIG_CHANGED)
-                  for state in node_states) and
-              (LEAVING_ACKNOWLEDGED_CHANGE in node_states or
-               NORMAL_ACKNOWLEDGED_CHANGE in node_states)):
+        elif ((node_state_counts[LEAVING_ACKNOWLEDGED_CHANGE] +
+               node_state_counts[NORMAL_ACKNOWLEDGED_CHANGE] +
+               node_state_counts[LEAVING_CONFIG_CHANGED] +
+               node_state_counts[NORMAL_CONFIG_CHANGED] == node_count) and
+              (node_state_counts[LEAVING_ACKNOWLEDGED_CHANGE] > 0 or
+               node_state_counts[NORMAL_ACKNOWLEDGED_CHANGE] > 0)):
             # At least one node in either LEAVING_ACKNOWLEDGED_CHANGE or
-            # NORMAL_ACKNOWLEDGED_CHANGE, all other nodes in
+            # NORMAL_ACKNOWLEDGED_CHANGE state, all other nodes in
             # LEAVING_CONFIG_CHANGED or NORMAL_CONFIG_CHANGED
             # state.
             return LEAVING_CONFIG_CHANGING
-        elif (all((state == LEAVING_CONFIG_CHANGED or
-                  state == NORMAL_CONFIG_CHANGED or
-                  state == FINISHED or
-                  state == NORMAL) for state in node_states) and
-              (LEAVING_CONFIG_CHANGED in node_states or
-               NORMAL_CONFIG_CHANGED in node_states)):
+        elif ((node_state_counts[LEAVING_CONFIG_CHANGED] +
+               node_state_counts[NORMAL_CONFIG_CHANGED] +
+               node_state_counts[NORMAL] +
+               node_state_counts[FINISHED] == node_count) and
+              (node_state_counts[LEAVING_CONFIG_CHANGED] > 0 or
+               node_state_counts[NORMAL_CONFIG_CHANGED] > 0)):
             # All nodes in LEAVING_CONFIG_CHANGED,
             # NORMAL_CONFIG_CHANGED, FINISHED or NORMAL state.
             return LEAVING_RESYNCING
-        elif all((state == NORMAL or
-                  state == FINISHED) for state in node_states):
+        elif (node_state_counts[NORMAL] +
+              node_state_counts[FINISHED] == node_count):
             # All nodes in NORMAL or FINISHED state.
             return FINISHED_LEAVING
         else:
@@ -168,8 +182,8 @@ class EtcdSynchronizer(object):
                 while not self._terminate_flag:
                     try:
                         result = self._client.watch(self._key,
-                                                     index=self._index+1,
-                                                     timeout=0.1)
+                                                    index=self._index+1,
+                                                    timeout=0.1)
                         break
                     except urllib3.exceptions.TimeoutError:
                         pass
