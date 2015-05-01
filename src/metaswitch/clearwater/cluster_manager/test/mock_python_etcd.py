@@ -3,6 +3,7 @@ import etcd
 from etcd import EtcdResult
 from random import random
 from time import sleep
+import urllib3
 
 allowed_key = '/test'
 global_data = ""
@@ -13,6 +14,7 @@ class MockEtcdClient(object):
     def __init__(self, _host, _port):
         pass
 
+    @classmethod
     def clear(self):
         global global_index
         global global_data
@@ -29,20 +31,25 @@ class MockEtcdClient(object):
         return r
 
     def get(self, key):
+        global_condvar.acquire()
         assert(key == allowed_key)
         if global_index == 0:
+            global_condvar.release()
             raise etcd.EtcdKeyError()
-        return self.fake_result()
+        ret = self.fake_result()
+        global_condvar.release()
+        return ret
 
     def write(self, key, value, prevIndex=0, prevExist=None):
         global global_index
         global global_data
         assert(key == allowed_key)
-        if (prevIndex != global_index) and (prevIndex != 0):
-            raise ValueError()
-        if prevExist and global_index != 0:
-            raise ValueError()
         global_condvar.acquire()
+        if (((prevIndex != global_index) and (prevIndex != 0)) or
+            (prevExist and global_index != 0)):
+            global_condvar.release()
+            raise ValueError()
+            raise ValueError()
         #print "%s successfully written" % value
         global_data = value
         global_index += 1
@@ -55,8 +62,12 @@ class MockEtcdClient(object):
         global_condvar.acquire()
         if index > global_index:
             global_condvar.wait(0.1)
+        if index > global_index:
+            global_condvar.release()
+            raise urllib3.exceptions.TimeoutError
+        ret = self.fake_result()
         global_condvar.release()
-        return self.fake_result()
+        return ret
 
     def eternal_watch(self, key, index=None):
         return self.watch(key, index, 36000)

@@ -5,7 +5,7 @@ _log = logging.getLogger("example_plugin")
 
 
 class DummyPlugin(SynchroniserPluginBase):
-    def __init__(self):
+    def __init__(self, ip):
         _log.debug("Raising not-clustered alarm")
 
     def key(self):

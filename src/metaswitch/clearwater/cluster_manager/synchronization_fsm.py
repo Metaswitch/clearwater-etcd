@@ -10,6 +10,8 @@ def safe_plugin(f, cluster_view, new_state=None):
     try:
         f(cluster_view)
         return new_state
+    except AssertionError:
+        raise
     except Exception as e:
         _log.error("Call to {} "
                    "with cluster {} caused exception {}".format(f,
