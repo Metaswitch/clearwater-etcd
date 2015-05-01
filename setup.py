@@ -34,6 +34,7 @@
 
 import logging
 import sys
+import multiprocessing
 
 from setuptools import setup, find_packages
 

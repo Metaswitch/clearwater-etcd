@@ -2,6 +2,7 @@
 
 import etcd
 import json
+from threading import Thread
 
 from .constants import *
 from .synchronization_fsm import SyncFSM
@@ -16,12 +17,25 @@ class EtcdSynchronizer(object):
         self._key = plugin._key
         self._index = None
         self._leaving_flag = False
+        self._terminate_flag = False
+        self.thread = Thread(target=self.main)
+
+    def start_thread(self):
+        self.thread.daemon = True
+        self.thread.start()
+
+    def terminate(self):
+        self._terminate_flag = True
+        self.thread.join()
+        self._fsm.quit()
 
     def main(self):
         # Continue looping while the FSM is running.
         while self._fsm.is_running():
             # This blocks on changes to the cluster in etcd.
             cluster_view = self.read_from_etcd()
+            if self._terminate_flag:
+                return
             cluster_state = self.calculate_cluster_state(cluster_view)
 
             # This node can only leave the cluster if the cluster is in a stable
@@ -151,8 +165,16 @@ class EtcdSynchronizer(object):
             if self._index is None:
                 result = self._client.get(self._key)
             else:
-                result = self._client.eternal_watch(self._key,
-                                                    index=self._index+1)
+                while not self._terminate_flag:
+                    try:
+                        result = self._client.watch(self._key,
+                                                     index=self._index+1,
+                                                     timeout=0.1)
+                        break
+                    except urllib3.exceptions.TimeoutError:
+                        pass
+            if self._terminate_flag:
+                return
             cluster_view = json.loads(result.value)
             self._index = result.modifiedIndex
         except etcd.EtcdKeyError:

@@ -27,6 +27,9 @@ class SyncFSM(object):
         self._running = True
         self._alarm = TooLongAlarm()
 
+    def quit(self):
+        self._alarm.quit()
+
     def is_running(self):
         return self._running
 
@@ -56,7 +59,7 @@ class SyncFSM(object):
         if local_state == NORMAL:
             self._alarm.cancel()
         else:
-            self._alarm.trigger()
+            self._alarm.trigger(self._id)
 
         if cluster_state == STABLE:
             if local_state == NORMAL:

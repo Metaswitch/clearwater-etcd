@@ -14,33 +14,37 @@ class TestTooLongAlarm(unittest.TestCase):
     @patch("metaswitch.clearwater.cluster_manager.alarms.issue_alarm")
     def test_raising(self, mock_issue_alarm):
         alarm = TooLongAlarm(0.1)
-        alarm.trigger()
+        alarm.trigger("a")
         sleep(0.3)
         self.assertIn(call(RAISE_TOO_LONG_CLUSTERING), mock_issue_alarm.call_args_list)
+        alarm.quit()
 
     @patch("metaswitch.clearwater.cluster_manager.alarms.issue_alarm")
     def test_not_triggered_early(self, mock_issue_alarm):
         alarm = TooLongAlarm(0.1)
-        alarm.trigger()
+        alarm.trigger("b")
         self.assertEqual([], mock_issue_alarm.call_args_list)
         sleep(0.3)
         self.assertIn(call(RAISE_TOO_LONG_CLUSTERING), mock_issue_alarm.call_args_list)
+        alarm.quit()
 
     @patch("metaswitch.clearwater.cluster_manager.alarms.issue_alarm")
     def test_cancellation(self, mock_issue_alarm):
         alarm = TooLongAlarm(0.1)
-        alarm.trigger()
+        alarm.trigger("c")
         alarm.cancel()
 
         sleep(0.3)
         self.assertNotIn(call(RAISE_TOO_LONG_CLUSTERING), mock_issue_alarm.call_args_list)
+        alarm.quit()
 
     @patch("metaswitch.clearwater.cluster_manager.alarms.issue_alarm")
     def test_clearing(self, mock_issue_alarm):
         alarm = TooLongAlarm(0.1)
-        alarm.trigger()
+        alarm.trigger("d")
         sleep(0.3)
         alarm.cancel()
 
         self.assertEqual([call(RAISE_TOO_LONG_CLUSTERING), call(CLEAR_TOO_LONG_CLUSTERING)],
                           mock_issue_alarm.call_args_list)
+        alarm.quit()

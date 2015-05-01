@@ -108,11 +108,19 @@ class TooLongAlarm(object):
             issue_alarm(RAISE_TOO_LONG_CLUSTERING)
         self._condvar.release()
 
-    def trigger(self):
+    def trigger(self, thread_name="Alarm thread"):
         self._should_alarm = True
         if self._timer_thread is None:
-            self._timer_thread = Thread(target=self.alarm)
+            self._timer_thread = Thread(target=self.alarm, name=thread_name)
             self._timer_thread.start()
+
+    def quit(self):
+        if self._timer_thread is not None:
+            self._should_alarm = False
+            self._condvar.acquire()
+            self._condvar.notify()
+            self._condvar.release()
+            self._timer_thread.join()
 
     def cancel(self):
         self._condvar.acquire()
