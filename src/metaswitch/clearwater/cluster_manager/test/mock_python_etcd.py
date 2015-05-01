@@ -40,11 +40,11 @@ class MockEtcdClient(object):
         global_condvar.release()
         return self.fake_result()
 
-    def watch(self, key, index=None, timeout=None):
+    def watch(self, key, index=None, timeout=None, recursive=None):
         assert(key == allowed_key)
         global_condvar.acquire()
         if index > global_index:
-            global_condvar.wait(timeout)
+            global_condvar.wait(0.1)
         global_condvar.release()
         return self.fake_result()
 

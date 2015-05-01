@@ -178,9 +178,15 @@ class EtcdSynchronizer(object):
                 while not self._terminate_flag:
                     try:
                         result = self._client.watch(self._key,
-                                                     index=self._index,
-                                                     timeout=5)
+                                                    index=self._index+1,
+                                                    timeout=5,
+                                                    recursive=False)
+                        _log.debug("result.modifiedIndex {}, self._index {}".format(result.modifiedIndex, self._index))
                         break
+                    except etcd.EtcdKeyError:
+                        raise
+                    except etcd.EtcdException:
+                        pass
                     except urllib3.exceptions.TimeoutError:
                         pass
             if self._terminate_flag:

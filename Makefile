@@ -64,9 +64,12 @@ include build-infra/cw-deb.mk
 reinstall-env:
 	${ENV_DIR}/bin/python setup.py install
 
+.PHONY: build-eggs
+build-eggs:
+	${ENV_DIR}/bin/python setup.py bdist_egg -d eggs
 
 .PHONY: deb
-deb: env deb-only
+deb: env build-eggs deb-only
 
 .PHONY: clean
 clean: envclean pyclean
