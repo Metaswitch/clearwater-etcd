@@ -7,7 +7,9 @@ _log = logging.getLogger("example_plugin")
 class DummyPlugin(SynchroniserPluginBase):
     def __init__(self):
         _log.debug("Raising not-clustered alarm")
-        self._key = "/test"
+
+    def key(self):
+        return "/test"
 
     def on_cluster_changing(self, cluster_view):
         _log.debug("New view of the cluster is {}".format(cluster_view))

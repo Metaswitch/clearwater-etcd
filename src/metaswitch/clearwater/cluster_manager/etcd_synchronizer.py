@@ -19,7 +19,7 @@ class EtcdSynchronizer(object):
         self._fsm = SyncFSM(plugin, ip)
         self._ip = ip
         self._client = etcd.Client(ip, 4000)
-        self._key = plugin._key
+        self._key = plugin.key()
         self._index = None
         self._last_cluster_view = {}
         self._leaving_flag = False

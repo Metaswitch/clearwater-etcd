@@ -5,6 +5,13 @@ class SynchroniserPluginBase(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
+    def key(self):
+
+        """This should return the etcd key to use to monitor this cluster's
+        state"""
+        pass
+
+    @abstractmethod
     def on_cluster_changing(self, cluster_view):
 
         """This hook is called when this node is already in the cluster, and the

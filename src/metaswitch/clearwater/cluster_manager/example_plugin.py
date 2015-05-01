@@ -8,6 +8,9 @@ class ExamplePlugin(SynchroniserPluginBase):
     def __init__(self):
         _log.debug("Raising not-clustered alarm")
 
+    def key(self):
+        return "/component/clustering/datastore"
+
     def on_cluster_changing(self, cluster_view):
         _log.debug("New view of the cluster is {}".format(cluster_view))
 
