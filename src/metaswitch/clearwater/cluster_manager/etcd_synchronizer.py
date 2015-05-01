@@ -7,6 +7,10 @@ from threading import Thread
 
 from .constants import *
 from .synchronization_fsm import SyncFSM
+import urllib3
+import logging
+
+_log = logging.getLogger("etcd_sync")
 
 
 class EtcdSynchronizer(object):
@@ -34,9 +38,11 @@ class EtcdSynchronizer(object):
         # Continue looping while the FSM is running.
         while self._fsm.is_running():
             # This blocks on changes to the cluster in etcd.
+            _log.debug("Waiting for state change from etcd")
             cluster_view = self.read_from_etcd()
             if self._terminate_flag:
                 return
+            _log.debug("Got new state %s from etcd" % cluster_view)
             cluster_state = self.calculate_cluster_state(cluster_view)
 
             # This node can only leave the cluster if the cluster is in a stable
@@ -46,6 +52,7 @@ class EtcdSynchronizer(object):
                 new_state = WAITING_TO_LEAVE
             else:
                 local_state = self.calculate_local_state(cluster_view)
+                _log.debug("Feeding %s, %s, %s into FSM" % (local_state, cluster_state, cluster_view))
                 new_state = self._fsm.next(local_state,
                                            cluster_state,
                                            cluster_view)
@@ -54,7 +61,10 @@ class EtcdSynchronizer(object):
             if new_state:
                 updated_cluster_view = self.update_cluster_view(cluster_view,
                                                                 new_state)
+                _log.debug("Writing state %s into etcd" % (updated_cluster_view))
                 self.write_to_etcd(updated_cluster_view)
+            else:
+                _log.debug("No state change")
 
     # This node has been asked to leave the cluster. Check if the cluster is in
     # a stable state, in which case we can leave. Otherwise, set a flag and
@@ -182,8 +192,8 @@ class EtcdSynchronizer(object):
                 while not self._terminate_flag:
                     try:
                         result = self._client.watch(self._key,
-                                                    index=self._index+1,
-                                                    timeout=0.1)
+                                                    index=self._index,
+                                                    timeout=5)
                         break
                     except urllib3.exceptions.TimeoutError:
                         pass

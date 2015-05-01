@@ -19,7 +19,7 @@ from docopt import docopt
 
 from metaswitch.common import logging_config, utils
 from metaswitch.clearwater.cluster_manager.pluginificator import load_plugins_in_dir
-from metaswitch.clearwater.cluster_manager.synchronization_fsm import FakeEtcdSynchronizer
+from metaswitch.clearwater.cluster_manager.etcd_synchronizer import EtcdSynchronizer
 import logging
 import os
 from time import sleep
@@ -65,11 +65,11 @@ def main(args):
     with open(arguments['--pidfile'], "w") as pidfile:
         pidfile.write(str(pid) + "\n")
 
-    plugins = load_plugins_in_dir("/home/vagrant/python_plugins/")
+    plugins = load_plugins_in_dir("/usr/share/clearwater/clearwater-cluster-manager/plugins/")
     synchronizers = []
     threads = []
     for plugin in plugins:
-        syncer = FakeEtcdSynchronizer(plugin, listen_ip)
+        syncer = EtcdSynchronizer(plugin, listen_ip)
         thread = Thread(target=syncer.main)
         thread.daemon = True
         thread.start()

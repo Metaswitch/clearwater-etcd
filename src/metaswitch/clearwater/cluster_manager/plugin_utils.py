@@ -32,11 +32,19 @@ def write_cluster_settings(filename, cluster_view):
 
     _log.debug("Writing out cluster_settings file '{}'".format(
         new_file_contents))
-    with open(filename) as f:
+    with open(filename, "w") as f:
         f.write(new_file_contents)
 
 
 def send_sighup(pidfile):
-    with open(pidfile) as f:
-        pid = int(f.read())
+    pid = -1
+    try:
+        with open(pidfile) as f:
+            pid = int(f.read())
+    except IOError, ValueError:
+        pass
+
+    if pid != -1:
         os.kill(pid, signal.SIGHUP)
+    else:
+        _log.info("Reading PID from {} failed - process probably not running".format(pidfile))

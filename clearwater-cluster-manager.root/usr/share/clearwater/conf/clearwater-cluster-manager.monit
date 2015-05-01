@@ -1,0 +1,13 @@
+# Check the clearwater-cluster-manager process.
+
+# Monitor the service's PID file and memory use.
+check process clearwater_cluster_manager with pidfile /var/run/clearwater-cluster-manager.pid
+
+  start program = "/bin/bash -c '/etc/init.d/clearwater-cluster-manager start'"
+  stop program = "/bin/bash -c '/etc/init.d/clearwater-cluster-manager stop'"
+  restart program = "/bin/bash -c '/etc/init.d/clearwater-cluster-manager restart'"
+
+  # Check the service's resource usage, and abort the process if it's too high. This will
+  # generate a (dummy) core file and trigger diagnostics collection.
+  if memory > 80% for 6 cycles then exec "/bin/bash -c '/etc/init.d/clearwater-cluster-manager abort'"
+

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# @file cluster-manager.init.d
+# @file clearwater-cluster-manager.init.d
 #
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015 Metaswitch Networks Ltd
@@ -35,24 +35,24 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 ### BEGIN INIT INFO
-# Provides:          cluster-manager
+# Provides:          clearwater-cluster-manager
 # Required-Start:    $network $local_fs
 # Required-Stop:
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: cluster-manager
-# Description:       cluster-manager
+# Short-Description: clearwater-cluster-manager
+# Description:       clearwater-cluster-manager
 ### END INIT INFO
 
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
-DESC=cluster-manager       # Introduce a short description here
-NAME=cluster-manager       # Introduce the short server's name here (not suitable for --name)
-USER=cluster-manager       # Username to run as
-DAEMON=/usr/share/clearwater/bin/cluster-manager # Introduce the server's location here
-ACTUAL_EXEC=/usr/share/clearwater/cluster-manager/env/bin/python
-DAEMON_DIR=/usr/share/clearwater/cluster-manager/
-PIDFILE=/var/run/$NAME/$NAME.pid
+DESC=clearwater-cluster-manager       # Introduce a short description here
+NAME=clearwater-cluster-manager       # Introduce the short server's name here (not suitable for --name)
+USER=clearwater-cluster-manager       # Username to run as
+DAEMON=/usr/share/clearwater/bin/clearwater-cluster-manager # Introduce the server's location here
+ACTUAL_EXEC=/usr/share/clearwater/clearwater-cluster-manager/env/bin/python
+DAEMON_DIR=/usr/share/clearwater/clearwater-cluster-manager/
+PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
 # Exit if the package is not installed
@@ -81,7 +81,7 @@ do_start()
 
         . /etc/clearwater/config
         log_level=2
-        log_directory=/var/log/cluster-manager
+        log_directory=/var/log/clearwater-cluster-manager
         [ -r /etc/clearwater/user_settings ] && . /etc/clearwater/user_settings
 
         DAEMON_ARGS="--local-ip=$local_ip --log-level=$log_level --log-directory=$log_directory --pidfile=$PIDFILE"
@@ -89,7 +89,7 @@ do_start()
 	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null \
 		|| return 1
 
-        start-stop-daemon --start --quiet --chdir $DAEMON_DIR --chuid $USER --pidfile $PIDFILE --exec $DAEMON -- \
+        start-stop-daemon --start --quiet --chdir $DAEMON_DIR --pidfile $PIDFILE --exec $DAEMON -- \
 		$DAEMON_ARGS \
 		|| return 2
 	# Add code here, if necessary, that waits for the process to be ready
