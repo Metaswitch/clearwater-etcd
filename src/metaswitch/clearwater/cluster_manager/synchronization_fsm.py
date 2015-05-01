@@ -50,7 +50,7 @@ class SyncFSM(object):
     def _delete_myself(self, cluster_view):
         return {k: v for k, v in cluster_view.iteritems() if k != self._id}
 
-    def next(self, local_state, cluster_state, cluster_view): #noqa
+    def next(self, local_state, cluster_state, cluster_view):  # noqa
         _log.debug("Entered state machine for {} with local state {}, "
                    "cluster state {} and cluster view {}".format(
                        self._id,
@@ -81,7 +81,6 @@ class SyncFSM(object):
                 local_state == NORMAL):
             return safe_plugin(self._plugin.on_stable_cluster,
                                cluster_view)
-
 
         # States for joining a cluster
 

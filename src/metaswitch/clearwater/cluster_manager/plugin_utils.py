@@ -42,7 +42,7 @@ def send_sighup(pidfile):
     try:
         with open(pidfile) as f:
             pid = int(f.read())
-    except IOError, ValueError:
+    except (IOError, ValueError):
         pass
 
     if pid != -1:

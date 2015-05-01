@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import unittest
-from metaswitch.clearwater.cluster_manager.pluginificator import load_plugins_in_dir
+from metaswitch.clearwater.cluster_manager.plugin_loader import load_plugins_in_dir
 import logging
 import os
 
