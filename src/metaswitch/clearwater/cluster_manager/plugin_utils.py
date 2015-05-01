@@ -4,7 +4,7 @@ import signal
 from textwrap import dedent
 from metaswitch.clearwater.cluster_manager import constants
 
-_log = logging.getLogger("memcached_plugin")
+_log = logging.getLogger("cluster_manager.plugin_utils")
 
 
 def write_cluster_settings(filename, cluster_view):
@@ -13,7 +13,8 @@ def write_cluster_settings(filename, cluster_view):
                             constants.NORMAL_ACKNOWLEDGED_CHANGE,
                             constants.NORMAL_CONFIG_CHANGED,
                             constants.NORMAL]
-    valid_new_servers_states = [constants.NORMAL_ACKNOWLEDGED_CHANGE,
+    valid_new_servers_states = [constants.NORMAL,
+                                constants.NORMAL_ACKNOWLEDGED_CHANGE,
                                 constants.NORMAL_CONFIG_CHANGED,
                                 constants.JOINING_ACKNOWLEDGED_CHANGE,
                                 constants.JOINING_CONFIG_CHANGED]

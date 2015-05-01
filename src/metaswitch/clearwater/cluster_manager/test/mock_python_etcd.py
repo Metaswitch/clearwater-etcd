@@ -33,7 +33,7 @@ class MockEtcdClient(object):
         if prevExist and global_index != 0:
             raise ValueError()
         global_condvar.acquire()
-        print "%s successfully written" % value
+        #print "%s successfully written" % value
         global_data = value
         global_index += 1
         global_condvar.notify_all()
