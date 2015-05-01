@@ -74,7 +74,13 @@ class EtcdSynchronizer(object):
     # a stable state, in which case we can leave. Otherwise, set a flag and
     # leave at the next available opportunity.
     def leave_cluster(self):
-        cluster_view = self.read_from_etcd()
+        cluster_view = {}
+        result = self._client.get(self._key)
+        try:
+            cluster_view = json.loads(result.value)
+        except:
+            cluster_view = {}
+
         cluster_state = self.calculate_cluster_state(cluster_view)
 
         if cluster_state == STABLE:

@@ -2,7 +2,7 @@ import imp
 import os
 
 
-def load_plugins_in_dir(dir):
+def load_plugins_in_dir(dir, config):
     files = os.listdir(dir)
     plugins = []
     for filename in files:
@@ -12,5 +12,5 @@ def load_plugins_in_dir(dir):
             if file:
                 mod = imp.load_module(module_name, file, pathname, description)
                 if hasattr(mod, "load_as_plugin"):
-                    plugins.append(mod.load_as_plugin())
+                    plugins.append(mod.load_as_plugin(config))
     return plugins

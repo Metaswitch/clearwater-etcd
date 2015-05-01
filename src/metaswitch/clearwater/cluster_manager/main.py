@@ -26,6 +26,8 @@ from time import sleep
 from threading import Thread
 import signal
 
+_log = logging.getLogger("metaswitch.clearwater.cluster_manager.main")
+
 LOG_LEVELS = {'0': logging.CRITICAL,
               '1': logging.ERROR,
               '2': logging.WARNING,
@@ -33,19 +35,14 @@ LOG_LEVELS = {'0': logging.CRITICAL,
               '4': logging.DEBUG}
 
 def install_sigquit_handler(plugins):
-    """
-    Install SIGUSR1 handler to dump stack."
-    """
     def sigquit_handler(sig, stack):
-        """
-        Handle SIGUSR1 by dumping stack and terminating.
-        """
+        _log.debug("Handling SIGQUIT")
         for plugin in plugins:
+            _log.debug("{} leaving cluster".format(plugin))
             plugin.leave_cluster()
     signal.signal(signal.SIGQUIT, sigquit_handler)
 
 def main(args):
-    _log = logging.getLogger("metaswitch.clearwater.cluster_manager.main")
     arguments = docopt(__doc__, argv=args)
 
     listen_ip = arguments['--local-ip']
@@ -65,7 +62,7 @@ def main(args):
     with open(arguments['--pidfile'], "w") as pidfile:
         pidfile.write(str(pid) + "\n")
 
-    plugins = load_plugins_in_dir("/usr/share/clearwater/clearwater-cluster-manager/plugins/")
+    plugins = load_plugins_in_dir("/usr/share/clearwater/clearwater-cluster-manager/plugins/", listen_ip)
     synchronizers = []
     threads = []
     for plugin in plugins:
