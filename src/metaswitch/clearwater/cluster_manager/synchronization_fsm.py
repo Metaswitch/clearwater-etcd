@@ -66,7 +66,9 @@ class SyncFSM(object):
         # Handle the case where the local node isn't in the cluster first
 
         if local_state is None:
-            if cluster_state in [STABLE, JOIN_PENDING]:
+            if cluster_state == EMPTY:
+                return NORMAL
+            elif cluster_state in [STABLE, JOIN_PENDING]:
                 return self._switch_myself_to(WAITING_TO_JOIN, cluster_view)
             else:
                 return None
@@ -75,6 +77,11 @@ class SyncFSM(object):
                 local_state == NORMAL):
             return safe_plugin(self._plugin.on_stable_cluster,
                                cluster_view)
+        elif (cluster_state == STABLE_WITH_ERRORS and
+                local_state == NORMAL):
+            return safe_plugin(self._plugin.on_stable_cluster,
+                               cluster_view)
+
 
         # States for joining a cluster
 

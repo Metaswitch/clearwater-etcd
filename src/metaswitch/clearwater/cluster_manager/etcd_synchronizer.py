@@ -97,6 +97,7 @@ class EtcdSynchronizer(object):
         node_state_counts = defaultdict(int)
         node_states = cluster_view.values()
         node_count = 0
+        error_count = 0
 
         # Count the number of nodes in each state. This will make working out
         # the state of the cluster below easier.
@@ -107,10 +108,16 @@ class EtcdSynchronizer(object):
             # ERROR state.
             if state is not ERROR:
                 node_count += 1
+            else:
+                error_count += 1
 
-        if node_state_counts[NORMAL] == node_count:
-            # All nodes in NORMAL state.
+        if node_count == 0 and error_count == 0:
+            return EMPTY
+        elif node_state_counts[NORMAL] == node_count and error_count == 0:
             return STABLE
+        elif node_state_counts[NORMAL] == node_count:
+            # All nodes in NORMAL state.
+            return STABLE_WITH_ERRORS
         elif (node_state_counts[NORMAL] +
               node_state_counts[WAITING_TO_JOIN] == node_count):
             # All nodes in NORMAL or WAITING_TO_JOIN state.

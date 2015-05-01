@@ -1,5 +1,7 @@
 # Cluster states
+EMPTY = "empty"
 STABLE = "stable"
+STABLE_WITH_ERRORS = "stable with errors"
 JOIN_PENDING = "join pending"
 STARTED_JOINING = "started joining"
 JOINING_CONFIG_CHANGING = "joining, config changing"
