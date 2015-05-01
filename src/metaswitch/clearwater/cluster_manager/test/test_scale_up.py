@@ -2,7 +2,7 @@
 
 import unittest
 from mock import patch, call
-from .mock_python_etcd import MockEtcdClient
+from .mock_python_etcd import MockEtcdClient, SlowMockEtcdClient
 from metaswitch.clearwater.cluster_manager.etcd_synchronizer import EtcdSynchronizer
 from metaswitch.clearwater.cluster_manager.synchronization_fsm import SyncFSM
 from .dummy_plugin import DummyPlugin
@@ -15,15 +15,40 @@ class TestScaleUp(unittest.TestCase):
     def setUp(self):
         pass
 
-    def wait_for_state(self, client, ip, state, tries=20):
+    def wait_for_all_normal(self, client, required_number=-1, tries=20):
         for i in range(tries):
             try:
                 end = json.loads(client.get("/test").value)
-                if end.get(ip) == state:
+                if all([v == "normal" for k, v in end.iteritems()]) and \
+                   (required_number == -1 or len(end) == required_number):
                     return
             except EtcdKeyError:
                 pass
             sleep(0.1)
+
+
+    def make_and_start_synchronizers(self, num):
+        ips = ["10.0.0.%s" % d for d in range(num)]
+        self.syncs = [EtcdSynchronizer(DummyPlugin(), ip) for ip in ips]
+        for s in self.syncs:
+            s.start_thread()
+
+    def close_synchronizers(self):
+        for s in self.syncs:
+            s.terminate()
+
+    @patch("etcd.Client", new=SlowMockEtcdClient)
+    @patch("metaswitch.clearwater.cluster_manager.synchronization_fsm.TooLongAlarm")
+    def test_large_cluster(self, alarm):
+        SyncFSM.DELAY = 0.1
+        self.make_and_start_synchronizers(20)
+        mock_client = self.syncs[0]._client
+        self.wait_for_all_normal(mock_client, required_number=20, tries=300)
+        end = json.loads(mock_client.get("/test").value)
+        self.assertEqual("normal", end.get("10.0.0.3"))
+        self.assertEqual("normal", end.get("10.0.0.19"))
+        self.close_synchronizers()
+
 
 
     @patch("etcd.Client", new=MockEtcdClient)
@@ -36,7 +61,7 @@ class TestScaleUp(unittest.TestCase):
         mock_client = sync1._client
         for s in [sync1, sync2, sync3]:
             s.start_thread()
-        self.wait_for_state(mock_client, '10.0.0.3', 'normal')
+        self.wait_for_all_normal(mock_client, required_number=3)
         end = json.loads(mock_client.get("/test").value)
         self.assertEqual("normal", end.get("10.0.0.3"))
         for s in [sync1, sync2, sync3]:
@@ -54,7 +79,7 @@ class TestScaleUp(unittest.TestCase):
         mock_client.write("/test", json.dumps({"10.0.0.1": "normal", "10.0.0.2": "normal"}))
         for s in [sync1, sync2, sync3]:
             s.start_thread()
-        self.wait_for_state(mock_client, '10.0.0.3', 'normal')
+        self.wait_for_all_normal(mock_client, required_number=3)
         end = json.loads(mock_client.get("/test").value)
         self.assertEqual("normal", end.get("10.0.0.3"))
         for s in [sync1, sync2, sync3]:
@@ -73,6 +98,7 @@ class TestScaleUp(unittest.TestCase):
             s.start_thread()
         sync2.leave_cluster()
         sync2.thread.join(20)
+        self.wait_for_all_normal(mock_client, required_number=2)
         end = json.loads(mock_client.get("/test").value)
         self.assertEqual(None, end.get("10.0.1.2"))
         sync1.terminate()
@@ -90,7 +116,7 @@ class TestScaleUp(unittest.TestCase):
         mock_client.write("/test", json.dumps({"10.0.0.1": "normal", "10.0.0.2": "normal"}))
         for s in [sync1, sync2, sync3, sync4]:
             s.start_thread()
-        self.wait_for_state(mock_client, '10.0.0.3', 'normal')
+        self.wait_for_all_normal(mock_client, required_number=4)
         end = json.loads(mock_client.get("/test").value)
         self.assertEqual("normal", end.get("10.0.0.3"))
         self.assertEqual("normal", end.get("10.0.0.4"))
