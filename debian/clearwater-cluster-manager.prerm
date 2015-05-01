@@ -38,52 +38,44 @@
 set -e
 
 # summary of how this script can be called:
-#        * <postinst> `configure' <most-recently-configured-version>
-#        * <old-postinst> `abort-upgrade' <new version>
-#        * <conflictor's-postinst> `abort-remove' `in-favour' <package>
-#          <new-version>
-#        * <postinst> `abort-remove'
-#        * <deconfigured's-postinst> `abort-deconfigure' `in-favour'
-#          <failed-install-package> <version> `removing'
+#        * <prerm> `remove'
+#        * <old-prerm> `upgrade' <new-version>
+#        * <new-prerm> `failed-upgrade' <old-version>
+#        * <conflictor's-prerm> `remove' `in-favour' <package> <new-version>
+#        * <deconfigured's-prerm> `deconfigure' `in-favour'
+#          <package-being-installed> <version> `removing'
 #          <conflicting-package> <version>
 # for details, see http://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
 
-NAME=cluster-manager
-BASE_DIR=/usr/share/clearwater/cluster-manager
+NAME=clearwater-cluster-manager
+BASE_DIR=/usr/share/clearwater/clearwater-cluster-manager
 
 case "$1" in
-    configure)
-        # Create the specific user.
-        if ! grep -q "^$NAME:" /etc/passwd ; then
-            useradd --system -M -d /nonexistent -s /bin/false $NAME
+    remove|upgrade|deconfigure)
+        # Stop monitoring the process
+        rm -f /etc/monit/conf.d/clearwater-cluster-manager.monit
+        reload clearwater-monit &> /dev/null || true
+        # Make sure the process is stopped - do this before env is removed,
+        # or init.d script won't work
+        service clearwater-cluster-manager stop
+        # Now do necessary cleanup
+        rm -rf $BASE_DIR/env
+        rm -rf /var/run/$NAME
+
+        # Don't remove the user if we're just upgrading.
+        if [ $1 != "upgrade" ]; then
+          if grep -q "^$NAME:" /etc/passwd ; then
+            userdel $NAME
+          fi
         fi
-        # Ensure the log directory exists and is owned by the user.
-        mkdir -p -m 755 /var/log/$NAME
-        chown -R $NAME:root /var/log/$NAME
-
-        virtualenv --python=$(which python) $BASE_DIR/env
-        $BASE_DIR/env/bin/easy_install --allow-hosts=None -f $BASE_DIR/eggs/ $BASE_DIR/eggs/*.egg
-        chown -R $NAME:root $BASE_DIR/env
-
-
-        # Start monit monitoring
-        install -D --mode=0644 /usr/share/clearwater/conf/cluster-manager.monit /etc/monit/conf.d/        
-        reload clearwater-monit || true
-
-        # Restart cluster-manager.  Always do this by terminating cluster-manager so monit will
-        # restart it more-or-less immediately.  (monit restart seems to have
-        # significant lag.)
-        # Don't fail if it's already stopped.
-        service cluster-manager stop || true
-
     ;;
 
-    abort-upgrade|abort-remove|abort-deconfigure)
+    failed-upgrade)
     ;;
 
     *)
-        echo "postinst called with unknown argument \`$1'" >&2
+        echo "prerm called with unknown argument \`$1'" >&2
         exit 1
     ;;
 esac

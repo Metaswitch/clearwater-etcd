@@ -92,7 +92,6 @@ class SyncFSM(object):
             elif local_state == NORMAL:
                 return self._switch_myself_to(NORMAL_ACKNOWLEDGED_CHANGE, cluster_view)
             elif local_state == JOINING:
-                self._plugin.on_joining_cluster(cluster_view)
                 return self._switch_myself_to(JOINING_ACKNOWLEDGED_CHANGE, cluster_view)
 
         elif cluster_state == JOINING_CONFIG_CHANGING:
@@ -111,10 +110,10 @@ class SyncFSM(object):
                     return None
             elif local_state == JOINING_ACKNOWLEDGED_CHANGE:
                 try:
-                    self._plugin.on_cluster_changing(cluster_view)
+                    self._plugin.on_joining_cluster(cluster_view)
                     return self._switch_myself_to(JOINING_CONFIG_CHANGED, cluster_view)
                 except Exception as e:
-                    _log.error("Call to on_cluster_changing method of {} "
+                    _log.error("Call to on_joining_cluster method of {} "
                                "with cluster {} caused exception {}".format(
                                self._plugin,
                                cluster_view,
