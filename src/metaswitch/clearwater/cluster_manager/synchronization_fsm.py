@@ -61,6 +61,13 @@ class SyncFSM(object):
         else:
             self._alarm.trigger(self._id)
 
+
+        if local_state is None:
+            if cluster_state in [STABLE, JOIN_PENDING]:
+                return self._switch_myself_to(WAITING_TO_JOIN, cluster_view)
+            else:
+                return None
+
         if cluster_state == STABLE:
             if local_state == NORMAL:
                 try:
@@ -72,8 +79,6 @@ class SyncFSM(object):
                                cluster_view,
                                e))
                 return None
-            elif local_state is None:
-                return self._switch_myself_to(WAITING_TO_JOIN, cluster_view)
 
         # States for joining a cluster
 
@@ -83,8 +88,6 @@ class SyncFSM(object):
                 return self._switch_all_to_joining(cluster_view)
             elif local_state == NORMAL:
                 return None
-            elif local_state is None:
-                return self._switch_myself_to(WAITING_TO_JOIN, cluster_view)
 
         elif cluster_state == STARTED_JOINING:
             if local_state in [JOINING_ACKNOWLEDGED_CHANGE, NORMAL_ACKNOWLEDGED_CHANGE]:
@@ -179,7 +182,7 @@ class SyncFSM(object):
                     return None
 
         elif cluster_state == LEAVING_RESYNCING:
-            if local_state == NORMAL:
+            if local_state in [NORMAL, FINISHED]:
                 return None
             elif local_state == LEAVING_CONFIG_CHANGED:
                 try:

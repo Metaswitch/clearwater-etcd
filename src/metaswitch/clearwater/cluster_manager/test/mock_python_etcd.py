@@ -1,15 +1,25 @@
 from threading import Condition
 import etcd
 from etcd import EtcdResult
+from random import random
+from time import sleep
 
 allowed_key = '/test'
-global_data = "{}"
+global_data = ""
 global_index = 0
 global_condvar = Condition()
 
 class MockEtcdClient(object):
     def __init__(self, _host, _port):
         pass
+
+    def clear(self):
+        global global_index
+        global global_data
+        global_condvar.acquire()
+        global_index = 0
+        global_data = ""
+        global_condvar.release()
 
     def fake_result(self):
         r = EtcdResult(None, {})
@@ -50,3 +60,10 @@ class MockEtcdClient(object):
 
     def eternal_watch(self, key, index=None):
         return self.watch(key, index, 36000)
+
+
+class SlowMockEtcdClient(MockEtcdClient):
+    def write(self, key, value, prevIndex=0, prevExist=None):
+        """Make writes take 0-200ms to discover race conditions"""
+        sleep(random()/5.0)
+        super(SlowMockEtcdClient, self).write(key, value, prevIndex=prevIndex, prevExist=prevExist)
