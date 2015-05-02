@@ -33,7 +33,6 @@ class EtcdSynchronizer(object):
     def terminate(self):
         self._terminate_flag = True
         self.thread.join()
-        self._fsm.quit()
 
     def main(self):
         # Continue looping while the FSM is running.
@@ -42,7 +41,7 @@ class EtcdSynchronizer(object):
             _log.debug("Waiting for state change from etcd")
             cluster_view = self.read_from_etcd()
             if self._terminate_flag:
-                return
+                break
             _log.debug("Got new state %s from etcd" % cluster_view)
             cluster_state = self.calculate_cluster_state(cluster_view)
 
@@ -66,6 +65,7 @@ class EtcdSynchronizer(object):
                 self.write_to_etcd(updated_cluster_view)
             else:
                 _log.debug("No state change")
+        self._fsm.quit()
 
     # This node has been asked to leave the cluster. Check if the cluster is in
     # a stable state, in which case we can leave. Otherwise, set a flag and
@@ -275,5 +275,7 @@ class EtcdSynchronizer(object):
                 # WAITING_TO_LEAVE, in which case we no longer need the leaving
                 # flag.
                 self._leaving_flag = False
+        except etcd.EtcdException as e:
+            print "{} caught {!r} when trying to write {} with index {}".format(self._ip, e, json_data, self._index)
         except ValueError:
             pass

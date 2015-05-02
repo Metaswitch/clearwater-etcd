@@ -13,8 +13,7 @@ class TestContention(BaseClusterTest):
 
     @unittest.skipUnless(os.environ.get("SLOW"), "SLOW=T not set")
     @patch("etcd.Client", new=SlowMockEtcdClient)
-    @patch("metaswitch.clearwater.cluster_manager.synchronization_fsm.TooLongAlarm")
-    def test_write_contention(self, alarm):
+    def test_write_contention(self):
         self.make_and_start_synchronizers(30, klass=ContentionDetectingPlugin)
         mock_client = self.syncs[0]._client
         self.wait_for_all_normal(mock_client, required_number=30, tries=300)

@@ -1,15 +1,22 @@
 from threading import Condition
 import etcd
-from etcd import EtcdResult
+from etcd import EtcdResult, Client
 from random import random
 from time import sleep
 import urllib3
+import os
 
 allowed_key = '/test'
 global_data = ""
 global_index = 0
 global_condvar = Condition()
 
+def EtcdFactory(*args, **kwargs):
+    if os.environ.get('ETCD_IP'):
+        return Client(os.environ.get('ETCD_IP'),
+                      os.environ.get('ETCD_PORT', 4001))
+    else:
+        return MockEtcdClient(None, None)
 
 class MockEtcdClient(object):
     def __init__(self, _host, _port):

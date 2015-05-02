@@ -17,8 +17,7 @@ from .test_base import BaseClusterTest
 class TestScaleDown(BaseClusterTest):
 
     @patch("etcd.Client", new=MockEtcdClient)
-    @patch("metaswitch.clearwater.cluster_manager.synchronization_fsm.TooLongAlarm")
-    def test_scale_down(self, alarm):
+    def test_scale_down(self):
         sync1 = EtcdSynchronizer(DummyPlugin(None), '10.0.1.1')
         sync2 = EtcdSynchronizer(DummyPlugin(None), '10.0.1.2')
         mock_client = sync1._client

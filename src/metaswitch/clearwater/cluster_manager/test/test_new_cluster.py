@@ -2,7 +2,7 @@
 
 import unittest
 from mock import patch, call
-from .mock_python_etcd import MockEtcdClient, SlowMockEtcdClient
+from .mock_python_etcd import EtcdFactory, SlowMockEtcdClient
 from metaswitch.clearwater.cluster_manager.etcd_synchronizer import EtcdSynchronizer
 from metaswitch.clearwater.cluster_manager.synchronization_fsm import SyncFSM
 from .dummy_plugin import DummyPlugin
@@ -17,23 +17,8 @@ from .test_base import BaseClusterTest
 
 class TestNewCluster(BaseClusterTest):
 
-    @unittest.skipUnless(os.environ.get("SLOW"), "SLOW=T not set")
-    @patch("etcd.Client", new=SlowMockEtcdClient)
-    @patch("metaswitch.clearwater.cluster_manager.synchronization_fsm.TooLongAlarm")
-    def test_large_new_cluster(self, alarm):
-        self.make_and_start_synchronizers(30)
-        mock_client = self.syncs[0]._client
-        self.wait_for_all_normal(mock_client, required_number=30, tries=300)
-        end = json.loads(mock_client.get("/test").value)
-        self.assertEqual("normal", end.get("10.0.0.3"))
-        self.assertEqual("normal", end.get("10.0.0.19"))
-        self.assertEqual("normal", end.get("10.0.0.29"))
-        self.close_synchronizers()
-
-
-    @patch("etcd.Client", new=MockEtcdClient)
-    @patch("metaswitch.clearwater.cluster_manager.synchronization_fsm.TooLongAlarm")
-    def test_new_cluster(self, alarm):
+    @patch("etcd.Client", new=EtcdFactory)
+    def test_new_cluster(self):
         sync1 = EtcdSynchronizer(DummyPlugin(None), '10.0.0.1')
         sync2 = EtcdSynchronizer(DummyPlugin(None), '10.0.0.2')
         sync3 = EtcdSynchronizer(DummyPlugin(None), '10.0.0.3')
@@ -46,3 +31,26 @@ class TestNewCluster(BaseClusterTest):
         for s in [sync1, sync2, sync3]:
             s.terminate()
 
+    @patch("etcd.Client", new=EtcdFactory)
+    def test_large_new_cluster(self):
+        self.make_and_start_synchronizers(30)
+        mock_client = self.syncs[0]._client
+        self.wait_for_all_normal(mock_client, required_number=30, tries=300)
+        end = json.loads(mock_client.get("/test").value)
+        self.assertEqual("normal", end.get("10.0.0.3"))
+        self.assertEqual("normal", end.get("10.0.0.19"))
+        self.assertEqual("normal", end.get("10.0.0.29"))
+        self.close_synchronizers()
+
+
+    @unittest.skipUnless(os.environ.get("SLOW"), "SLOW=T not set")
+    @patch("etcd.Client", new=SlowMockEtcdClient)
+    def test_large_new_cluster_with_delays(self):
+        self.make_and_start_synchronizers(30)
+        mock_client = self.syncs[0]._client
+        self.wait_for_all_normal(mock_client, required_number=30, tries=300)
+        end = json.loads(mock_client.get("/test").value)
+        self.assertEqual("normal", end.get("10.0.0.3"))
+        self.assertEqual("normal", end.get("10.0.0.19"))
+        self.assertEqual("normal", end.get("10.0.0.29"))
+        self.close_synchronizers()
