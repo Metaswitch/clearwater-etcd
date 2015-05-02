@@ -26,4 +26,3 @@ class DummyPlugin(SynchroniserPluginBase):
 
     def on_leaving_cluster(self, cluster_view):
         _log.info("I'm out of the cluster")
-

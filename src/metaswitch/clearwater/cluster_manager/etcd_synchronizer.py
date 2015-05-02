@@ -53,9 +53,6 @@ class EtcdSynchronizer(object):
                 new_state = WAITING_TO_LEAVE
             else:
                 local_state = self.calculate_local_state(cluster_view)
-                _log.debug("Feeding %s, %s, %s into FSM" % (local_state,
-                                                            cluster_state,
-                                                            cluster_view))
                 new_state = self._fsm.next(local_state,
                                            cluster_state,
                                            cluster_view)

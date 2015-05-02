@@ -1,18 +1,15 @@
 #!/usr/bin/env python
 
 import unittest
-from mock import patch, call
-from .mock_python_etcd import MockEtcdClient, SlowMockEtcdClient
-from metaswitch.clearwater.cluster_manager.etcd_synchronizer import EtcdSynchronizer
+from .mock_python_etcd import MockEtcdClient
 from metaswitch.clearwater.cluster_manager.synchronization_fsm import SyncFSM
+from metaswitch.clearwater.cluster_manager.etcd_synchronizer import \
+    EtcdSynchronizer
 from .dummy_plugin import DummyPlugin
-from .contention_detecting_plugin import ContentionDetectingPlugin
-from threading import Thread
 from time import sleep
 import json
 from etcd import EtcdKeyError
-import logging
-import os
+
 
 class BaseClusterTest(unittest.TestCase):
     def setUp(self):
@@ -30,7 +27,6 @@ class BaseClusterTest(unittest.TestCase):
                 pass
             sleep(0.1)
 
-
     def make_and_start_synchronizers(self, num, klass=DummyPlugin):
         ips = ["10.0.0.%s" % d for d in range(num)]
         self.syncs = [EtcdSynchronizer(klass(ip), ip) for ip in ips]
@@ -40,5 +36,3 @@ class BaseClusterTest(unittest.TestCase):
     def close_synchronizers(self):
         for s in self.syncs:
             s.terminate()
-
-

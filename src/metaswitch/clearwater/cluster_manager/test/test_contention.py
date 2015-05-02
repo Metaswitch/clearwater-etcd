@@ -1,19 +1,13 @@
 #!/usr/bin/env python
 
 import unittest
-from mock import patch, call
-from .mock_python_etcd import MockEtcdClient, SlowMockEtcdClient
-from metaswitch.clearwater.cluster_manager.etcd_synchronizer import EtcdSynchronizer
-from metaswitch.clearwater.cluster_manager.synchronization_fsm import SyncFSM
-from .dummy_plugin import DummyPlugin
+from mock import patch
+from .mock_python_etcd import SlowMockEtcdClient
 from .contention_detecting_plugin import ContentionDetectingPlugin
-from threading import Thread
-from time import sleep
 import json
-from etcd import EtcdKeyError
-import logging
 import os
 from .test_base import BaseClusterTest
+
 
 class TestContention(BaseClusterTest):
 
@@ -29,4 +23,3 @@ class TestContention(BaseClusterTest):
         self.assertEqual("normal", end.get("10.0.0.19"))
         self.assertEqual("normal", end.get("10.0.0.29"))
         self.close_synchronizers()
-

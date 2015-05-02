@@ -20,21 +20,18 @@ class ContentionDetectingPlugin(SynchroniserPluginBase):
     def on_cluster_changing(self, cluster_view):
         nodes = sorted(cluster_view.keys())
         assert nodes not in self.on_cluster_changing_nodes,\
-               "on_cluster_changing called twice with nodes {}".format(nodes)
+            "on_cluster_changing called twice with nodes {}".format(nodes)
         self.on_cluster_changing_nodes.append(nodes)
-        _log.debug("!!!!! {} sees cluster changing! New view of the cluster is {}".format(self.ip, cluster_view))
 
     def on_joining_cluster(self, cluster_view):
         nodes = sorted(cluster_view.keys())
         assert(nodes not in self.on_joining_nodes)
         self.on_joining_nodes.append(nodes)
-        _log.info("I'm about to join the cluster")
 
     def on_new_cluster_config_ready(self, cluster_view):
         nodes = sorted(cluster_view.keys())
         assert(nodes not in self.on_new_cluster_config_ready_nodes)
         self.on_new_cluster_config_ready_nodes.append(nodes)
-        _log.info("All nodes have updated configuration")
 
     def on_stable_cluster(self, cluster_view):
         nodes = sorted(cluster_view.keys())
@@ -45,5 +42,3 @@ class ContentionDetectingPlugin(SynchroniserPluginBase):
         nodes = sorted(cluster_view.keys())
         assert(nodes not in self.on_leaving_cluster_nodes)
         self.on_leaving_cluster_nodes.append(nodes)
-        _log.info("I'm out of the cluster")
-

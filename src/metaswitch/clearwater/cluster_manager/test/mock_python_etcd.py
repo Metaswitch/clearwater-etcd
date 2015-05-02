@@ -10,6 +10,7 @@ global_data = ""
 global_index = 0
 global_condvar = Condition()
 
+
 class MockEtcdClient(object):
     def __init__(self, _host, _port):
         pass
@@ -46,11 +47,9 @@ class MockEtcdClient(object):
         assert(key == allowed_key)
         global_condvar.acquire()
         if (((prevIndex != global_index) and (prevIndex != 0)) or
-            (prevExist and global_index != 0)):
+                (prevExist and global_index != 0)):
             global_condvar.release()
             raise ValueError()
-            raise ValueError()
-        #print "%s successfully written" % value
         global_data = value
         global_index += 1
         global_condvar.notify_all()
