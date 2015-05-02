@@ -111,81 +111,56 @@ class EtcdSynchronizer(object):
             else:
                 error_count += 1
 
+        def state_check(zeroOrMore=None, oneOrMore=None):
+            if not zeroOrMore:
+                zeroOrMore = []
+            if not oneOrMore:
+                oneOrMore = []
+
+            states_to_sum = zeroOrMore + oneOrMore
+
+            total = sum([node_state_counts[i] for i in states_to_sum])
+            has_minimum = sum([node_state_counts[i] for i in oneOrMore]) > 0
+
+            return has_minimum and (total == node_count)
+
         if node_count == 0 and error_count == 0:
             return EMPTY
         elif node_state_counts[NORMAL] == node_count and error_count == 0:
             return STABLE
         elif node_state_counts[NORMAL] == node_count:
-            # All nodes in NORMAL state.
             return STABLE_WITH_ERRORS
-        elif (node_state_counts[NORMAL] +
-              node_state_counts[WAITING_TO_JOIN] == node_count):
-            # All nodes in NORMAL or WAITING_TO_JOIN state.
+        elif state_check(oneOrMore=[NORMAL, WAITING_TO_JOIN]):
             return JOIN_PENDING
-        elif ((node_state_counts[JOINING] +
-               node_state_counts[JOINING_ACKNOWLEDGED_CHANGE] +
-               node_state_counts[NORMAL_ACKNOWLEDGED_CHANGE] +
-               node_state_counts[NORMAL] == node_count) and
-              (node_state_counts[JOINING] > 0 or
-               node_state_counts[NORMAL] > 0)):
-            # At least one node in either JOINING or NORMAL state, all other
-            # nodes in JOINING_ACKNOWLEDGED_CHANGE or NORMAL_ACKNOWLEDGED_CHANGE
-            # state.
+        elif state_check(oneOrMore=[NORMAL, JOINING],
+                         zeroOrMore=[NORMAL_ACKNOWLEDGED_CHANGE,
+                                     JOINING_ACKNOWLEDGED_CHANGE]):
             return STARTED_JOINING
-        elif ((node_state_counts[JOINING_ACKNOWLEDGED_CHANGE] +
-               node_state_counts[NORMAL_ACKNOWLEDGED_CHANGE] +
-               node_state_counts[JOINING_CONFIG_CHANGED] +
-               node_state_counts[NORMAL_CONFIG_CHANGED] == node_count) and
-              (node_state_counts[JOINING_ACKNOWLEDGED_CHANGE] > 0 or
-               node_state_counts[NORMAL_ACKNOWLEDGED_CHANGE] > 0)):
-            # At least one node in either JOINING_ACKNOWLEDGED_CHANGE or
-            # NORMAL_ACKNOWLEDGED_CHANGE state, all other nodes in
-            # JOINING_CONFIG_CHANGED or NORMAL_CONFIG_CHANGED
-            # state.
+        elif state_check(oneOrMore=[NORMAL_ACKNOWLEDGED_CHANGE,
+                                    JOINING_ACKNOWLEDGED_CHANGE],
+                         zeroOrMore=[NORMAL_CONFIG_CHANGED,
+                                     JOINING_CONFIG_CHANGED]):
             return JOINING_CONFIG_CHANGING
-        elif (node_state_counts[JOINING_CONFIG_CHANGED] +
-              node_state_counts[NORMAL_CONFIG_CHANGED] +
-              node_state_counts[NORMAL] == node_count):
-            # All nodes in JOINING_CONFIG_CHANGED, NORMAL_CONFIG_CHANGED or
-            # NORMAL state.
+        elif state_check(oneOrMore=[NORMAL_CONFIG_CHANGED,
+                                    JOINING_CONFIG_CHANGED],
+                         zeroOrMore=[NORMAL]):
             return JOINING_RESYNCING
-        elif (node_state_counts[NORMAL] +
-              node_state_counts[WAITING_TO_LEAVE] == node_count):
-            # All nodes in NORMAL or WAITING_TO_LEAVE state.
+        elif state_check(oneOrMore=[NORMAL, WAITING_TO_LEAVE]):
             return LEAVE_PENDING
-        elif ((node_state_counts[LEAVING] +
-               node_state_counts[LEAVING_ACKNOWLEDGED_CHANGE] +
-               node_state_counts[NORMAL_ACKNOWLEDGED_CHANGE] +
-               node_state_counts[NORMAL] == node_count) and
-              (node_state_counts[LEAVING] > 0 or
-               node_state_counts[NORMAL] > 0)):
-            # At least one node in either LEAVING or NORMAL state, all other
-            # nodes in LEAVING_ACKNOWLEDGED_CHANGE or NORMAL_ACKNOWLEDGED_CHANGE
-            # state.
+        elif state_check(oneOrMore=[NORMAL, LEAVING],
+                         zeroOrMore=[NORMAL_ACKNOWLEDGED_CHANGE,
+                                     LEAVING_ACKNOWLEDGED_CHANGE]):
             return STARTED_LEAVING
-        elif ((node_state_counts[LEAVING_ACKNOWLEDGED_CHANGE] +
-               node_state_counts[NORMAL_ACKNOWLEDGED_CHANGE] +
-               node_state_counts[LEAVING_CONFIG_CHANGED] +
-               node_state_counts[NORMAL_CONFIG_CHANGED] == node_count) and
-              (node_state_counts[LEAVING_ACKNOWLEDGED_CHANGE] > 0 or
-               node_state_counts[NORMAL_ACKNOWLEDGED_CHANGE] > 0)):
-            # At least one node in either LEAVING_ACKNOWLEDGED_CHANGE or
-            # NORMAL_ACKNOWLEDGED_CHANGE state, all other nodes in
-            # LEAVING_CONFIG_CHANGED or NORMAL_CONFIG_CHANGED
-            # state.
+        elif state_check(oneOrMore=[NORMAL_ACKNOWLEDGED_CHANGE,
+                                    LEAVING_ACKNOWLEDGED_CHANGE],
+                         zeroOrMore=[NORMAL_CONFIG_CHANGED,
+                                     LEAVING_CONFIG_CHANGED]):
             return LEAVING_CONFIG_CHANGING
-        elif ((node_state_counts[LEAVING_CONFIG_CHANGED] +
-               node_state_counts[NORMAL_CONFIG_CHANGED] +
-               node_state_counts[NORMAL] +
-               node_state_counts[FINISHED] == node_count) and
-              (node_state_counts[LEAVING_CONFIG_CHANGED] > 0 or
-               node_state_counts[NORMAL_CONFIG_CHANGED] > 0)):
-            # All nodes in LEAVING_CONFIG_CHANGED,
-            # NORMAL_CONFIG_CHANGED, FINISHED or NORMAL state.
+        elif state_check(oneOrMore=[NORMAL_CONFIG_CHANGED,
+                                    LEAVING_CONFIG_CHANGED],
+                         zeroOrMore=[NORMAL, FINISHED]):
             return LEAVING_RESYNCING
-        elif (node_state_counts[NORMAL] +
-              node_state_counts[FINISHED] == node_count):
-            # All nodes in NORMAL or FINISHED state.
+        elif state_check(oneOrMore=[NORMAL, FINISHED]):
             return FINISHED_LEAVING
         else:
             # Cluster in unexpected state.
