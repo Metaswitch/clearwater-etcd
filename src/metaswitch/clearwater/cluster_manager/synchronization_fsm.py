@@ -13,10 +13,11 @@ def safe_plugin(f, cluster_view, new_state=None):
     except AssertionError:
         raise
     except Exception as e:
-        _log.error("Call to {} "
-                   "with cluster {} caused exception {}".format(f,
-                                                                cluster_view,
-                                                                e))
+        _log.error("Call to {}.{} with cluster {} caused exception {!r}".
+                   format(f.__self__.__class__.__name__,
+                          f.__name__,
+                          cluster_view,
+                          e))
         return None
 
 
