@@ -45,53 +45,22 @@ import sys
 import logging
 from threading import Thread, Condition
 from .constants import RAISE_TOO_LONG_CLUSTERING, CLEAR_TOO_LONG_CLUSTERING
+import imp
 
 _log = logging.getLogger("metaswitch.clearwater.cluster_manager.alarms")
 
+sendrequest = None
 
-def alarms_enabled():
-    config = "/etc/clearwater/config"
-    if os.path.isfile(config):
-        reg = re.compile('^snmp_ip\s*=\s*[^\s]+\s*$')
-        for line in open(config):
-            if reg.match(line):
-                return True
-    return False
-
-
-def sendrequest(request):
-    try:
-        if alarms_enabled():
-            context = zmq.Context.instance()
-
-            client = context.socket(zmq.REQ)
-            client.connect("tcp://127.0.0.1:6664")
-
-            poller = zmq.Poller()
-            poller.register(client, zmq.POLLIN)
-
-            for reqelem in request[0:-1]:
-                client.send(reqelem, zmq.SNDMORE)
-
-            client.send(request[-1])
-
-            socks = dict(poller.poll(2000))
-
-            if client in socks:
-                client.recv()
-            else:
-                return "dropped request: '%s'" % " ".join(request)
-
-            context.destroy(100)
-
-    except:
-        return sys.exc_info()[0]
-
+try:
+    file, pathname, description = imp.find_module("alarms", ["/usr/share/clearwater/bin"])
+    mod = imp.load_module("alarms", file, pathname, description)
+    sendrequest = mod.sendrequest
+except ImportError:
+    _log.error("Could not import /usr/share/clearwater/bin/alarms.py, alarms will not be sent")
 
 def issue_alarm(identifier):
-    err = sendrequest(["issue-alarm", "cluster-manager", identifier])
-    if err:
-        _log.error(err)
+    if sendrequest:
+        sendrequest(["issue-alarm", "cluster-manager", identifier])
 
 
 class TooLongAlarm(object):
