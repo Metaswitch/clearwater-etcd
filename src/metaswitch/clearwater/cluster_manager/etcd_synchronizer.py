@@ -61,11 +61,7 @@ class EtcdSynchronizer(object):
 
             # If we have a new state, try and write it to etcd.
             if new_state:
-                updated_cluster_view = self.update_cluster_view(cluster_view,
-                                                                new_state)
-                _log.debug("Writing state %s into etcd" %
-                           (updated_cluster_view))
-                self.write_to_etcd(updated_cluster_view)
+                self.write_to_etcd(cluster_view, new_state)
             else:
                 _log.debug("No state change")
         self._fsm.quit()
@@ -84,9 +80,7 @@ class EtcdSynchronizer(object):
         cluster_state = self.calculate_cluster_state(cluster_view)
 
         if cluster_state == STABLE:
-            updated_cluster_view = self.update_cluster_view(cluster_view,
-                                                            WAITING_TO_LEAVE)
-            self.write_to_etcd(updated_cluster_view)
+            self.write_to_etcd(cluster_view, WAITING_TO_LEAVE)
         else:
             self._leaving_flag = True
 
@@ -212,7 +206,10 @@ class EtcdSynchronizer(object):
 
             # If the cluster view hasn't changed since we last saw it, then
             # wait for it to change before doing anything else.
-            _log.info("Read cluster view {} from etcd, comparing to last cluster view {}".format(cluster_view, self._last_cluster_view))
+            _log.info("Read cluster view {} from etcd, "
+                      "comparing to last cluster view {}".format(
+                          cluster_view,
+                          self._last_cluster_view))
             if cluster_view == self._last_cluster_view:
                 while not self._terminate_flag:
                     try:
@@ -231,6 +228,8 @@ class EtcdSynchronizer(object):
                         # The index isn't valid to watch on, probably because
                         # there has been a snapshot between the get and the
                         # watch. Just start the read again.
+                        _log.info("etcd index {} is invalid, retrying".format(
+                            result.modifiedIndex+1))
                         self._read_from_etcd()
 
                 # Return if we're termiating.
@@ -255,23 +254,25 @@ class EtcdSynchronizer(object):
         self._last_cluster_view = cluster_view.copy()
         return cluster_view
 
-    # Update the cluster view based on new state information. If new_state is a
-    # string then it refers to the new state of the local node. Otherwise, it is
-    # an overall picture of the new cluster.
-    def update_cluster_view(self, cluster_view, new_state):
+    # Write the new cluster view to etcd. We may be expecting to create the key
+    # for the first time.
+    def write_to_etcd(self, old_cluster_view, new_state, with_index=None):
+        cluster_view = old_cluster_view.copy()
+
+        # Update the cluster view based on new state information. If new_state
+        # is a string then it refers to the new state of the local node.
+        # Otherwise, it is an overall picture of the new cluster.
         if isinstance(new_state, str):
             cluster_view[self._ip] = new_state
         elif isinstance(new_state, dict):
             cluster_view = new_state
 
-        return cluster_view
-
-    # Write the new cluster view to etcd. We may be expecting to create the key
-    # for the first time.
-    def write_to_etcd(self, cluster_view):
+        _log.debug("Writing state %s into etcd" % cluster_view)
         json_data = json.dumps(cluster_view)
 
         try:
+            if with_index:
+                self._client.write(self._key, json_data, prevIndex=with_index)
             if self._index is None:
                 self._client.write(self._key, json_data, prevExist=False)
             else:
@@ -284,4 +285,22 @@ class EtcdSynchronizer(object):
         except etcd.EtcdException as e:
             print "{} caught {!r} when trying to write {} with index {}".format(self._ip, e, json_data, self._index)
         except ValueError:
-            pass
+            _log.debug("Contention on etcd write")
+            # Our etcd write failed because someone got there before us.
+
+            if isinstance(new_state, str):
+                # We're just trying to update our own state, so it may be safe
+                # to take the new state, update our own state in it, and retry.
+                result = self._client.get(self._key)
+                cluster_view = json.loads(result.value)
+
+                # This isn't safe if someone else has changed our state for us,
+                # or the overall deployment state has changed (in which case we
+                # may want to change our state to something else, so check for
+                # that.
+                if (cluster_view[self._ip] == old_cluster_view[self._ip] and
+                    (self.calculate_cluster_state(cluster_view) ==
+                     self.calculate_cluster_state(old_cluster_view))):
+                    self.write_to_etcd(cluster_view,
+                                       new_state,
+                                       with_index=result.modifiedIndex)
