@@ -7,7 +7,7 @@ import urllib3
 import os
 
 allowed_key = '/test'
-global_data = ""
+global_data = "INVALID_JSON"
 global_index = 0
 global_condvar = Condition()
 
@@ -83,13 +83,27 @@ class SlowMockEtcdClient(MockEtcdClient):
     def write(self, key, value, prevIndex=0, prevExist=None):
         """Make writes take 0-200ms to discover race conditions"""
         sleep(random()/5.0)
-        super(SlowMockEtcdClient, self).write(key, value, prevIndex=prevIndex, prevExist=prevExist)
+        super(SlowMockEtcdClient, self).write(key,
+                                              value,
+                                              prevIndex=prevIndex,
+                                              prevExist=prevExist)
 
 
 class ExceptionMockEtcdClient(MockEtcdClient):
     def write(self, key, value, prevIndex=0, prevExist=None):
-        """Make writes take 0-200ms to discover race conditions"""
         if random() > 0.9:
-            e = choice([etcd.EtcdException])
+            e = choice([etcd.EtcdException, etcd.EtcdKeyError])
             raise e
-        super(ExceptionMockEtcdClient, self).write(key, value, prevIndex=prevIndex, prevExist=prevExist)
+        return super(ExceptionMockEtcdClient, self).write(key,
+                                                          value,
+                                                          prevIndex=prevIndex,
+                                                          prevExist=prevExist)
+
+    def watch(self, key, index=None, timeout=None, recursive=None):
+        if random() > 0.9:
+            e = choice([etcd.EtcdException, ValueError])
+            raise e
+        return super(ExceptionMockEtcdClient, self).watch(key,
+                                                          index=index,
+                                                          timeout=timeout,
+                                                          recursive=recursive)

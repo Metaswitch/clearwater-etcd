@@ -201,10 +201,6 @@ class EtcdSynchronizer(object):
                                                     timeout=5,
                                                     recursive=False)
                         break
-                    except etcd.EtcdKeyError:
-                        raise
-                    except etcd.EtcdException:
-                        pass
                     except urllib3.exceptions.TimeoutError:
                         pass
                     except ValueError:
@@ -213,7 +209,7 @@ class EtcdSynchronizer(object):
                         # watch. Just start the read again.
                         _log.info("etcd index {} is invalid, retrying".format(
                             result.modifiedIndex+1))
-                        self._read_from_etcd()
+                        self.read_from_etcd()
 
                 # Return if we're termiating.
                 if self._terminate_flag:
@@ -233,7 +229,8 @@ class EtcdSynchronizer(object):
             self._last_cluster_view = None
             pass
         except Exception as e:
-            print "{} caught {!r} when trying to read with index {}".format(self._ip, e, self._index)
+            _log.error("{} caught {!r} when trying to read with index {}".
+                       format(self._ip, e, self._index))
             self._index = None
             self._last_cluster_view = None
             pass
