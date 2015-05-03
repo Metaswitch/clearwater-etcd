@@ -15,7 +15,7 @@ _log = logging.getLogger("etcd_sync")
 
 class EtcdSynchronizer(object):
 
-    def __init__(self, plugin, ip, etcd_ip=None):
+    def __init__(self, plugin, ip, etcd_ip=None, force_leave=False):
         self._fsm = SyncFSM(plugin, ip)
         self._ip = ip
         if etcd_ip:
@@ -28,6 +28,7 @@ class EtcdSynchronizer(object):
         self._leaving_flag = False
         self._terminate_flag = False
         self.thread = Thread(target=self.main)
+        self.force_leave = force_leave
 
     def start_thread(self):
         self.thread.daemon = True
@@ -51,7 +52,9 @@ class EtcdSynchronizer(object):
             # This node can only leave the cluster if the cluster is in a stable
             # state. Check the leaving flag and the cluster state. If necessary,
             # set this node to WAITING_TO_LEAVE. Otherwise, kick the FSM.
-            if self._leaving_flag and cluster_state == STABLE:
+            if self._leaving_flag and \
+                    (cluster_state == STABLE or
+                     (self.force_leave and cluster_state == STABLE_WITH_ERRORS)):
                 new_state = WAITING_TO_LEAVE
             else:
                 local_state = self.calculate_local_state(cluster_view)
@@ -66,26 +69,34 @@ class EtcdSynchronizer(object):
                 _log.debug("No state change")
         self._fsm.quit()
 
+    def parse_cluster_view(self, view):
+        try:
+            return json.loads(view)
+        except:
+            return {}
+
     # This node has been asked to leave the cluster. Check if the cluster is in
     # a stable state, in which case we can leave. Otherwise, set a flag and
     # leave at the next available opportunity.
     def leave_cluster(self):
-        cluster_view = {}
         result = self._client.get(self._key)
-        try:
-            cluster_view = json.loads(result.value)
-        except:
-            cluster_view = {}
+        cluster_view = self.parse_cluster_view(result.value)
 
         cluster_state = self.calculate_cluster_state(cluster_view)
 
-        if cluster_state == STABLE:
+        if cluster_state == STABLE or \
+            (self.force_leave and cluster_state == STABLE_WITH_ERRORS):
             self.write_to_etcd(cluster_view, WAITING_TO_LEAVE)
         else:
             self._leaving_flag = True
 
     def mark_node_failed(self):
-        pass
+        result = self._client.get(self._key)
+        cluster_view = self.parse_cluster_view(result.value)
+
+        cluster_state = self.calculate_cluster_state(cluster_view)
+
+        self.write_to_etcd(cluster_view, ERROR)
 
     # Calculate the state of the cluster based on the state of all the nodes in
     # the cluster.
@@ -103,7 +114,7 @@ class EtcdSynchronizer(object):
 
             # Count the total number of nodes in the cluster. Ignore nodes in
             # ERROR state.
-            if state is not ERROR:
+            if state != ERROR:
                 node_count += 1
             else:
                 error_count += 1
@@ -273,9 +284,10 @@ class EtcdSynchronizer(object):
                 # or the overall deployment state has changed (in which case we
                 # may want to change our state to something else, so check for
                 # that.
-                if (cluster_view[self._ip] == old_cluster_view[self._ip] and
+                if ((new_state == ERROR) or
+                    (cluster_view[self._ip] == old_cluster_view[self._ip] and
                     (self.calculate_cluster_state(cluster_view) ==
-                     self.calculate_cluster_state(old_cluster_view))):
+                     self.calculate_cluster_state(old_cluster_view)))):
                     self.write_to_etcd(cluster_view,
                                        new_state,
                                        with_index=result.modifiedIndex)
