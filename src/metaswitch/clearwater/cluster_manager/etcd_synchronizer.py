@@ -15,10 +15,13 @@ _log = logging.getLogger("etcd_sync")
 
 class EtcdSynchronizer(object):
 
-    def __init__(self, plugin, ip):
+    def __init__(self, plugin, ip, etcd_ip=None):
         self._fsm = SyncFSM(plugin, ip)
         self._ip = ip
-        self._client = etcd.Client(ip, 4000)
+        if etcd_ip:
+            self._client = etcd.Client(etcd_ip, 4000)
+        else:
+            self._client = etcd.Client(ip, 4000)
         self._key = plugin.key()
         self._index = None
         self._last_cluster_view = None
@@ -86,6 +89,9 @@ class EtcdSynchronizer(object):
             self.write_to_etcd(updated_cluster_view)
         else:
             self._leaving_flag = True
+
+    def mark_node_failed(self):
+        pass
 
     # Calculate the state of the cluster based on the state of all the nodes in
     # the cluster.
