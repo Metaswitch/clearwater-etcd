@@ -1,7 +1,7 @@
 from threading import Condition
 import etcd
 from etcd import EtcdResult, Client
-from random import random
+from random import random, choice
 from time import sleep
 import urllib3
 import os
@@ -84,3 +84,12 @@ class SlowMockEtcdClient(MockEtcdClient):
         """Make writes take 0-200ms to discover race conditions"""
         sleep(random()/5.0)
         super(SlowMockEtcdClient, self).write(key, value, prevIndex=prevIndex, prevExist=prevExist)
+
+
+class ExceptionMockEtcdClient(MockEtcdClient):
+    def write(self, key, value, prevIndex=0, prevExist=None):
+        """Make writes take 0-200ms to discover race conditions"""
+        if random() > 0.9:
+            e = choice([etcd.EtcdException])
+            raise e
+        super(ExceptionMockEtcdClient, self).write(key, value, prevIndex=prevIndex, prevExist=prevExist)
