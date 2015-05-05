@@ -62,17 +62,19 @@ def join_cassandra_cluster(cluster_view, cassandra_yaml_file, ip):
     seeds_list = []
 
     for seed, state in cluster_view.items():
-        if state == constants.NORMAL:
+        if (state == constants.NORMAL_ACKNOWLEDGED_CHANGE or
+            state == constants.NORMAL_CONFIG_CHANGED):
             seeds_list.append(seed)
 
     if len(seeds_list) == 0:
         for seed, state in cluster_view.items():
-            if state == constants.WAITING_TO_JOIN:
+            if (state == constants.JOINING_ACKNOWLEDGED_CHANGE or
+                state == constants.JOINING_CONFIG_CHANGED):
                 seeds_list.append(seed)
 
     if len(seeds_list) > 0:
         seeds_list_str = ','.join(map(str, seeds_list))
-        _log.info("Cassandra seeds list is" % seeds_list_str)
+        _log.info("Cassandra seeds list is {}".format(seeds_list_str))
 
         # Read cassandra.yaml.
         with open(cassandra_yaml_file) as f:

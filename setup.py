@@ -47,6 +47,6 @@ setup(
         '': ['*.eml'],
         },
     test_suite='metaswitch.clearwater.cluster_manager.test',
-    install_requires=["docopt", "python-etcd", "pyzmq"],
+    install_requires=["docopt", "python-etcd", "pyzmq", "pyyaml"],
     tests_require=["Mock"],
     )
