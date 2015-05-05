@@ -14,6 +14,7 @@ from etcd import EtcdKeyError
 class BaseClusterTest(unittest.TestCase):
     def setUp(self):
         SyncFSM.DELAY = 0.1
+        EtcdSynchronizer.PAUSE_BEFORE_RETRY = 0
         MockEtcdClient.clear()
 
     def wait_for_all_normal(self, client, required_number=-1, tries=20):
