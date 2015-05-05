@@ -2,6 +2,7 @@ import logging
 import os
 import signal
 from textwrap import dedent
+import subprocess
 from metaswitch.clearwater.cluster_manager import constants
 
 _log = logging.getLogger("cluster_manager.plugin_utils")
@@ -37,6 +38,14 @@ def write_cluster_settings(filename, cluster_view):
     with open(filename, "w") as f:
         f.write(new_file_contents)
 
+def run_command(command):
+    try:
+        output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
+        _log.info("Command {} succeeded and printed output {!r}".format(command, output))
+        return 0
+    except subprocess.CalledProcessError as e:
+        _log.error("Command {} failed with return code {} and printed output {!r}".format(command, e.returncode,e.output))
+        return e.returncode
 
 def write_chronos_cluster_settings(filename, cluster_view, current_server):
     current_or_joining_servers = [constants.JOINING_ACKNOWLEDGED_CHANGE,
@@ -68,7 +77,7 @@ def send_sighup(pidfile):
     try:
         with open(pidfile) as f:
             pid = int(f.read())
-    except IOError, ValueError:
+    except (IOError, ValueError):
         pass
 
     if pid != -1:

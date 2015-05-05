@@ -18,11 +18,10 @@ Options:
 from docopt import docopt
 
 from metaswitch.common import logging_config, utils
-from metaswitch.clearwater.cluster_manager.pluginificator import load_plugins_in_dir
+from metaswitch.clearwater.cluster_manager.plugin_loader import load_plugins_in_dir
 from metaswitch.clearwater.cluster_manager.etcd_synchronizer import EtcdSynchronizer
 import logging
 import os
-from time import sleep
 from threading import Thread
 import signal
 
@@ -34,6 +33,7 @@ LOG_LEVELS = {'0': logging.CRITICAL,
               '3': logging.INFO,
               '4': logging.DEBUG}
 
+
 def install_sigquit_handler(plugins):
     def sigquit_handler(sig, stack):
         _log.debug("Handling SIGQUIT")
@@ -41,6 +41,7 @@ def install_sigquit_handler(plugins):
             _log.debug("{} leaving cluster".format(plugin))
             plugin.leave_cluster()
     signal.signal(signal.SIGQUIT, sigquit_handler)
+
 
 def main(args):
     arguments = docopt(__doc__, argv=args)
@@ -62,7 +63,8 @@ def main(args):
     with open(arguments['--pidfile'], "w") as pidfile:
         pidfile.write(str(pid) + "\n")
 
-    plugins = load_plugins_in_dir("/usr/share/clearwater/clearwater-cluster-manager/plugins/", listen_ip)
+    plugins_dir = "/usr/share/clearwater/clearwater-cluster-manager/plugins/"
+    plugins = load_plugins_in_dir(plugins_dir, listen_ip)
     synchronizers = []
     threads = []
     for plugin in plugins:

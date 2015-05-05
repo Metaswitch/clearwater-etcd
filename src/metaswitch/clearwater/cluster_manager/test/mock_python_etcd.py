@@ -1,15 +1,35 @@
 from threading import Condition
 import etcd
-from etcd import EtcdResult
+from etcd import EtcdResult, Client
+from random import random, choice
+from time import sleep
+import urllib3
+import os
 
 allowed_key = '/test'
-global_data = "{}"
+global_data = "INVALID_JSON"
 global_index = 0
 global_condvar = Condition()
+
+def EtcdFactory(*args, **kwargs):
+    if os.environ.get('ETCD_IP'):
+        return Client(os.environ.get('ETCD_IP'),
+                      os.environ.get('ETCD_PORT', 4001))
+    else:
+        return MockEtcdClient(None, None)
 
 class MockEtcdClient(object):
     def __init__(self, _host, _port):
         pass
+
+    @classmethod
+    def clear(self):
+        global global_index
+        global global_data
+        global_condvar.acquire()
+        global_index = 0
+        global_data = ""
+        global_condvar.release()
 
     def fake_result(self):
         r = EtcdResult(None, {})
@@ -19,21 +39,24 @@ class MockEtcdClient(object):
         return r
 
     def get(self, key):
+        global_condvar.acquire()
         assert(key == allowed_key)
         if global_index == 0:
+            global_condvar.release()
             raise etcd.EtcdKeyError()
-        return self.fake_result()
+        ret = self.fake_result()
+        global_condvar.release()
+        return ret
 
     def write(self, key, value, prevIndex=0, prevExist=None):
         global global_index
         global global_data
         assert(key == allowed_key)
-        if (prevIndex != global_index) and (prevIndex != 0):
-            raise ValueError()
-        if prevExist and global_index != 0:
-            raise ValueError()
         global_condvar.acquire()
-        #print "%s successfully written" % value
+        if (((prevIndex != global_index) and (prevIndex != 0)) or
+                (prevExist and global_index != 0)):
+            global_condvar.release()
+            raise ValueError()
         global_data = value
         global_index += 1
         global_condvar.notify_all()
@@ -45,8 +68,42 @@ class MockEtcdClient(object):
         global_condvar.acquire()
         if index > global_index:
             global_condvar.wait(0.1)
+        if index > global_index:
+            global_condvar.release()
+            raise urllib3.exceptions.TimeoutError
+        ret = self.fake_result()
         global_condvar.release()
-        return self.fake_result()
+        return ret
 
     def eternal_watch(self, key, index=None):
         return self.watch(key, index, 36000)
+
+
+class SlowMockEtcdClient(MockEtcdClient):
+    def write(self, key, value, prevIndex=0, prevExist=None):
+        """Make writes take 0-200ms to discover race conditions"""
+        sleep(random()/5.0)
+        super(SlowMockEtcdClient, self).write(key,
+                                              value,
+                                              prevIndex=prevIndex,
+                                              prevExist=prevExist)
+
+
+class ExceptionMockEtcdClient(MockEtcdClient):
+    def write(self, key, value, prevIndex=0, prevExist=None):
+        if random() > 0.9:
+            e = choice([etcd.EtcdException, etcd.EtcdKeyError])
+            raise e
+        return super(ExceptionMockEtcdClient, self).write(key,
+                                                          value,
+                                                          prevIndex=prevIndex,
+                                                          prevExist=prevExist)
+
+    def watch(self, key, index=None, timeout=None, recursive=None):
+        if random() > 0.9:
+            e = choice([etcd.EtcdException, ValueError])
+            raise e
+        return super(ExceptionMockEtcdClient, self).watch(key,
+                                                          index=index,
+                                                          timeout=timeout,
+                                                          recursive=recursive)

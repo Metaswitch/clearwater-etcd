@@ -3,7 +3,8 @@
 import unittest
 from mock import patch, call
 from metaswitch.clearwater.cluster_manager.alarms import TooLongAlarm
-from metaswitch.clearwater.cluster_manager.constants import RAISE_TOO_LONG_CLUSTERING, CLEAR_TOO_LONG_CLUSTERING
+from metaswitch.clearwater.cluster_manager.constants import \
+    RAISE_TOO_LONG_CLUSTERING, CLEAR_TOO_LONG_CLUSTERING
 from time import sleep
 
 
@@ -45,6 +46,7 @@ class TestTooLongAlarm(unittest.TestCase):
         sleep(0.3)
         alarm.cancel()
 
-        self.assertEqual([call(RAISE_TOO_LONG_CLUSTERING), call(CLEAR_TOO_LONG_CLUSTERING)],
-                          mock_issue_alarm.call_args_list)
+        self.assertEqual([call(RAISE_TOO_LONG_CLUSTERING),
+                          call(CLEAR_TOO_LONG_CLUSTERING)],
+                         mock_issue_alarm.call_args_list)
         alarm.quit()
