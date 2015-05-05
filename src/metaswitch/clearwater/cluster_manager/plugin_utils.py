@@ -1,6 +1,7 @@
 import logging
 import os
 import signal
+from textwrap import dedent
 import subprocess
 from metaswitch.clearwater.cluster_manager import constants
 
@@ -37,6 +38,7 @@ def write_cluster_settings(filename, cluster_view):
     with open(filename, "w") as f:
         f.write(new_file_contents)
 
+
 def run_command(command):
     try:
         output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
@@ -45,6 +47,32 @@ def run_command(command):
     except subprocess.CalledProcessError as e:
         _log.error("Command {} failed with return code {} and printed output {!r}".format(command, e.returncode,e.output))
         return e.returncode
+
+
+def write_chronos_cluster_settings(filename, cluster_view, current_server):
+    current_or_joining = [constants.JOINING_ACKNOWLEDGED_CHANGE,
+                          constants.JOINING_CONFIG_CHANGED,
+                          constants.NORMAL_ACKNOWLEDGED_CHANGE,
+                          constants.NORMAL_CONFIG_CHANGED,
+                          constants.NORMAL]
+    leaving = [constants.LEAVING_ACKNOWLEDGED_CHANGE,
+               constants.LEAVING_CONFIG_CHANGED]
+
+    staying_servers = ([k for k, v in cluster_view.iteritems()
+                        if v in current_or_joining])
+    leaving_servers = ([k for k, v in cluster_view.iteritems()
+                        if v in leaving])
+
+    with open(filename, 'w') as f:
+        f.write(dedent('''\
+        [cluster]
+        localhost = {}
+        ''').format(current_server))
+        for node in staying_servers:
+            f.write('node = {}\n'.format(node))
+        for node in leaving_servers:
+            f.write('leaving = {}\n'.format(node))
+
 
 def send_sighup(pidfile):
     pid = -1

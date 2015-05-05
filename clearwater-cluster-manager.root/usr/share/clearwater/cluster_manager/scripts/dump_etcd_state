@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -ue
+
+. /etc/clearwater/config
+
+if [ $# -ne 1 ]
+then
+  echo "Usage: dump_etcd_state [etcd_key]"
+  exit 1
+fi
+
+key=$1
+
+/usr/share/clearwater/cluster_manager/env/bin/python /usr/share/clearwater/cluster_manager/scripts/dump_etcd_state.py $local_ip $key

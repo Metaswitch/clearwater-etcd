@@ -74,6 +74,9 @@ class SyncFSM(object):
             else:
                 return None
 
+        if local_state == ERROR:
+            return None
+
         elif (cluster_state == STABLE and
                 local_state == NORMAL):
             return safe_plugin(self._plugin.on_stable_cluster,
