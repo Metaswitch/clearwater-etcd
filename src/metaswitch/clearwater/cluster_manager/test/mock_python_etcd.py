@@ -11,12 +11,16 @@ global_data = "INVALID_JSON"
 global_index = 0
 global_condvar = Condition()
 
+
 def EtcdFactory(*args, **kwargs):
+    """Factory method, returning a connection to a real etcd if we need one for
+    FV, or to an in-memory implementation for UT."""
     if os.environ.get('ETCD_IP'):
         return Client(os.environ.get('ETCD_IP'),
                       os.environ.get('ETCD_PORT', 4001))
     else:
         return MockEtcdClient(None, None)
+
 
 class MockEtcdClient(object):
     def __init__(self, _host, _port):

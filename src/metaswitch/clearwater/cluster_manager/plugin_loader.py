@@ -3,6 +3,12 @@ import os
 
 
 def load_plugins_in_dir(dir, config):
+    """Loads plugins by:
+        - looking for all .py files in the given directory
+        - calling their load_as_plugin() function, passing 'config'
+        - returning a list containing the return values of all load_as_plugin()
+        calls
+        """
     files = os.listdir(dir)
     plugins = []
     for filename in files:

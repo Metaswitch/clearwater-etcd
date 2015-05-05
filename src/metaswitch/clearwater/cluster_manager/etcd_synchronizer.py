@@ -85,7 +85,7 @@ class EtcdSynchronizer(object):
         cluster_state = self.calculate_cluster_state(cluster_view)
 
         if cluster_state == STABLE or \
-            (self.force_leave and cluster_state == STABLE_WITH_ERRORS):
+                (self.force_leave and cluster_state == STABLE_WITH_ERRORS):
             self.write_to_etcd(cluster_view, WAITING_TO_LEAVE)
         else:
             self._leaving_flag = True
@@ -93,8 +93,6 @@ class EtcdSynchronizer(object):
     def mark_node_failed(self):
         result = self._client.get(self._key)
         cluster_view = self.parse_cluster_view(result.value)
-
-        cluster_state = self.calculate_cluster_state(cluster_view)
 
         self.write_to_etcd(cluster_view, ERROR)
 
@@ -287,6 +285,9 @@ class EtcdSynchronizer(object):
                                        new_state,
                                        with_index=result.modifiedIndex)
         except Exception as e:
-            print "{} caught {!r} when trying to write {} with index {}".format(self._ip, e, json_data, self._index)
+            # Catch-all error handler (for invalid requests, timeouts, etc -
+            # unset all our state and start over.
+            _log.error("{} caught {!r} when trying to write {} with index {}"
+                .format(self._ip, e, json_data, self._index))
             self._index = None
             self._last_cluster_view = None

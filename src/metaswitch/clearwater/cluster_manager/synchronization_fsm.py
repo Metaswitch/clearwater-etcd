@@ -6,11 +6,18 @@ import logging
 _log = logging.getLogger("cluster_manager.fsm")
 
 
+# Decorator to call a plugin function, and catch and log any exceptions it
+# raises.
 def safe_plugin(f, cluster_view, new_state=None):
     try:
+        _log.info("Calling plugin method {}.{}".
+                      format(f.__self__.__class__.__name__,
+                             f.__name__))
         f(cluster_view)
         return new_state
     except AssertionError:
+        # Allow UT plugins to assert things, halt their FSM, and be noticed more
+        # easily.
         raise
     except Exception as e:
         _log.error("Call to {}.{} with cluster {} caused exception {!r}".
@@ -22,6 +29,10 @@ def safe_plugin(f, cluster_view, new_state=None):
 
 
 class SyncFSM(object):
+
+    # The number of seconds to wait in WAITING_TO_JOIN/WAITING_TO_LEAVE state
+    # before switching into JOINING/LEAVING state. Defined as a class constant
+    # for easy overriding in UT.
     DELAY = 30
 
     def __init__(self, plugin, local_ip):
@@ -44,14 +55,24 @@ class SyncFSM(object):
         return {k: (LEAVING if v == WAITING_TO_LEAVE else v)
                 for k, v in cluster_view.iteritems()}
 
-    def _switch_myself_to(self, new_state, cluster_view):
-        cluster_view.update({self._id: new_state})
-        return cluster_view
-
     def _delete_myself(self, cluster_view):
         return {k: v for k, v in cluster_view.iteritems() if k != self._id}
 
     def next(self, local_state, cluster_state, cluster_view):  # noqa
+        """Main state machine function.
+
+        Arguments:
+            - local_state: string constant from constants.py
+            - cluster_state: string constant from constants.py
+            - cluster_view: dictionary of node IPs to local states
+
+        Returns:
+            - None if the state should not change
+            - A string constant (from constants.py) representing the new local
+            state of this node, if it wants to just change that
+            - A dictionary of node IPs to states, representing the new state of
+            the whole cluster, if it wants to change that
+        """
         _log.debug("Entered state machine for {} with local state {}, "
                    "cluster state {} and cluster view {}".format(
                        self._id,
@@ -59,23 +80,31 @@ class SyncFSM(object):
                        cluster_state,
                        cluster_view))
         assert(self._running)
+
+        # If we're mid-scale-up, ensure that the "scaling operation taking too
+        # long" alarm is running, and cancel it if we're not
         if local_state == NORMAL:
             self._alarm.cancel()
         else:
             self._alarm.trigger(self._id)
 
-        # Handle the case where the local node isn't in the cluster first
+        # Handle the abnormal cases first - where the local node isn't in the
+        # cluster, and where the local node is in ERROR state. These can happen
+        # in any cluster state, so don't fit neatly into the main function body.
 
         if local_state is None:
             if cluster_state == EMPTY:
                 return NORMAL
             elif cluster_state in [STABLE, JOIN_PENDING]:
-                return self._switch_myself_to(WAITING_TO_JOIN, cluster_view)
+                return WAITING_TO_JOIN
             else:
                 return None
 
         if local_state == ERROR:
             return None
+
+        # Main body of this function - define the action and next state for each
+        # valid cluster state/local state pair.
 
         elif (cluster_state == STABLE and
                 local_state == NORMAL):

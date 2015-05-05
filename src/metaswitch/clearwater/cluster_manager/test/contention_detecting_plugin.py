@@ -5,8 +5,11 @@ _log = logging.getLogger("example_plugin")
 
 
 class ContentionDetectingPlugin(SynchroniserPluginBase):
+    """Plugin that asserts no method is called twice with the same arguments.
+
+    This would mean that we were needlessly repeating work - our handling of
+    etcd contention ought to avoid this."""
     def __init__(self, ip):
-        _log.debug("Raising not-clustered alarm")
         self.ip = ip
         self.on_cluster_changing_nodes = []
         self.on_joining_nodes = []
@@ -25,20 +28,24 @@ class ContentionDetectingPlugin(SynchroniserPluginBase):
 
     def on_joining_cluster(self, cluster_view):
         nodes = sorted(cluster_view.keys())
-        assert(nodes not in self.on_joining_nodes)
+        assert nodes not in self.on_joining_nodes,\
+            "on_joining_cluster called twice with nodes {}".format(nodes)
         self.on_joining_nodes.append(nodes)
 
     def on_new_cluster_config_ready(self, cluster_view):
         nodes = sorted(cluster_view.keys())
-        assert(nodes not in self.on_new_cluster_config_ready_nodes)
+        assert nodes not in self.on_new_cluster_config_ready_nodes,\
+            "on_new_cluster_config_ready called twice with nodes {}".format(nodes)
         self.on_new_cluster_config_ready_nodes.append(nodes)
 
     def on_stable_cluster(self, cluster_view):
         nodes = sorted(cluster_view.keys())
-        assert(nodes not in self.on_stable_cluster_nodes)
+        assert nodes not in self.on_stable_cluster_nodes,\
+            "on_stable_cluster called twice with nodes {}".format(nodes)
         self.on_stable_cluster_nodes.append(nodes)
 
     def on_leaving_cluster(self, cluster_view):
         nodes = sorted(cluster_view.keys())
-        assert(nodes not in self.on_leaving_cluster_nodes)
+        assert nodes not in self.on_leaving_cluster_nodes,\
+            "on_leaving_cluster called twice with nodes {}".format(nodes)
         self.on_leaving_cluster_nodes.append(nodes)
