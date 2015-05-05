@@ -2,14 +2,16 @@ import logging
 import os
 import socket
 import time
-import signal
 import yaml
+from textwrap import dedent
+import subprocess
 from metaswitch.clearwater.cluster_manager import constants
 
 _log = logging.getLogger("cluster_manager.plugin_utils")
 
 
 def write_cluster_settings(filename, cluster_view):
+    """Writes out the memcached cluster_settings file"""
     valid_servers_states = [constants.LEAVING_ACKNOWLEDGED_CHANGE,
                             constants.LEAVING_CONFIG_CHANGED,
                             constants.NORMAL_ACKNOWLEDGED_CHANGE,
@@ -20,10 +22,12 @@ def write_cluster_settings(filename, cluster_view):
                                 constants.NORMAL_CONFIG_CHANGED,
                                 constants.JOINING_ACKNOWLEDGED_CHANGE,
                                 constants.JOINING_CONFIG_CHANGED]
-    servers_ips = sorted([k for k, v in cluster_view.iteritems()
+    servers_ips = sorted(["{}:11211".format(k)
+                          for k, v in cluster_view.iteritems()
                           if v in valid_servers_states])
 
-    new_servers_ips = sorted([k for k, v in cluster_view.iteritems()
+    new_servers_ips = sorted(["{}:11211".format(k)
+                              for k, v in cluster_view.iteritems()
                               if v in valid_new_servers_states])
 
     new_file_contents = ""
@@ -40,18 +44,21 @@ def write_cluster_settings(filename, cluster_view):
         f.write(new_file_contents)
 
 
-def send_sighup(pidfile):
-    pid = -1
+def run_command(command):
+    """Runs the given shell command, logging the output and return code"""
     try:
-        with open(pidfile) as f:
-            pid = int(f.read())
-    except IOError, ValueError:
-        pass
-
-    if pid != -1:
-        os.kill(pid, signal.SIGHUP)
-    else:
-        _log.info("Reading PID from {} failed - process probably not running".format(pidfile))
+        output = subprocess.check_output(command,
+                                         shell=True,
+                                         stderr=subprocess.STDOUT)
+        _log.info("Command {} succeeded and printed output {!r}".
+                  format(command, output))
+        return 0
+    except subprocess.CalledProcessError as e:
+        _log.error("Command {} failed with return code {}"
+                   " and printed output {!r}".format(command,
+                                                     e.returncode,
+                                                     e.output))
+        return e.returncode
 
 
 # Edits cassandra.yaml and restarts Cassandra in order to join a Cassandra
@@ -131,3 +138,28 @@ def start_cassandra():
             break
         except:
             time.sleep(1)
+
+
+def write_chronos_cluster_settings(filename, cluster_view, current_server):
+    current_or_joining = [constants.JOINING_ACKNOWLEDGED_CHANGE,
+                          constants.JOINING_CONFIG_CHANGED,
+                          constants.NORMAL_ACKNOWLEDGED_CHANGE,
+                          constants.NORMAL_CONFIG_CHANGED,
+                          constants.NORMAL]
+    leaving = [constants.LEAVING_ACKNOWLEDGED_CHANGE,
+               constants.LEAVING_CONFIG_CHANGED]
+
+    staying_servers = ([k for k, v in cluster_view.iteritems()
+                        if v in current_or_joining])
+    leaving_servers = ([k for k, v in cluster_view.iteritems()
+                        if v in leaving])
+
+    with open(filename, 'w') as f:
+        f.write(dedent('''\
+        [cluster]
+        localhost = {}
+        ''').format(current_server))
+        for node in staying_servers:
+            f.write('node = {}\n'.format(node))
+        for node in leaving_servers:
+            f.write('leaving = {}\n'.format(node))
