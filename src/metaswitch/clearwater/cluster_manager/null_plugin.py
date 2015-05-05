@@ -1,5 +1,6 @@
 from .plugin_base import SynchroniserPluginBase
 
+
 class NullPlugin(SynchroniserPluginBase):
     def __init__(self, key):
         self._key = key

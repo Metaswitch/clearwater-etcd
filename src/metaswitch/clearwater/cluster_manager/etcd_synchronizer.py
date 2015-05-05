@@ -4,6 +4,7 @@ import etcd
 import json
 from collections import defaultdict
 from threading import Thread
+from time import sleep
 
 from .constants import *
 from .synchronization_fsm import SyncFSM
@@ -14,6 +15,7 @@ _log = logging.getLogger("etcd_sync")
 
 
 class EtcdSynchronizer(object):
+    PAUSE_BEFORE_RETRY = 30
 
     def __init__(self, plugin, ip, etcd_ip=None, force_leave=False):
         self._fsm = SyncFSM(plugin, ip)
@@ -85,7 +87,7 @@ class EtcdSynchronizer(object):
         cluster_state = self.calculate_cluster_state(cluster_view)
 
         if cluster_state == STABLE or \
-            (self.force_leave and cluster_state == STABLE_WITH_ERRORS):
+                (self.force_leave and cluster_state == STABLE_WITH_ERRORS):
             self.write_to_etcd(cluster_view, WAITING_TO_LEAVE)
         else:
             self._leaving_flag = True
@@ -93,8 +95,6 @@ class EtcdSynchronizer(object):
     def mark_node_failed(self):
         result = self._client.get(self._key)
         cluster_view = self.parse_cluster_view(result.value)
-
-        cluster_state = self.calculate_cluster_state(cluster_view)
 
         self.write_to_etcd(cluster_view, ERROR)
 
@@ -202,6 +202,8 @@ class EtcdSynchronizer(object):
                                                     recursive=False)
                         break
                     except urllib3.exceptions.TimeoutError:
+                        # Timeouts after 5 seconds are expected - just check if
+                        # we're termninating and continue
                         pass
                     except ValueError:
                         # The index isn't valid to watch on, probably because
@@ -229,11 +231,15 @@ class EtcdSynchronizer(object):
             self._last_cluster_view = None
             pass
         except Exception as e:
-            _log.error("{} caught {!r} when trying to read with index {}".
+            # Catch-all error handler (for invalid requests, timeouts, etc -
+            # unset all our state and start over.
+            _log.error("{} caught {!r} when trying to read with index {}"
+                       " - pause before retry".
                        format(self._ip, e, self._index))
             self._index = None
             self._last_cluster_view = None
-            pass
+            # Sleep briefly to avoid hammering a failed server
+            sleep(self.PAUSE_BEFORE_RETRY)
 
         return cluster_view
 
@@ -287,6 +293,12 @@ class EtcdSynchronizer(object):
                                        new_state,
                                        with_index=result.modifiedIndex)
         except Exception as e:
-            print "{} caught {!r} when trying to write {} with index {}".format(self._ip, e, json_data, self._index)
+            # Catch-all error handler (for invalid requests, timeouts, etc -
+            # unset all our state and start over.
+            _log.error("{} caught {!r} when trying to write {} with index {}"
+                       " - pause before retrying"
+                .format(self._ip, e, json_data, self._index))
             self._index = None
             self._last_cluster_view = None
+            # Sleep briefly to avoid hammering a failed server
+            sleep(self.PAUSE_BEFORE_RETRY)

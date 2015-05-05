@@ -38,10 +38,6 @@
 # the request will timeout after 2 seconds and be dropped.
 
 
-import re
-import zmq
-import os.path
-import sys
 import logging
 from threading import Thread, Condition
 from .constants import RAISE_TOO_LONG_CLUSTERING, CLEAR_TOO_LONG_CLUSTERING
@@ -57,6 +53,7 @@ try:
     sendrequest = mod.sendrequest
 except ImportError:
     _log.error("Could not import /usr/share/clearwater/bin/alarms.py, alarms will not be sent")
+
 
 def issue_alarm(identifier):
     if sendrequest:
