@@ -98,11 +98,11 @@ def join_cassandra_cluster(cluster_view, cassandra_yaml_file, ip):
 
         # Restart Cassandra and make sure it picks up the new list of seeds.
         _log.debug("Restarting Cassandra")
-        os.system("monit unmonitor cassandra")
-        os.system("service cassandra stop")
-        os.system("rm -rf /var/lib/cassandra/")
-        os.system("mkdir -m 755 /var/lib/cassandra")
-        os.system("chown -R cassandra /var/lib/cassandra")
+        run_command("monit unmonitor cassandra")
+        run_command("service cassandra stop")
+        run_command("rm -rf /var/lib/cassandra/")
+        run_command("mkdir -m 755 /var/lib/cassandra")
+        run_command("chown -R cassandra /var/lib/cassandra")
 
         start_cassandra()
 
