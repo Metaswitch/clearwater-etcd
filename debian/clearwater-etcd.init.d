@@ -80,7 +80,7 @@ create_cluster()
 
         # Build the initial cluster view string based on the IP addresses in
         # $etcd_cluster.  Each entry looks like <name>=<peer url>.
-        export ETCD_INITIAL_CLUSTER=
+        ETCD_INITIAL_CLUSTER=
         OLD_IFS=$IFS
         IFS=,
         for server in $etcd_cluster
@@ -91,7 +91,9 @@ create_cluster()
         done
         IFS=$OLD_IFS
 
-        export ETCD_INITIAL_CLUSTER_STATE=new 
+        CLUSTER_ARGS="--name $ETCD_NAME
+                      --initial-cluster $ETCD_INITIAL_CLUSTER
+                      --initial-cluster-state new"
 }
 
 join_cluster()
@@ -126,7 +128,9 @@ join_cluster()
         # Load the environment variables back into the local shell and export
         # them so ./etcd can see them when it starts up.
         . $TEMP_FILE
-        export ETCD_NAME ETCD_INITIAL_CLUSTER ETCD_INITIAL_CLUSTER_STATE
+        CLUSTER_ARGS="--name $ETCD_NAME
+                      --initial-cluster $ETCD_INITIAL_CLUSTER
+                      --initial-cluster-state $ETCD_INITIAL_CLUSTER_STATE"
 
         # daemon is not running, so attempt to start it.
         ulimit -Hn 10000
@@ -140,16 +144,19 @@ join_cluster()
 #
 # Function to join/create an etcd cluster based on the `etcd_cluster` variable
 #
+# Sets the CLUSTER_ARGS variable to an appropriate value to use as arguments to
+# etcd.
+#
 join_or_create_cluster()
 {
-	export ETCD_NAME=${local_ip//./-}
+        export ETCD_NAME=${local_ip//./-}
 
-	if [[ $etcd_cluster =~ (^|,)$local_ip(,|$) ]]
-	then
-	  create_cluster
-	else
-	  join_cluster
-	fi
+        if [[ $etcd_cluster =~ (^|,)$local_ip(,|$) ]]
+        then
+          create_cluster
+        else
+          join_cluster
+        fi
 }
 
 wait_for_etcd()
@@ -176,6 +183,7 @@ do_start()
         start-stop-daemon --start --quiet --pidfile $PIDFILE --name $NAME --exec $DAEMON --test > /dev/null \
                 || return 1
 
+        CLUSTER_ARGS=
         if [[ -d $DATA_DIR/$local_ip ]]
         then
           # We'll start normally using the data we saved off on our last boot.
@@ -191,7 +199,7 @@ do_start()
           join_or_create_cluster
         fi
 
-        # Standard ports
+        # Common arguments
         DAEMON_ARGS="--listen-client-urls http://$local_ip:4000
                      --advertise-client-urls http://$local_ip:4000
                      --listen-peer-urls http://$local_ip:2380
@@ -199,7 +207,7 @@ do_start()
                      --initial-cluster-token $home_domain
                      --data-dir $DATA_DIR/$local_ip"
 
-        start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --exec $DAEMON --chuid $NAME -- $DAEMON_ARGS \
+        start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --exec $DAEMON --chuid $NAME -- $DAEMON_ARGS $CLUSTER_ARGS \
                 || return 2
 
         wait_for_etcd
@@ -225,7 +233,7 @@ do_rebuild()
                      --data-dir $DATA_DIR/$local_ip
                      --force-new-cluster"
 
-        start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --exec $DAEMON --chuid $NAME -- $DAEMON_ARGS \
+        start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --exec $DAEMON --chuid $NAME -- $DAEMON_ARGS $CLUSTER_ARGS \
                 || return 2
 
         wait_for_etcd
