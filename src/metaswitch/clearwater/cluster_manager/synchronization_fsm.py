@@ -244,6 +244,12 @@ class SyncFSM(object):
 
         # States for leaving a cluster
 
+        # If we're waiting to leave, pause for SyncFSM.DELAY seconds (to allow
+        # other leaving nodes to enter this state), then move all
+        # WAITING_TO_LEAVE nodes into LEAVING state in order to kick off
+        # scale-down.
+
+        # Remaining nodes (in NORMAL state) should do nothing.
         elif (cluster_state == LEAVE_PENDING and
                 local_state == WAITING_TO_LEAVE):
             sleep(SyncFSM.DELAY)
@@ -251,6 +257,12 @@ class SyncFSM(object):
         elif (cluster_state == LEAVE_PENDING and
                 local_state == NORMAL):
             return None
+
+        # STARTED_LEAVING state involves everyone acknowledging that scale-down is
+        # starting, so NORMAL or LEAVING nodes should move into the relevant
+        # ACKNOWLEDGED_CHANGE state. (Once they're in that state, they don't
+        # have to do anything else until everyone has switched to that state, at
+        # which point the cluster is in LEAVING_CONFIG_CHANGING state).
 
         elif (cluster_state == STARTED_LEAVING and
                 local_state == LEAVING_ACKNOWLEDGED_CHANGE):
@@ -264,6 +276,15 @@ class SyncFSM(object):
         elif (cluster_state == STARTED_LEAVING and
                 local_state == LEAVING):
             return LEAVING_ACKNOWLEDGED_CHANGE
+
+        # LEAVING_CONFIG_CHANGING state starts when everyone has acknowledged
+        # that scale-down is happening, and ends when everyone has updated their
+        # config. So:
+        # - Nodes in NORMAL_ACKNOWLEDGED_CHANGE/LEAVING_ACKNOWLEDGED_CHANGE
+        # should kick their plugin, and then move to the relevant
+        # _CONFIG_CHANGED state.
+        # - Nodes in NORMAL_CONFIG_CHANGED/LEAVING_CONFIG_CHANGED state don't
+        # have any more work to do in this phase
 
         elif (cluster_state == LEAVING_CONFIG_CHANGING and
                 local_state == NORMAL_CONFIG_CHANGED):
@@ -282,6 +303,14 @@ class SyncFSM(object):
                                cluster_view,
                                new_state=LEAVING_CONFIG_CHANGED)
 
+        # LEAVING_RESYNCING state starts when everyone has updated their
+        # config, and ends when everyone has resynchronised their data around
+        # the cluster. So:
+        # - Nodes in NORMAL_ACKNOWLEDGED_CHANGE/LEAVING_ACKNOWLEDGED_CHANGE
+        # state should call into their plugin to do the resync, and then move to
+        # NORMAL state.
+        # - Nodes in NORMAL or FINISHED state don't have any more work to do.
+
         elif (cluster_state == LEAVING_RESYNCING and
                 local_state == NORMAL):
             return None
@@ -299,11 +328,18 @@ class SyncFSM(object):
                                cluster_view,
                                new_state=NORMAL)
 
+        # In FINISHED_LEAVING state, everyone is in NORMAL state (if they're
+        # remaining, in which case they should do nothing) or FINISHED state (if
+        # they're done, in which case they kick their plugin and then leave the
+        # cluster.
+
         elif (cluster_state == FINISHED_LEAVING and
                 local_state == NORMAL):
             return None
         elif (cluster_state == FINISHED_LEAVING and
                 local_state == FINISHED):
+            # This node is finished, so this state machine (and this thread)
+            # should stop.
             self._running = False
             return safe_plugin(self._plugin.on_leaving_cluster,
                                cluster_view,
