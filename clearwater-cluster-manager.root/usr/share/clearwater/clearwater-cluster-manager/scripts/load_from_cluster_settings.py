@@ -21,7 +21,7 @@ with open('/etc/clearwater/cluster_settings') as f:
 
 print "Inserting data %s into etcd key %s" % (data, etcd_key)
 
-c = etcd.Client(local_ip, 4001)
+c = etcd.Client(local_ip, 4000)
 new = c.write(etcd_key, data).value
 
 if new == data:

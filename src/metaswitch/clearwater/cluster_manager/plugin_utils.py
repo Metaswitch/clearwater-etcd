@@ -39,7 +39,7 @@ from metaswitch.clearwater.cluster_manager import constants
 _log = logging.getLogger("cluster_manager.plugin_utils")
 
 
-def write_cluster_settings(filename, cluster_view):
+def write_memcached_cluster_settings(filename, cluster_view):
     """Writes out the memcached cluster_settings file"""
     valid_servers_states = [constants.LEAVING_ACKNOWLEDGED_CHANGE,
                             constants.LEAVING_CONFIG_CHANGED,

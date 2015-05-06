@@ -8,7 +8,7 @@ data = ""
 with open(json_file) as f:
     data = f.read()
 
-c = etcd.Client(local_ip, 4001)
+c = etcd.Client(local_ip, 4000)
 old =  c.get(key).value
 
 print "Replacing old data %s with new data %s" % (old, data)
