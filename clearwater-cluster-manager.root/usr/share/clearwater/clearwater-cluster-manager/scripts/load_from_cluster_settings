@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -ue
+
+. /etc/clearwater/config
+
+if [ $# -ne 1 ]
+then
+  echo "Usage: load_from_cluster_settings [node_type]"
+  exit 1
+fi
+
+node_type=$1
+
+/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-cluster-manager/scripts/dump_etcd_state.py $local_ip $node_type
