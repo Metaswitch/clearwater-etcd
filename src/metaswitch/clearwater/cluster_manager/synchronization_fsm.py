@@ -46,6 +46,8 @@ def safe_plugin(f, cluster_view, new_state=None):
         _log.info("Calling plugin method {}.{}".
                       format(f.__self__.__class__.__name__,
                              f.__name__))
+        # Call into the plugin, and if it doesn't throw an exception,
+        # return the state we should move into.
         f(cluster_view)
         return new_state
     except AssertionError:
@@ -53,6 +55,10 @@ def safe_plugin(f, cluster_view, new_state=None):
         # easily.
         raise
     except Exception as e:
+        # If the plugin fails (which is unexpected), log the error and then
+        # return None. This will keep this node in the same state, pausing the
+        # scale-up (which will raise an alarm) until someone looks into it anhd
+        # fixes the issue.
         _log.error("Call to {}.{} with cluster {} caused exception {!r}".
                    format(f.__self__.__class__.__name__,
                           f.__name__,
@@ -139,6 +145,10 @@ class SyncFSM(object):
         # Main body of this function - define the action and next state for each
         # valid cluster state/local state pair.
 
+        # If we're back in a stable state, and this node is a member of the
+        # cluster, trigger the plugin to do whatever's necessary to refect that
+        # (e.g. removing mid-scale-up config).
+
         elif (cluster_state == STABLE and
                 local_state == NORMAL):
             return safe_plugin(self._plugin.on_stable_cluster,
@@ -150,6 +160,13 @@ class SyncFSM(object):
 
         # States for joining a cluster
 
+        # If we're waiting to join, pause for SyncFSM.DELAY seconds (to allow
+        # other new nodes to come online, and avoid repeating scale-up sveral
+        # times), then move all WAITING_TO_JOIN nodes into JOINING state in
+        # order to kick off scale-up.
+
+        # Existing nodes (in NORMAL state) should do nothing.
+
         elif (cluster_state == JOIN_PENDING and
                 local_state == WAITING_TO_JOIN):
             sleep(SyncFSM.DELAY)
@@ -157,6 +174,12 @@ class SyncFSM(object):
         elif (cluster_state == JOIN_PENDING and
                 local_state == NORMAL):
             return None
+
+        # STARTED_JOINING state involves everyone acknowledging that scale-up is
+        # starting, so NORMAL or JOINING nodes should move into the relevant
+        # ACKNOWLEDGED_CHANGE state. (Once they're in that state, they don't
+        # have to do anything else until everyone has switched to that state, at
+        # which point the cluster is in JOINING_CONFIG_CHANGING state).
 
         elif (cluster_state == STARTED_JOINING and
                 local_state == JOINING_ACKNOWLEDGED_CHANGE):
@@ -170,6 +193,15 @@ class SyncFSM(object):
         elif (cluster_state == STARTED_JOINING and
                 local_state == JOINING):
             return JOINING_ACKNOWLEDGED_CHANGE
+
+        # JOINING_CONFIG_CHANGING state starts when everyone has acknowledged
+        # that scale-up is happening, and ends when everyone has updated their
+        # config. So:
+        # - Nodes in NORMAL_ACKNOWLEDGED_CHANGE/JOINING_ACKNOWLEDGED_CHANGE
+        # should kick their plugin, and then move to the relevant
+        # _CONFIG_CHANGED state.
+        # - Nodes in NORMAL_CONFIG_CHANGED/JOINING_CONFIG_CHANGED state don't
+        # have any more work to do in this phase
 
         elif (cluster_state == JOINING_CONFIG_CHANGING and
                 local_state == JOINING_CONFIG_CHANGED):
@@ -187,6 +219,14 @@ class SyncFSM(object):
             return safe_plugin(self._plugin.on_cluster_changing,
                                cluster_view,
                                new_state=JOINING_CONFIG_CHANGED)
+
+        # JOINING_RESYNCING state starts when everyone has updated their
+        # config, and ends when everyone has resynchronised their data around
+        # the cluster. So:
+        # - Nodes in NORMAL_ACKNOWLEDGED_CHANGE/JOINING_ACKNOWLEDGED_CHANGE
+        # state should call into their plugin to do the resync, and then move to
+        # NORMAL state.
+        # - Nodes in NORMAL state don't have any more work to do.
 
         elif (cluster_state == JOINING_RESYNCING and
                 local_state == NORMAL):
