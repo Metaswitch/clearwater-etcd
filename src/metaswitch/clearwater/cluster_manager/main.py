@@ -1,9 +1,42 @@
 #!/usr/bin/env python
 
+# Project Clearwater - IMS in the Cloud
+# Copyright (C) 2015 Metaswitch Networks Ltd
+#
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version, along with the "Special Exception" for use of
+# the program along with SSL, set forth below. This program is distributed
+# in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more
+# details. You should have received a copy of the GNU General Public
+# License along with this program.  If not, see
+# <http://www.gnu.org/licenses/>.
+#
+# The author can be reached by email at clearwater@metaswitch.com or by
+# post at Metaswitch Networks Ltd, 100 Church St, Enfield EN2 6BQ, UK
+#
+# Special Exception
+# Metaswitch Networks Ltd  grants you permission to copy, modify,
+# propagate, and distribute a work formed by combining OpenSSL with The
+# Software, or a work derivative of such a combination, even if such
+# copying, modification, propagation, or distribution would otherwise
+# violate the terms of the GPL. You must comply with the GPL in all
+# respects for all of the code used other than OpenSSL.
+# "OpenSSL" means OpenSSL toolkit software distributed by the OpenSSL
+# Project and licensed under the OpenSSL Licenses, or a work based on such
+# software and licensed under the OpenSSL Licenses.
+# "OpenSSL Licenses" means the OpenSSL License and Original SSLeay License
+# under which the OpenSSL Project distributes the OpenSSL toolkit software,
+# as those licenses appear in the file LICENSE-OPENSSL.
+
 """Clearwater Cluster Manager
 
 Usage:
-  main.py --local-ip=IP [--foreground] [--log-level=LVL] [--log-directory=DIR] [--pidfile=FILE]
+  main.py --local-ip=IP [--foreground] [--log-level=LVL] [--log-directory=DIR]
+          [--pidfile=FILE]
 
 Options:
   -h --help                   Show this screen.
@@ -18,8 +51,10 @@ Options:
 from docopt import docopt
 
 from metaswitch.common import logging_config, utils
-from metaswitch.clearwater.cluster_manager.plugin_loader import load_plugins_in_dir
-from metaswitch.clearwater.cluster_manager.etcd_synchronizer import EtcdSynchronizer
+from metaswitch.clearwater.cluster_manager.plugin_loader \
+    import load_plugins_in_dir
+from metaswitch.clearwater.cluster_manager.etcd_synchronizer \
+    import EtcdSynchronizer
 import logging
 import os
 from threading import Thread
@@ -65,9 +100,25 @@ def main(args):
 
     plugins_dir = "/usr/share/clearwater/clearwater-cluster-manager/plugins/"
     plugins = load_plugins_in_dir(plugins_dir, listen_ip)
+    plugins.sort(key=lambda x: x.key())
+    plugins_to_use = []
+    files = []
+    skip = False
+    for plugin in plugins:
+        for plugin_file in plugin.files():
+            if plugin_file in files:
+                _log.info("Skipping plugin {} because {} "
+                          "is already managed by another plugin"
+                          .format(plugin, plugin_file))
+                skip = True
+
+        if not skip:
+            plugins_to_use.append(plugin)
+            files.extend(plugin.files())
+
     synchronizers = []
     threads = []
-    for plugin in plugins:
+    for plugin in plugins_to_use:
         syncer = EtcdSynchronizer(plugin, listen_ip)
         thread = Thread(target=syncer.main)
         thread.daemon = True

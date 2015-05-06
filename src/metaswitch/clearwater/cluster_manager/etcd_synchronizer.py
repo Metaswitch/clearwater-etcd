@@ -1,5 +1,37 @@
 #!/usr/bin/python
 
+# Project Clearwater - IMS in the Cloud
+# Copyright (C) 2015 Metaswitch Networks Ltd
+#
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version, along with the "Special Exception" for use of
+# the program along with SSL, set forth below. This program is distributed
+# in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more
+# details. You should have received a copy of the GNU General Public
+# License along with this program.  If not, see
+# <http://www.gnu.org/licenses/>.
+#
+# The author can be reached by email at clearwater@metaswitch.com or by
+# post at Metaswitch Networks Ltd, 100 Church St, Enfield EN2 6BQ, UK
+#
+# Special Exception
+# Metaswitch Networks Ltd  grants you permission to copy, modify,
+# propagate, and distribute a work formed by combining OpenSSL with The
+# Software, or a work derivative of such a combination, even if such
+# copying, modification, propagation, or distribution would otherwise
+# violate the terms of the GPL. You must comply with the GPL in all
+# respects for all of the code used other than OpenSSL.
+# "OpenSSL" means OpenSSL toolkit software distributed by the OpenSSL
+# Project and licensed under the OpenSSL Licenses, or a work based on such
+# software and licensed under the OpenSSL Licenses.
+# "OpenSSL Licenses" means the OpenSSL License and Original SSLeay License
+# under which the OpenSSL Project distributes the OpenSSL toolkit software,
+# as those licenses appear in the file LICENSE-OPENSSL.
+
 import etcd
 import json
 from collections import defaultdict
@@ -119,6 +151,10 @@ class EtcdSynchronizer(object):
             else:
                 error_count += 1
 
+        # Checks the contents of node_states: returns True if
+        # - at least one node is in one of the states in oneOrMore, and
+        # - all nodes are in one of the states on oneOrMore, zeroOrMore, or
+        #   ERROR
         def state_check(zeroOrMore=None, oneOrMore=None):
             if not zeroOrMore:
                 zeroOrMore = []
@@ -202,8 +238,9 @@ class EtcdSynchronizer(object):
                                                     recursive=False)
                         break
                     except urllib3.exceptions.TimeoutError:
-                        # Timeouts after 5 seconds are expected - just check if
-                        # we're termninating and continue
+                        # Timeouts after 5 seconds are expected, so ignore them
+                        # - unless we're terminating, we'll stay in the while
+                        # loop and try again
                         pass
                     except ValueError:
                         # The index isn't valid to watch on, probably because
@@ -213,7 +250,7 @@ class EtcdSynchronizer(object):
                             result.modifiedIndex+1))
                         self.read_from_etcd()
 
-                # Return if we're termiating.
+                # Return if we're terminating.
                 if self._terminate_flag:
                     return
                 else:
@@ -232,14 +269,14 @@ class EtcdSynchronizer(object):
             pass
         except Exception as e:
             # Catch-all error handler (for invalid requests, timeouts, etc -
-            # unset all our state and start over.
+            # start over.
             _log.error("{} caught {!r} when trying to read with index {}"
                        " - pause before retry".
                        format(self._ip, e, self._index))
-            self._index = None
-            self._last_cluster_view = None
             # Sleep briefly to avoid hammering a failed server
             sleep(self.PAUSE_BEFORE_RETRY)
+            # The main loop (which reads from etcd in a loop) should call this
+            # function again after we return, causing the read to be retried.
 
         return cluster_view
 
@@ -294,11 +331,13 @@ class EtcdSynchronizer(object):
                                        with_index=result.modifiedIndex)
         except Exception as e:
             # Catch-all error handler (for invalid requests, timeouts, etc -
-            # unset all our state and start over.
+            # unset our state and start over.
             _log.error("{} caught {!r} when trying to write {} with index {}"
                        " - pause before retrying"
                 .format(self._ip, e, json_data, self._index))
-            self._index = None
+            # Setting last_cluster_view to None means that the next successful
+            # read from etcd will trigger the state machine, which will mean
+            # that any necessary work/state changes get retried.
             self._last_cluster_view = None
             # Sleep briefly to avoid hammering a failed server
             sleep(self.PAUSE_BEFORE_RETRY)

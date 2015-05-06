@@ -1,7 +1,8 @@
-#!/usr/bin/env python
-
+#! /usr/bin/python
+# @file load_from_chronos_cluster.py
+#
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015 Metaswitch Networks Ltd
+# Copyright (C) 2015  Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -32,41 +33,34 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-
-import unittest
-from .mock_python_etcd import MockEtcdClient
-from metaswitch.clearwater.cluster_manager.synchronization_fsm import SyncFSM
-from metaswitch.clearwater.cluster_manager.etcd_synchronizer import \
-    EtcdSynchronizer
-from .dummy_plugin import DummyPlugin
-from time import sleep
+import sys
+import etcd
 import json
-from etcd import EtcdKeyError
 
+local_ip = sys.argv[1]
+node_type = sys.argv[2]
 
-class BaseClusterTest(unittest.TestCase):
-    def setUp(self):
-        SyncFSM.DELAY = 0.1
-        EtcdSynchronizer.PAUSE_BEFORE_RETRY = 0
-        MockEtcdClient.clear()
+assert node_type in ["sprout", "ralf"], "Node type must be 'sprout' or 'ralf'"
 
-    def wait_for_all_normal(self, client, required_number=-1, tries=20):
-        for i in range(tries):
-            try:
-                end = json.loads(client.get("/test").value)
-                if all([v == "normal" for k, v in end.iteritems()]) and \
-                   (required_number == -1 or len(end) == required_number):
-                    return
-            except EtcdKeyError:
-                pass
-            sleep(0.1)
+etcd_key = "/{}/clustering/chronos".format(node_type)
 
-    def make_and_start_synchronizers(self, num, klass=DummyPlugin):
-        ips = ["10.0.0.%s" % d for d in range(num)]
-        self.syncs = [EtcdSynchronizer(klass(ip), ip) for ip in ips]
-        for s in self.syncs:
-            s.start_thread()
+with open('/etc/chronos/chronos_cluster.conf') as f:
+    nodes = []
+    for line in f.readlines():
+        line = line.strip().replace(' ','')
+        if '=' in line:
+            key, value = line.split("=")
+            assert key != "leaving", "Must not have any leaving entries when running this script"
+            if key == "node":
+                nodes.append(value)
+    data = json.dumps({node: "normal" for node in nodes})
 
-    def close_synchronizers(self):
-        for s in self.syncs:
-            s.terminate()
+print "Inserting data %s into etcd key %s" % (data, etcd_key)
+
+c = etcd.Client(local_ip, 4000)
+new = c.write(etcd_key, data).value
+
+if new == data:
+    print "Update succeeded"
+else:
+    print "Update failed"
