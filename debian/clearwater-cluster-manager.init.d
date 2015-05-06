@@ -79,6 +79,8 @@ do_start()
 	#   2 if daemon could not be started
         [ -d /var/run/$NAME ] || install -m 755 -o $USER -g root -d /var/run/$NAME
 
+        [ -e /etc/clearwater/no_cluster_manager ] && (echo "/etc/clearwater/no_cluster_manager exists, not starting cluster manager" && return 2)
+
         . /etc/clearwater/config
         log_level=2
         log_directory=/var/log/clearwater-cluster-manager
