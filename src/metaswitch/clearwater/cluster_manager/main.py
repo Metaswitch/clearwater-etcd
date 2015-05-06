@@ -35,7 +35,8 @@
 """Clearwater Cluster Manager
 
 Usage:
-  main.py --local-ip=IP [--foreground] [--log-level=LVL] [--log-directory=DIR] [--pidfile=FILE]
+  main.py --local-ip=IP [--foreground] [--log-level=LVL] [--log-directory=DIR]
+          [--pidfile=FILE]
 
 Options:
   -h --help                   Show this screen.
@@ -50,8 +51,10 @@ Options:
 from docopt import docopt
 
 from metaswitch.common import logging_config, utils
-from metaswitch.clearwater.cluster_manager.plugin_loader import load_plugins_in_dir
-from metaswitch.clearwater.cluster_manager.etcd_synchronizer import EtcdSynchronizer
+from metaswitch.clearwater.cluster_manager.plugin_loader \
+    import load_plugins_in_dir
+from metaswitch.clearwater.cluster_manager.etcd_synchronizer \
+    import EtcdSynchronizer
 import logging
 import os
 from threading import Thread
@@ -97,9 +100,25 @@ def main(args):
 
     plugins_dir = "/usr/share/clearwater/clearwater-cluster-manager/plugins/"
     plugins = load_plugins_in_dir(plugins_dir, listen_ip)
+    plugins.sort(key=lambda x: x.key())
+    plugins_to_use = []
+    files = []
+    skip = False
+    for plugin in plugins:
+        for plugin_file in plugin.files():
+            if plugin_file in files:
+                _log.info("Skipping plugin {} because {} "
+                          "is already managed by another plugin"
+                          .format(plugin, plugin_file))
+                skip = True
+
+        if not skip:
+            plugins_to_use.append(plugin)
+            files.extend(plugin.files())
+
     synchronizers = []
     threads = []
-    for plugin in plugins:
+    for plugin in plugins_to_use:
         syncer = EtcdSynchronizer(plugin, listen_ip)
         thread = Thread(target=syncer.main)
         thread.daemon = True

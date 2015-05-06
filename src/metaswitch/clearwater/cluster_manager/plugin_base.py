@@ -11,6 +11,13 @@ class SynchroniserPluginBase(object):
         state"""
         pass
 
+
+    def files(self):
+
+        """This should return the files managed by this plugin,
+        to avoid conflicts"""
+        return []
+
     @abstractmethod
     def on_cluster_changing(self, cluster_view):
 
