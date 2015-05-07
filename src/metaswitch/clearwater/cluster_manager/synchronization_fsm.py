@@ -216,7 +216,7 @@ class SyncFSM(object):
                                new_state=NORMAL_CONFIG_CHANGED)
         elif (cluster_state == JOINING_CONFIG_CHANGING and
                 local_state == JOINING_ACKNOWLEDGED_CHANGE):
-            return safe_plugin(self._plugin.on_cluster_changing,
+            return safe_plugin(self._plugin.on_joining_cluster,
                                cluster_view,
                                new_state=JOINING_CONFIG_CHANGED)
 
