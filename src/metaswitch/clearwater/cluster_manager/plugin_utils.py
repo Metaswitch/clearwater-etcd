@@ -156,12 +156,13 @@ def leave_cassandra_cluster():
     except:
         start_cassandra()
 
-    os.system("nodetool decomission")
+    run_command("nodetool decomission")
     _log.debug("Cassandra node successfully decommissioned")
 
 
 def start_cassandra():
-    os.system("service cassandra start")
+    run_command("monit monitor cassandra")
+    run_command("monit monitor poll_cassandra_ring")
 
     # Wait until we can connect on port 9160 - i.e. Cassandra is running.
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
