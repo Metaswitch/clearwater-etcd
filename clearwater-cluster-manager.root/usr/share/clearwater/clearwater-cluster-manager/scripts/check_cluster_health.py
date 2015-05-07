@@ -1,6 +1,3 @@
-#! /usr/bin/python
-# @file load_from_chronos_cluster.py
-#
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015  Metaswitch Networks Ltd
 #
@@ -33,34 +30,49 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
+
 import sys
 import etcd
-import json
 
-local_ip = sys.argv[1]
-node_type = sys.argv[2]
+pairs = [
+    ("sprout", "memcached"),
+    ("sprout", "chronos"),
+    ("ralf", "memcached"),
+    ("ralf", "chronos"),
+    ("homestead", "cassandra"),
+    ("homer", "cassandra"),
+    ("memento", "memcached"),
+    ("memento", "cassandra")
+]
 
-assert node_type in ["sprout", "ralf"], "Node type must be 'sprout' or 'ralf'"
+local_node = sys.argv[1]
+client = etcd.Client(local_ip, 4000)
 
-etcd_key = "/{}/clustering/chronos".format(node_type)
 
-with open('/etc/chronos/chronos_cluster.conf') as f:
-    nodes = []
-    for line in f.readlines():
-        line = line.strip().replace(' ','')
-        if '=' in line:
-            key, value = line.split("=")
-            assert key != "leaving", "Must not have any leaving entries when running this script"
-            if key == "node":
-                nodes.append(value)
-    data = json.dumps({node: "normal" for node in nodes})
+def describe_cluster(node_type, store_name):
+    result = client.get("{}/clustering/{}".format(node_type, store_name))
+    if result.value == "":
+        # Cluster does not exist
+        return
 
-print "Inserting data %s into etcd key %s" % (data, etcd_key)
+    print "Describing {} {} cluster:".format(node_type, store_name)
+    cluster = json.loads(result.value)
+    cluster_ok = all([state == "normal"
+                      for node, state in cluster.iteritems()])
 
-c = etcd.Client(local_ip, 4000)
-new = c.write(etcd_key, data).value
+    if local_node in cluster:
+        print "Local node is in this cluster"
+    else:
+        print "Local node is *not* in this cluster"
 
-if new == data:
-    print "Update succeeded"
-else:
-    print "Update failed"
+    if cluster_ok:
+        print "Cluster is healthy and stable"
+    else:
+        print "Cluster is *not* healthy and stable"
+
+    for node, state in cluster.iteritems():
+        print "   {} is in state {}".format(node, state)
+    print ""
+
+for node_type, store_name in pairs:
+    describe_cluster(node_type, store_name)
