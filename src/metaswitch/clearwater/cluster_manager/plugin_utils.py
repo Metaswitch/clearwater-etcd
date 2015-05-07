@@ -156,7 +156,7 @@ def leave_cassandra_cluster():
     except:
         start_cassandra()
 
-    run_command("nodetool decomission")
+    run_command("nodetool decommission")
     _log.debug("Cassandra node successfully decommissioned")
 
 
