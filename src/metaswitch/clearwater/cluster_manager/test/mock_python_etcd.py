@@ -49,7 +49,7 @@ def EtcdFactory(*args, **kwargs):
     FV, or to an in-memory implementation for UT."""
     if os.environ.get('ETCD_IP'):
         return Client(os.environ.get('ETCD_IP'),
-                      os.environ.get('ETCD_PORT', 4001))
+                      int(os.environ.get('ETCD_PORT', 4001)))
     else:
         return MockEtcdClient(None, None)
 
