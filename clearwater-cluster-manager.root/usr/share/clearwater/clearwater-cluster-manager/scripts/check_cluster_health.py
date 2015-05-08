@@ -1,3 +1,5 @@
+#! /usr/bin/python
+#
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015  Metaswitch Networks Ltd
 #
@@ -33,6 +35,7 @@
 
 import sys
 import etcd
+import json
 
 pairs = [
     ("sprout", "memcached"),
@@ -46,11 +49,17 @@ pairs = [
 ]
 
 local_node = sys.argv[1]
-client = etcd.Client(local_ip, 4000)
+client = etcd.Client(local_node, 4000)
 
 
 def describe_cluster(node_type, store_name):
-    result = client.get("{}/clustering/{}".format(node_type, store_name))
+    try:
+        result = client.get("{}/clustering/{}".format(node_type, store_name))
+    except etcd.EtcdKeyNotFound:
+        # There's none of the particular node type in the deployment
+        print "{} {} cluster key doesn't exist".format(node_type, store_name)
+        return
+
     if result.value == "":
         # Cluster does not exist
         return
