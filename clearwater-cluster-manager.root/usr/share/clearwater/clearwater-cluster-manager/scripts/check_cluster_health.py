@@ -57,7 +57,6 @@ def describe_cluster(node_type, store_name):
         result = client.get("{}/clustering/{}".format(node_type, store_name))
     except etcd.EtcdKeyNotFound:
         # There's none of the particular node type in the deployment
-        print "{} {} cluster key doesn't exist".format(node_type, store_name)
         return
 
     if result.value == "":
