@@ -101,6 +101,7 @@ class EtcdSynchronizer(object):
                 self.write_to_etcd(cluster_view, new_state)
             else:
                 _log.debug("No state change")
+        _log.info("Quitting FSM")
         self._fsm.quit()
 
     def parse_cluster_view(self, view):
@@ -230,7 +231,7 @@ class EtcdSynchronizer(object):
                           cluster_view,
                           self._last_cluster_view))
             if cluster_view == self._last_cluster_view:
-                while not self._terminate_flag:
+                while not self._terminate_flag and self._fsm.is_running():
                     try:
                         result = self._client.watch(self._key,
                                                     index=result.modifiedIndex+1,
