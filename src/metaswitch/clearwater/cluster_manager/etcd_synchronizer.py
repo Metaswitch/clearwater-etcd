@@ -101,6 +101,7 @@ class EtcdSynchronizer(object):
                 self.write_to_etcd(cluster_view, new_state)
             else:
                 _log.debug("No state change")
+        _log.info("Quitting FSM")
         self._fsm.quit()
 
     def parse_cluster_view(self, view):
@@ -230,7 +231,7 @@ class EtcdSynchronizer(object):
                           cluster_view,
                           self._last_cluster_view))
             if cluster_view == self._last_cluster_view:
-                while not self._terminate_flag:
+                while not self._terminate_flag and self._fsm.is_running():
                     try:
                         result = self._client.watch(self._key,
                                                     index=result.modifiedIndex+1,
@@ -242,6 +243,14 @@ class EtcdSynchronizer(object):
                         # - unless we're terminating, we'll stay in the while
                         # loop and try again
                         pass
+                    except etcd.EtcdException as e:
+                        # We have seen timeouts getting raised as EtcdExceptions
+                        # so catch these here too and treat them as timeouts if
+                        # they indicate that the read timed out.
+                        if "Read timed out" in e.message:
+                            pass
+                        else:
+                            raise
                     except ValueError:
                         # The index isn't valid to watch on, probably because
                         # there has been a snapshot between the get and the
