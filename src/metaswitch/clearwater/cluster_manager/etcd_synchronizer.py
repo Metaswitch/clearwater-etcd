@@ -242,6 +242,14 @@ class EtcdSynchronizer(object):
                         # - unless we're terminating, we'll stay in the while
                         # loop and try again
                         pass
+                    except etcd.EtcdException as e:
+                        # We have seen timeouts getting raised as EtcdExceptions
+                        # so catch these here too and treat them as timeouts if
+                        # they indicate that the read timed out.
+                        if "Read timed out" in e.message:
+                            pass
+                        else:
+                            raise
                     except ValueError:
                         # The index isn't valid to watch on, probably because
                         # there has been a snapshot between the get and the
