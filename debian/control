@@ -13,3 +13,8 @@ Package: clearwater-etcd
 Architecture: all
 Depends: python-dev, python-pip, libffi-dev, libssl-dev, clearwater-infrastructure
 Description: etcd configured for Clearwater
+
+Package: clearwater-cluster-manager
+Architecture: all
+Depends: python-dev, python-pip, libffi-dev, libssl-dev, libzmq3-dev, python-virtualenv, clearwater-etcd
+Description: Cluster manager for Clearwater

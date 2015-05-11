@@ -1,0 +1,353 @@
+# Project Clearwater - IMS in the Cloud
+# Copyright (C) 2015 Metaswitch Networks Ltd
+#
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version, along with the "Special Exception" for use of
+# the program along with SSL, set forth below. This program is distributed
+# in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more
+# details. You should have received a copy of the GNU General Public
+# License along with this program.  If not, see
+# <http://www.gnu.org/licenses/>.
+#
+# The author can be reached by email at clearwater@metaswitch.com or by
+# post at Metaswitch Networks Ltd, 100 Church St, Enfield EN2 6BQ, UK
+#
+# Special Exception
+# Metaswitch Networks Ltd  grants you permission to copy, modify,
+# propagate, and distribute a work formed by combining OpenSSL with The
+# Software, or a work derivative of such a combination, even if such
+# copying, modification, propagation, or distribution would otherwise
+# violate the terms of the GPL. You must comply with the GPL in all
+# respects for all of the code used other than OpenSSL.
+# "OpenSSL" means OpenSSL toolkit software distributed by the OpenSSL
+# Project and licensed under the OpenSSL Licenses, or a work based on such
+# software and licensed under the OpenSSL Licenses.
+# "OpenSSL Licenses" means the OpenSSL License and Original SSLeay License
+# under which the OpenSSL Project distributes the OpenSSL toolkit software,
+# as those licenses appear in the file LICENSE-OPENSSL.
+
+
+from time import sleep
+from .constants import *
+from .alarms import TooLongAlarm
+import logging
+
+_log = logging.getLogger("cluster_manager.fsm")
+
+
+# Decorator to call a plugin function, and catch and log any exceptions it
+# raises.
+def safe_plugin(f, cluster_view, new_state=None):
+    try:
+        _log.info("Calling plugin method {}.{}".
+                      format(f.__self__.__class__.__name__,
+                             f.__name__))
+        # Call into the plugin, and if it doesn't throw an exception,
+        # return the state we should move into.
+        f(cluster_view)
+        return new_state
+    except AssertionError:
+        # Allow UT plugins to assert things, halt their FSM, and be noticed more
+        # easily.
+        raise
+    except Exception as e:
+        # If the plugin fails (which is unexpected), log the error and then
+        # return None. This will keep this node in the same state, pausing the
+        # scale-up (which will raise an alarm) until someone looks into it anhd
+        # fixes the issue.
+        _log.error("Call to {}.{} with cluster {} caused exception {!r}".
+                   format(f.__self__.__class__.__name__,
+                          f.__name__,
+                          cluster_view,
+                          e))
+        return None
+
+
+class SyncFSM(object):
+
+    # The number of seconds to wait in WAITING_TO_JOIN/WAITING_TO_LEAVE state
+    # before switching into JOINING/LEAVING state. Defined as a class constant
+    # for easy overriding in UT.
+    DELAY = 30
+
+    def __init__(self, plugin, local_ip):
+        self._plugin = plugin
+        self._id = local_ip
+        self._running = True
+        self._alarm = TooLongAlarm()
+
+    def quit(self):
+        self._alarm.quit()
+
+    def is_running(self):
+        return self._running
+
+    def _switch_all_to_joining(self, cluster_view):
+        return {k: (JOINING if v == WAITING_TO_JOIN else v)
+                for k, v in cluster_view.iteritems()}
+
+    def _switch_all_to_leaving(self, cluster_view):
+        return {k: (LEAVING if v == WAITING_TO_LEAVE else v)
+                for k, v in cluster_view.iteritems()}
+
+    def _delete_myself(self, cluster_view):
+        return {k: v for k, v in cluster_view.iteritems() if k != self._id}
+
+    def next(self, local_state, cluster_state, cluster_view):  # noqa
+        """Main state machine function.
+
+        Arguments:
+            - local_state: string constant from constants.py
+            - cluster_state: string constant from constants.py
+            - cluster_view: dictionary of node IPs to local states
+
+        Returns:
+            - None if the state should not change
+            - A string constant (from constants.py) representing the new local
+            state of this node, if it wants to just change that
+            - A dictionary of node IPs to states, representing the new state of
+            the whole cluster, if it wants to change that
+        """
+        _log.debug("Entered state machine for {} with local state {}, "
+                   "cluster state {} and cluster view {}".format(
+                       self._id,
+                       local_state,
+                       cluster_state,
+                       cluster_view))
+        assert(self._running)
+
+        # If we're mid-scale-up, ensure that the "scaling operation taking too
+        # long" alarm is running, and cancel it if we're not
+        if local_state == NORMAL:
+            self._alarm.cancel()
+        else:
+            self._alarm.trigger(self._id)
+
+        # Handle the abnormal cases first - where the local node isn't in the
+        # cluster, and where the local node is in ERROR state. These can happen
+        # in any cluster state, so don't fit neatly into the main function body.
+
+        if local_state is None:
+            if cluster_state in [EMPTY, STABLE, JOIN_PENDING]:
+                return WAITING_TO_JOIN
+            else:
+                return None
+
+        if local_state == ERROR:
+            return None
+
+        # Main body of this function - define the action and next state for each
+        # valid cluster state/local state pair.
+
+        # If we're back in a stable state, and this node is a member of the
+        # cluster, trigger the plugin to do whatever's necessary to refect that
+        # (e.g. removing mid-scale-up config).
+
+        elif (cluster_state == STABLE and
+                local_state == NORMAL):
+            return safe_plugin(self._plugin.on_stable_cluster,
+                               cluster_view)
+        elif (cluster_state == STABLE_WITH_ERRORS and
+                local_state == NORMAL):
+            return safe_plugin(self._plugin.on_stable_cluster,
+                               cluster_view)
+
+        # States for joining a cluster
+
+        # If we're waiting to join, pause for SyncFSM.DELAY seconds (to allow
+        # other new nodes to come online, and avoid repeating scale-up sveral
+        # times), then move all WAITING_TO_JOIN nodes into JOINING state in
+        # order to kick off scale-up.
+
+        # Existing nodes (in NORMAL state) should do nothing.
+
+        elif (cluster_state == JOIN_PENDING and
+                local_state == WAITING_TO_JOIN):
+            sleep(SyncFSM.DELAY)
+            return self._switch_all_to_joining(cluster_view)
+        elif (cluster_state == JOIN_PENDING and
+                local_state == NORMAL):
+            return None
+
+        # STARTED_JOINING state involves everyone acknowledging that scale-up is
+        # starting, so NORMAL or JOINING nodes should move into the relevant
+        # ACKNOWLEDGED_CHANGE state. (Once they're in that state, they don't
+        # have to do anything else until everyone has switched to that state, at
+        # which point the cluster is in JOINING_CONFIG_CHANGING state).
+
+        elif (cluster_state == STARTED_JOINING and
+                local_state == JOINING_ACKNOWLEDGED_CHANGE):
+            return None
+        elif (cluster_state == STARTED_JOINING and
+                local_state == NORMAL_ACKNOWLEDGED_CHANGE):
+            return None
+        elif (cluster_state == STARTED_JOINING and
+                local_state == NORMAL):
+            return NORMAL_ACKNOWLEDGED_CHANGE
+        elif (cluster_state == STARTED_JOINING and
+                local_state == JOINING):
+            return JOINING_ACKNOWLEDGED_CHANGE
+
+        # JOINING_CONFIG_CHANGING state starts when everyone has acknowledged
+        # that scale-up is happening, and ends when everyone has updated their
+        # config. So:
+        # - Nodes in NORMAL_ACKNOWLEDGED_CHANGE/JOINING_ACKNOWLEDGED_CHANGE
+        # should kick their plugin, and then move to the relevant
+        # _CONFIG_CHANGED state.
+        # - Nodes in NORMAL_CONFIG_CHANGED/JOINING_CONFIG_CHANGED state don't
+        # have any more work to do in this phase
+
+        elif (cluster_state == JOINING_CONFIG_CHANGING and
+                local_state == JOINING_CONFIG_CHANGED):
+            return None
+        elif (cluster_state == JOINING_CONFIG_CHANGING and
+                local_state == NORMAL_CONFIG_CHANGED):
+            return None
+        elif (cluster_state == JOINING_CONFIG_CHANGING and
+                local_state == NORMAL_ACKNOWLEDGED_CHANGE):
+            return safe_plugin(self._plugin.on_cluster_changing,
+                               cluster_view,
+                               new_state=NORMAL_CONFIG_CHANGED)
+        elif (cluster_state == JOINING_CONFIG_CHANGING and
+                local_state == JOINING_ACKNOWLEDGED_CHANGE):
+            return safe_plugin(self._plugin.on_joining_cluster,
+                               cluster_view,
+                               new_state=JOINING_CONFIG_CHANGED)
+
+        # JOINING_RESYNCING state starts when everyone has updated their
+        # config, and ends when everyone has resynchronised their data around
+        # the cluster. So:
+        # - Nodes in NORMAL_ACKNOWLEDGED_CHANGE/JOINING_ACKNOWLEDGED_CHANGE
+        # state should call into their plugin to do the resync, and then move to
+        # NORMAL state.
+        # - Nodes in NORMAL state don't have any more work to do.
+
+        elif (cluster_state == JOINING_RESYNCING and
+                local_state == NORMAL):
+            return None
+        elif (cluster_state == JOINING_RESYNCING and
+                local_state == NORMAL_CONFIG_CHANGED):
+            return safe_plugin(self._plugin.on_new_cluster_config_ready,
+                               cluster_view,
+                               new_state=NORMAL)
+        elif (cluster_state == JOINING_RESYNCING and
+                local_state == JOINING_CONFIG_CHANGED):
+            return safe_plugin(self._plugin.on_new_cluster_config_ready,
+                               cluster_view,
+                               new_state=NORMAL)
+
+        # States for leaving a cluster
+
+        # If we're waiting to leave, pause for SyncFSM.DELAY seconds (to allow
+        # other leaving nodes to enter this state), then move all
+        # WAITING_TO_LEAVE nodes into LEAVING state in order to kick off
+        # scale-down.
+
+        # Remaining nodes (in NORMAL state) should do nothing.
+        elif (cluster_state == LEAVE_PENDING and
+                local_state == WAITING_TO_LEAVE):
+            sleep(SyncFSM.DELAY)
+            return self._switch_all_to_leaving(cluster_view)
+        elif (cluster_state == LEAVE_PENDING and
+                local_state == NORMAL):
+            return None
+
+        # STARTED_LEAVING state involves everyone acknowledging that scale-down is
+        # starting, so NORMAL or LEAVING nodes should move into the relevant
+        # ACKNOWLEDGED_CHANGE state. (Once they're in that state, they don't
+        # have to do anything else until everyone has switched to that state, at
+        # which point the cluster is in LEAVING_CONFIG_CHANGING state).
+
+        elif (cluster_state == STARTED_LEAVING and
+                local_state == LEAVING_ACKNOWLEDGED_CHANGE):
+            return None
+        elif (cluster_state == STARTED_LEAVING and
+                local_state == NORMAL_ACKNOWLEDGED_CHANGE):
+            return None
+        elif (cluster_state == STARTED_LEAVING and
+                local_state == NORMAL):
+            return NORMAL_ACKNOWLEDGED_CHANGE
+        elif (cluster_state == STARTED_LEAVING and
+                local_state == LEAVING):
+            return LEAVING_ACKNOWLEDGED_CHANGE
+
+        # LEAVING_CONFIG_CHANGING state starts when everyone has acknowledged
+        # that scale-down is happening, and ends when everyone has updated their
+        # config. So:
+        # - Nodes in NORMAL_ACKNOWLEDGED_CHANGE/LEAVING_ACKNOWLEDGED_CHANGE
+        # should kick their plugin, and then move to the relevant
+        # _CONFIG_CHANGED state.
+        # - Nodes in NORMAL_CONFIG_CHANGED/LEAVING_CONFIG_CHANGED state don't
+        # have any more work to do in this phase
+
+        elif (cluster_state == LEAVING_CONFIG_CHANGING and
+                local_state == NORMAL_CONFIG_CHANGED):
+                return None
+        elif (cluster_state == LEAVING_CONFIG_CHANGING and
+                local_state == LEAVING_CONFIG_CHANGED):
+                return None
+        elif (cluster_state == LEAVING_CONFIG_CHANGING and
+                local_state == NORMAL_ACKNOWLEDGED_CHANGE):
+            return safe_plugin(self._plugin.on_cluster_changing,
+                               cluster_view,
+                               new_state=NORMAL_CONFIG_CHANGED)
+        elif (cluster_state == LEAVING_CONFIG_CHANGING and
+                local_state == LEAVING_ACKNOWLEDGED_CHANGE):
+            return safe_plugin(self._plugin.on_cluster_changing,
+                               cluster_view,
+                               new_state=LEAVING_CONFIG_CHANGED)
+
+        # LEAVING_RESYNCING state starts when everyone has updated their
+        # config, and ends when everyone has resynchronised their data around
+        # the cluster. So:
+        # - Nodes in NORMAL_ACKNOWLEDGED_CHANGE/LEAVING_ACKNOWLEDGED_CHANGE
+        # state should call into their plugin to do the resync, and then move to
+        # NORMAL state.
+        # - Nodes in NORMAL or FINISHED state don't have any more work to do.
+
+        elif (cluster_state == LEAVING_RESYNCING and
+                local_state == NORMAL):
+            return None
+        elif (cluster_state == LEAVING_RESYNCING and
+                local_state == FINISHED):
+            return None
+        elif (cluster_state == LEAVING_RESYNCING and
+                local_state == LEAVING_CONFIG_CHANGED):
+            return safe_plugin(self._plugin.on_new_cluster_config_ready,
+                               cluster_view,
+                               new_state=FINISHED)
+        elif (cluster_state == LEAVING_RESYNCING and
+                local_state == NORMAL_CONFIG_CHANGED):
+            return safe_plugin(self._plugin.on_new_cluster_config_ready,
+                               cluster_view,
+                               new_state=NORMAL)
+
+        # In FINISHED_LEAVING state, everyone is in NORMAL state (if they're
+        # remaining, in which case they should do nothing) or FINISHED state (if
+        # they're done, in which case they kick their plugin and then leave the
+        # cluster.
+
+        elif (cluster_state == FINISHED_LEAVING and
+                local_state == NORMAL):
+            return None
+        elif (cluster_state == FINISHED_LEAVING and
+                local_state == FINISHED):
+            # This node is finished, so this state machine (and this thread)
+            # should stop.
+            self._running = False
+            return safe_plugin(self._plugin.on_leaving_cluster,
+                               cluster_view,
+                               new_state=self._delete_myself(cluster_view))
+
+        # Any valid state should have caused me to return by now
+        _log.error("Invalid state in state machine for {} - local state {}, "
+                   "cluster state {} and cluster view {}".format(
+                       self._id,
+                       local_state,
+                       cluster_state,
+                       cluster_view))
+        return None

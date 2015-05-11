@@ -1,0 +1,8 @@
+/.eggs/
+/eggs/
+/_env/
+*.pyc
+/.coverage
+/build/
+/htmlcov/
+/src/clearwater_cluster_manager.egg-info/
