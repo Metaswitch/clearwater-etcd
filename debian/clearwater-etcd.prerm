@@ -50,12 +50,18 @@ set -e
 # for details, see http://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
 
+NAME=clearwater-etcd
+
 #
 # These functions undo their counterparts in clearwater-etcd.postinst
 #
 
 case "$1" in
     upgrade|deconfigure|remove)
+        # Must stop before attempting to remove the user, else that will fail.
+        # Use || /bin/true to ignore a failure, because set -e is in effect.
+        rm -f /etc/monit/conf.d/$NAME.monit
+        reload clearwater-monit &> /dev/null || true
     ;;
 
     failed-upgrade)

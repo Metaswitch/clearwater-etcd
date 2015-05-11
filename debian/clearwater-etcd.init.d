@@ -91,8 +91,7 @@ create_cluster()
         done
         IFS=$OLD_IFS
 
-        CLUSTER_ARGS="--name $ETCD_NAME
-                      --initial-cluster $ETCD_INITIAL_CLUSTER
+        CLUSTER_ARGS="--initial-cluster $ETCD_INITIAL_CLUSTER
                       --initial-cluster-state new"
 }
 
@@ -128,8 +127,7 @@ join_cluster()
         # Load the environment variables back into the local shell and export
         # them so ./etcd can see them when it starts up.
         . $TEMP_FILE
-        CLUSTER_ARGS="--name $ETCD_NAME
-                      --initial-cluster $ETCD_INITIAL_CLUSTER
+        CLUSTER_ARGS="--initial-cluster $ETCD_INITIAL_CLUSTER
                       --initial-cluster-state $ETCD_INITIAL_CLUSTER_STATE"
 
         # daemon is not running, so attempt to start it.
@@ -149,8 +147,6 @@ join_cluster()
 #
 join_or_create_cluster()
 {
-        export ETCD_NAME=${local_ip//./-}
-
         if [[ $etcd_cluster =~ (^|,)$local_ip(,|$) ]]
         then
           create_cluster
@@ -183,6 +179,7 @@ do_start()
         start-stop-daemon --start --quiet --pidfile $PIDFILE --name $NAME --exec $DAEMON --test > /dev/null \
                 || return 1
 
+        ETCD_NAME=${local_ip//./-}
         CLUSTER_ARGS=
         if [[ -d $DATA_DIR/$local_ip ]]
         then
@@ -205,7 +202,8 @@ do_start()
                      --listen-peer-urls http://$local_ip:2380
                      --initial-advertise-peer-urls http://$local_ip:2380
                      --initial-cluster-token $home_domain
-                     --data-dir $DATA_DIR/$local_ip"
+                     --data-dir $DATA_DIR/$local_ip
+                     --name $ETCD_NAME"
 
         start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --exec $DAEMON --chuid $NAME -- $DAEMON_ARGS $CLUSTER_ARGS \
                 || return 2
