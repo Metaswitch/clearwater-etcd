@@ -81,12 +81,14 @@ do_start()
 
         [ -e /etc/clearwater/no_cluster_manager ] && (echo "/etc/clearwater/no_cluster_manager exists, not starting cluster manager" && return 2)
 
+        local_site_name=site1
+        remote_site_name=""
         . /etc/clearwater/config
         log_level=2
         log_directory=/var/log/clearwater-cluster-manager
         [ -r /etc/clearwater/user_settings ] && . /etc/clearwater/user_settings
 
-        DAEMON_ARGS="--local-ip=$local_ip --log-level=$log_level --log-directory=$log_directory --pidfile=$PIDFILE"
+        DAEMON_ARGS="--local-ip=$local_ip --local-site=$local_site_name --remote-site=$remote_site_name --log-level=$log_level --log-directory=$log_directory --pidfile=$PIDFILE"
 
 	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null \
 		|| return 1

@@ -10,7 +10,7 @@ node_type = sys.argv[2]
 assert node_type in ["homestead", "homer", "memento"], \
     "Node type must be 'homestead', 'homer' or 'memento'"
 
-etcd_key = "/{}/clustering/cassandra".format(node_type)
+etcd_key = "/clearwater/{}/clustering/cassandra".format(node_type)
 
 try:
     # Use nodetool describecluster to find the nodes in the existing cluster.

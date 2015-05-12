@@ -38,11 +38,12 @@ import etcd
 import json
 
 local_ip = sys.argv[1]
-node_type = sys.argv[2]
+site_name = sys.argv[2]
+node_type = sys.argv[3]
 
 assert node_type in ["sprout", "ralf"], "Node type must be 'sprout' or 'ralf'"
 
-etcd_key = "/{}/clustering/chronos".format(node_type)
+etcd_key = "/clearwater/{}/{}/clustering/chronos".format(site_name, node_type)
 
 with open('/etc/chronos/chronos_cluster.conf') as f:
     nodes = []

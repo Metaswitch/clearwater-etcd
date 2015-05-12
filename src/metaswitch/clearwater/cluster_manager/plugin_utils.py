@@ -98,7 +98,11 @@ def run_command(command):
 # cluster. If there is an existing Cassandra cluster formed, we use the nodes in
 # that cluster as the seeds; otherwise, we use the all the joining nodes as the
 # seeds._
-def join_cassandra_cluster(cluster_view, cassandra_yaml_file, ip):
+def join_cassandra_cluster(cluster_view,
+                           cassandra_yaml_file,
+                           cassandra_topology_file,
+                           ip,
+                           site_name):
     seeds_list = []
 
     for seed, state in cluster_view.items():
@@ -124,10 +128,16 @@ def join_cassandra_cluster(cluster_view, cassandra_yaml_file, ip):
         # document.
         doc["listen_address"] = ip
         doc["seed_provider"][0]["parameters"][0]["seeds"] = seeds_list_str
+        doc["endpoint_snitch"] = "GossipingFilePropertySnitch"
 
         # Write back to cassandra.yaml.
         with open(cassandra_yaml_file, "w") as f:
             yaml.dump(doc, f)
+
+        topology = "dc={}\nrack=RAC1".format(site_name)
+
+        with open(cassandra_topology_file, "w") as f:
+            f.write(topology)
 
         # Restart Cassandra and make sure it picks up the new list of seeds.
         _log.debug("Restarting Cassandra")

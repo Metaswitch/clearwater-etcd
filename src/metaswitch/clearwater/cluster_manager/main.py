@@ -35,12 +35,15 @@
 """Clearwater Cluster Manager
 
 Usage:
-  main.py --local-ip=IP [--foreground] [--log-level=LVL] [--log-directory=DIR]
+  main.py --local-ip=IP --local-site=NAME --remote-site=NAME
+          [--foreground] [--log-level=LVL] [--log-directory=DIR]
           [--pidfile=FILE]
 
 Options:
   -h --help                   Show this screen.
   --local-ip=IP               IP address
+  --local-site=NAME           Name of local site
+  --remote-site=NAME          Name of local site
   --foreground                Don't daemonise
   --log-level=LVL             Level to log at, 0-4 [default: 3]
   --log-directory=DIR         Directory to log to [default: ./]
@@ -82,6 +85,8 @@ def main(args):
     arguments = docopt(__doc__, argv=args)
 
     listen_ip = arguments['--local-ip']
+    local_site_name = arguments['--local-site']
+    remote_site_name = arguments['--remote-site']
     log_dir = arguments['--log-directory']
     log_level = LOG_LEVELS.get(arguments['--log-level'], logging.DEBUG)
 
@@ -99,7 +104,10 @@ def main(args):
         pidfile.write(str(pid) + "\n")
 
     plugins_dir = "/usr/share/clearwater/clearwater-cluster-manager/plugins/"
-    plugins = load_plugins_in_dir(plugins_dir, listen_ip)
+    plugins = load_plugins_in_dir(plugins_dir,
+                                  listen_ip,
+                                  local_site_name,
+                                  remote_site_name)
     plugins.sort(key=lambda x: x.key())
     plugins_to_use = []
     files = []
