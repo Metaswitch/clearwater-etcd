@@ -111,8 +111,8 @@ def main(args):
 
     install_sigquit_handler(synchronizers)
 
-    while True:
-        for thread in threads:
+    for thread in threads:
+        while thread.isAlive():
             thread.join(1)
 
 if __name__ == '__main__':
