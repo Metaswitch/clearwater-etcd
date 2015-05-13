@@ -50,12 +50,16 @@ set -e
 # for details, see http://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
 
+NAME=clearwater-etcd
+
 #
 # These functions undo their counterparts in clearwater-etcd.postinst
 #
 
 case "$1" in
     upgrade|deconfigure|remove)
+        rm -f /etc/monit/conf.d/$NAME.monit
+        reload clearwater-monit &> /dev/null || true
     ;;
 
     failed-upgrade)

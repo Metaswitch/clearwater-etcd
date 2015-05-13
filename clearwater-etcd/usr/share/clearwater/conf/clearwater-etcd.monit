@@ -35,7 +35,7 @@
 # Check the clearwater-etcd service.
 
 # Monitor the service's PID file and memory use.
-check process etcd with pidfile /var/run/etcd.pid
+check process etcd with pidfile /var/run/clearwater-etcd.pid
 
   start program    = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 6500.3; /etc/init.d/clearwater-etcd start'"
   stop program     = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 6500.3; /etc/init.d/clearwater-etcd stop'"

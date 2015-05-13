@@ -132,9 +132,7 @@ class SyncFSM(object):
         # in any cluster state, so don't fit neatly into the main function body.
 
         if local_state is None:
-            if cluster_state == EMPTY:
-                return NORMAL
-            elif cluster_state in [STABLE, JOIN_PENDING]:
+            if cluster_state in [EMPTY, STABLE, JOIN_PENDING]:
                 return WAITING_TO_JOIN
             else:
                 return None
