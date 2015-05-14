@@ -44,8 +44,8 @@ _log = logging.getLogger("cluster_manager.fsm")
 def safe_plugin(f, cluster_view, new_state=None):
     try:
         _log.info("Calling plugin method {}.{}".
-                      format(f.__self__.__class__.__name__,
-                             f.__name__))
+                  format(f.__self__.__class__.__name__,
+                         f.__name__))
         # Call into the plugin, and if it doesn't throw an exception,
         # return the state we should move into.
         f(cluster_view)
@@ -257,8 +257,8 @@ class SyncFSM(object):
                 local_state == NORMAL):
             return None
 
-        # STARTED_LEAVING state involves everyone acknowledging that scale-down is
-        # starting, so NORMAL or LEAVING nodes should move into the relevant
+        # STARTED_LEAVING state involves everyone acknowledging that scale-down
+        # is starting, so NORMAL or LEAVING nodes should move into the relevant
         # ACKNOWLEDGED_CHANGE state. (Once they're in that state, they don't
         # have to do anything else until everyone has switched to that state, at
         # which point the cluster is in LEAVING_CONFIG_CHANGING state).
