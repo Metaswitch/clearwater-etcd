@@ -31,9 +31,11 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 
+import logging
 import imp
 import os
 
+_log = logging.getLogger("metaswitch.clearwater.config_manager.plugin_loader")
 
 def load_plugins_in_dir(dir, config):
     """Loads plugins by:
@@ -45,11 +47,13 @@ def load_plugins_in_dir(dir, config):
     files = os.listdir(dir)
     plugins = []
     for filename in files:
+        _log.info("Inspecting {}".format(filename))
         module_name, suffix = filename.split(".")
         if suffix == "py":
             file, pathname, description = imp.find_module(module_name, [dir])
             if file:
                 mod = imp.load_module(module_name, file, pathname, description)
                 if hasattr(mod, "load_as_plugin"):
+                    _log.info("Loading {}".format(filename))
                     plugins.append(mod.load_as_plugin(config))
     return plugins

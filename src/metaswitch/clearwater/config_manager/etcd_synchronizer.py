@@ -36,7 +36,6 @@ import etcd
 from threading import Thread
 from time import sleep
 
-from .constants import *
 import urllib3
 import logging
 
@@ -53,30 +52,23 @@ class EtcdSynchronizer(object):
         else:
             self._client = etcd.Client(ip, 4000)
         self._key = plugin.key()
+        self._plugin = plugin
         self._index = None
         self._terminate_flag = False
         self.thread = Thread(target=self.main)
         self.force_leave = force_leave
 
-    def start_thread(self):
-        self.thread.daemon = True
-        self.thread.start()
-
-    def terminate(self):
-        self._terminate_flag = True
-        self.thread.join()
-
     def main(self):
         # Continue looping while the FSM is running.
-        while self._fsm.is_running():
+        while not self._terminate_flag:
             # This blocks on changes to the watched key in etcd.
             _log.debug("Waiting for change from etcd for key{}".format(
                          self._key))
             value = self.read_from_etcd()
             if self._terminate_flag:
                 break
-            _log.debug("Got new config value from etcd:\n{}" % value)
-            self._plugin.on_config_change(value)
+            _log.debug("Got new config value from etcd:\n{}".format(value))
+            self._plugin.on_config_changed(value)
 
     # Read the current value of the key from etcd (blocks until there's a
     # change).

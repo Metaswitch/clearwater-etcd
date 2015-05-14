@@ -53,7 +53,7 @@ from docopt import docopt
 from metaswitch.common import logging_config, utils
 from metaswitch.clearwater.config_manager.plugin_loader \
     import load_plugins_in_dir
-from metaswitch.clearwater.cluster_manager.etcd_synchronizer \
+from metaswitch.clearwater.config_manager.etcd_synchronizer \
     import EtcdSynchronizer
 import logging
 import os
@@ -78,6 +78,7 @@ def install_sigquit_handler(plugins):
 def main(args):
     arguments = docopt(__doc__, argv=args)
 
+    local_ip = arguments['--local-ip']
     log_dir = arguments['--log-directory']
     log_level = LOG_LEVELS.get(arguments['--log-level'], logging.DEBUG)
 
@@ -95,14 +96,13 @@ def main(args):
         pidfile.write(str(pid) + "\n")
 
     plugins_dir = "/usr/share/clearwater/clearwater-config-manager/plugins/"
-    plugins = load_plugins_in_dir(plugins_dir)
+    plugins = load_plugins_in_dir(plugins_dir, local_ip)
     plugins.sort(key=lambda x: x.key())
     synchronizers = []
     threads = []
     for plugin in plugins:
-        syncer = EtcdSynchronizer(plugin)
+        syncer = EtcdSynchronizer(plugin, local_ip)
         thread = Thread(target=syncer.main)
-        thread.daemon = True
         thread.start()
 
         synchronizers.append(syncer)
@@ -114,6 +114,8 @@ def main(args):
     for thread in threads:
         while thread.isAlive():
             thread.join(1)
+
+    _log.info("Clearwater Configuration Manager shutting down")
 
 if __name__ == '__main__':
     import sys
