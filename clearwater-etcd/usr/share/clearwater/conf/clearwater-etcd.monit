@@ -35,7 +35,8 @@
 # Check the clearwater-etcd service.
 
 # Monitor the service's PID file and memory use.
-check process etcd with pidfile /var/run/clearwater-etcd.pid
+check process etcd_process with pidfile /var/run/clearwater-etcd.pid
+  group etcd
 
   start program    = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 6500.3; /etc/init.d/clearwater-etcd start'"
   stop program     = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 6500.3; /etc/init.d/clearwater-etcd stop'"
@@ -55,11 +56,13 @@ check process etcd with pidfile /var/run/clearwater-etcd.pid
 # unnecessary retransmissions). Only check every 60 seconds due to overhead of
 # running etcdctl cluster-health.
 check program poll_etcd_cluster with path "/usr/share/clearwater/bin/poll_etcd_cluster.sh" every 6 cycles
-  depends on etcd
+  group etcd
+  depends on etcd_process
   if status != 0 then alert
 
 # Check that etcd is listening on 4000. This depends on the etcd process (and
 # so won't run unless the etcd process is running)
 check program poll_etcd with path "/usr/share/clearwater/bin/poll_etcd.sh"
-  depends on etcd
+  group etcd
+  depends on etcd_process
   if status != 0 for 2 cycles then exec "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 6500.3; /etc/init.d/clearwater-etcd stop'"
