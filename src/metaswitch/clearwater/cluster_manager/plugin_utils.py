@@ -134,7 +134,7 @@ def join_cassandra_cluster(cluster_view,
         with open(cassandra_yaml_file, "w") as f:
             yaml.dump(doc, f)
 
-        topology = "dc={}\nrack=RAC1".format(site_name)
+        topology = "dc={}\nrack=RAC1\n".format(site_name)
 
         with open(cassandra_topology_file, "w") as f:
             f.write(topology)
@@ -172,6 +172,7 @@ def leave_cassandra_cluster():
 
 def start_cassandra():
     run_command("monit monitor cassandra")
+    run_command("monit monitor poll_cassandra")
     run_command("monit monitor poll_cassandra_ring")
 
     # Wait until we can connect on port 9160 - i.e. Cassandra is running.
