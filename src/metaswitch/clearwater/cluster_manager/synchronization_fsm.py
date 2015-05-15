@@ -131,9 +131,19 @@ class SyncFSM(object):
         # cluster, and where the local node is in ERROR state. These can happen
         # in any cluster state, so don't fit neatly into the main function body.
 
+        if not self._plugin.should_be_in_cluster():
+            # This plugin is just monitoring a remote cluster
+            if cluster_state in [JOINING_CONFIG_CHANGING,
+                                 LEAVING_CONFIG_CHANGING]:
+                safe_plugin(self._plugin.on_cluster_changing,
+                            cluster_view)
+            elif cluster_state == STABLE:
+                safe_plugin(self._plugin.on_stable_cluster,
+                            cluster_view)
+            return None
+
         if local_state is None:
-            if (cluster_state in [EMPTY, STABLE, JOIN_PENDING] and
-                self._plugin.should_be_in_cluster()):
+            if cluster_state in [EMPTY, STABLE, JOIN_PENDING]:
                 return WAITING_TO_JOIN
             else:
                 return None
