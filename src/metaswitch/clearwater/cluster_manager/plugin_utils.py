@@ -131,7 +131,7 @@ def join_cassandra_cluster(cluster_view, cassandra_yaml_file, ip):
 
         # Restart Cassandra and make sure it picks up the new list of seeds.
         _log.debug("Restarting Cassandra")
-        run_command("monit unmonitor cassandra")
+        run_command("monit unmonitor -g cassandra")
         run_command("service cassandra stop")
         run_command("rm -rf /var/lib/cassandra/")
         run_command("mkdir -m 755 /var/lib/cassandra")
@@ -156,13 +156,12 @@ def leave_cassandra_cluster():
     except:
         start_cassandra()
 
-    run_command("monit unmonitor cassandra")
+    run_command("monit unmonitor -g cassandra")
     run_command("nodetool decommission")
 
 
 def start_cassandra():
-    run_command("monit monitor cassandra")
-    run_command("monit monitor poll_cassandra_ring")
+    run_command("monit monitor -g cassandra")
 
     # Wait until we can connect on port 9160 - i.e. Cassandra is running.
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
