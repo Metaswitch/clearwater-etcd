@@ -47,7 +47,7 @@ $(ENV_DIR)/bin/python:
 	virtualenv --setuptools --python=$(PYTHON_BIN) $(ENV_DIR)
 	$(ENV_DIR)/bin/easy_install "setuptools>0.7"
 	$(ENV_DIR)/bin/easy_install distribute
-	
+
 include build-infra/cw-deb.mk
 
 .PHONY: build-eggs
@@ -55,16 +55,14 @@ build-eggs: setup.py common/setup.py src
 	# Generate .egg files
 	${ENV_DIR}/bin/python setup.py bdist_egg -d eggs
 	cd common && ${ENV_DIR}/bin/python setup.py bdist_egg -d ../eggs
-	
+
 	# Download the egg files they depend upon
 	${ENV_DIR}/bin/easy_install -zmaxd eggs/ eggs/*.egg
-
 
 .PHONY: install-eggs
 install-eggs: eggs/
 	# Install the downloaded egg files (this should match the Debian postinst)
 	${ENV_DIR}/bin/easy_install --allow-hosts=None -f eggs/ eggs/*.egg
-
 
 .PHONY: deb
 deb: env build-eggs deb-only
