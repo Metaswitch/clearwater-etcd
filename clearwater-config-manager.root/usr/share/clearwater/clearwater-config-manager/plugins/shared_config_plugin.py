@@ -54,6 +54,9 @@ class SharedConfigPlugin(ConfigPluginBase):
     def key(self):
         return "/configuration/shared_config"
 
+    def file(self):
+        return _file
+
     def on_config_changed(self, value):
         if os.path.exists(_file) and not os.path.exists(_file + ".apply"):
             _log.debug("Ignoring shared config change - Shared config already learnt")

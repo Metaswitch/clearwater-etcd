@@ -55,6 +55,8 @@ from metaswitch.clearwater.config_manager.plugin_loader \
     import load_plugins_in_dir
 from metaswitch.clearwater.config_manager.etcd_synchronizer \
     import EtcdSynchronizer
+from metaswitch.clearwater.config_manager.alarms \
+    import ConfigAlarm
 import logging
 import os
 from threading import Thread
