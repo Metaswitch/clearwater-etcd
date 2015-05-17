@@ -68,9 +68,11 @@ class EtcdSynchronizer(object):
             value = self.read_from_etcd()
             if self._terminate_flag:
                 break
-            _log.debug("Got new config value from etcd:\n{}".format(value))
-            self._plugin.on_config_changed(value)
-            self._alarm.update_file(self._plugin.file())
+
+            if len(value) > 0:
+                _log.debug("Got new config value from etcd:\n{}".format(value))
+                self._plugin.on_config_changed(value)
+                self._alarm.update_file(self._plugin.file())
 
     # Read the current value of the key from etcd (blocks until there's a
     # change).
