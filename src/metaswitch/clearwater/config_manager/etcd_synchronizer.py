@@ -45,7 +45,7 @@ _log = logging.getLogger("etcd_sync")
 class EtcdSynchronizer(object):
     PAUSE_BEFORE_RETRY = 30
 
-    def __init__(self, plugin, ip, etcd_ip=None, force_leave=False):
+    def __init__(self, plugin, ip, alarm, etcd_ip=None, force_leave=False):
         self._ip = ip
         if etcd_ip:
             self._client = etcd.Client(etcd_ip, 4000)
@@ -53,6 +53,7 @@ class EtcdSynchronizer(object):
             self._client = etcd.Client(ip, 4000)
         self._key = plugin.key()
         self._plugin = plugin
+        self._alarm = alarm
         self._index = None
         self._terminate_flag = False
         self.thread = Thread(target=self.main)
@@ -69,6 +70,7 @@ class EtcdSynchronizer(object):
                 break
             _log.debug("Got new config value from etcd:\n{}".format(value))
             self._plugin.on_config_changed(value)
+            self._alarm.update_file(self._plugin.file())
 
     # Read the current value of the key from etcd (blocks until there's a
     # change).

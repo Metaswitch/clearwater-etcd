@@ -42,6 +42,12 @@ class ConfigPluginBase(object):
         pass
 
     @abstractmethod
+    def file(self):
+        """This should return the name of the file on disk that is managed
+        by this plugin."""
+        pass
+
+    @abstractmethod
     def on_config_changed(self, value):
 
         """This hook is called when the key that controls this plugin's config

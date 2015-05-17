@@ -100,8 +100,12 @@ def main(args):
     plugins.sort(key=lambda x: x.key())
     synchronizers = []
     threads = []
+
+    files = map(lambda p: p.file(), plugins)
+    alarm = ConfigAlarm(files)
+
     for plugin in plugins:
-        syncer = EtcdSynchronizer(plugin, local_ip)
+        syncer = EtcdSynchronizer(plugin, alarm)
         thread = Thread(target=syncer.main)
         thread.start()
 

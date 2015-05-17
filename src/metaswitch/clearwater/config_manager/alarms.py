@@ -40,6 +40,11 @@
 
 import logging
 import imp
+import os
+from threading import Lock
+
+CLEAR_GLOBAL_CONFIG_NOT_SYNCHED = "6503.1"
+RAISE_GLOBAL_CONFIG_NOT_SYNCHED = "6503.3"
 
 _log = logging.getLogger("metaswitch.clearwater.config_manager.alarms")
 
@@ -52,7 +57,28 @@ try:
 except ImportError:
     _log.error("Could not import /usr/share/clearwater/bin/alarms.py, alarms will not be sent")
 
-
 def issue_alarm(identifier):
     if sendrequest:
         sendrequest(["issue-alarm", "config-manager", identifier])
+
+class ConfigAlarm(object):
+    def __init__(self, files=[]):
+        self._files = {}
+        self._lock = Lock()
+        self._lock.acquire()
+        for file in files:
+            self._files[file] = os.path.isfile(file)
+        self.check_alarm()
+        self._lock.release()
+
+    def update_file(self, filename):
+        self._lock.acquire()
+        self._files[filename] = True;
+        self.check_alarm()
+        self._lock.release()
+
+    def check_alarm(self):
+        if all(self._files.values()):
+            issue_alarm(CLEAR_GLOBAL_CONFIG_NOT_SYNCHED)
+        else:
+            issue_alarm(RAISE_GLOBAL_CONFIG_NOT_SYNCHED)
