@@ -35,7 +35,7 @@ import imp
 import os
 
 
-def load_plugins_in_dir(dir, config):
+def load_plugins_in_dir(dir, *config):
     """Loads plugins by:
         - looking for all .py files in the given directory
         - calling their load_as_plugin() function, passing 'config'
@@ -51,5 +51,5 @@ def load_plugins_in_dir(dir, config):
             if file:
                 mod = imp.load_module(module_name, file, pathname, description)
                 if hasattr(mod, "load_as_plugin"):
-                    plugins.append(mod.load_as_plugin(config))
+                    plugins.append(mod.load_as_plugin(*config))
     return plugins
