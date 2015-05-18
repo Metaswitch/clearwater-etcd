@@ -43,7 +43,7 @@ Options:
   -h --help                   Show this screen.
   --local-ip=IP               IP address
   --local-site=NAME           Name of local site
-  --remote-site=NAME          Name of local site
+  --remote-site=NAME          Name of remote site
   --foreground                Don't daemonise
   --log-level=LVL             Level to log at, 0-4 [default: 3]
   --log-directory=DIR         Directory to log to [default: ./]
