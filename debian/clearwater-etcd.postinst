@@ -80,8 +80,6 @@ case "$1" in
         setup_data_dir
         install -D --mode=0644 /usr/share/clearwater/conf/clearwater-etcd.monit /etc/monit/conf.d/
         reload clearwater-monit || /bin/true
-
-        pip install python-etcd
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
