@@ -128,7 +128,7 @@ def join_cassandra_cluster(cluster_view,
         # document.
         doc["listen_address"] = ip
         doc["seed_provider"][0]["parameters"][0]["seeds"] = seeds_list_str
-        doc["endpoint_snitch"] = "GossipingFilePropertySnitch"
+        doc["endpoint_snitch"] = "GossipingPropertyFileSnitch"
 
         # Write back to cassandra.yaml.
         with open(cassandra_yaml_file, "w") as f:
