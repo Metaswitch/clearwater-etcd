@@ -268,6 +268,7 @@ class EtcdSynchronizer(object):
             # Save off the index of the result we're using for when we write
             # back to etcd later.
             self._index = result.modifiedIndex
+            self._last_cluster_view = cluster_view.copy()
 
         except etcd.EtcdKeyError:
             # If the key doesn't exist in etcd then there is currently no
@@ -286,7 +287,6 @@ class EtcdSynchronizer(object):
             # The main loop (which reads from etcd in a loop) should call this
             # function again after we return, causing the read to be retried.
 
-        self._last_cluster_view = cluster_view.copy()
         return cluster_view
 
     # Write the new cluster view to etcd. We may be expecting to create the key
