@@ -60,7 +60,7 @@ import os
 from threading import Thread
 import signal
 
-_log = logging.getLogger("metaswitch.clearwater.cluster_manager.main")
+_log = logging.getLogger("cluster_manager.main")
 
 LOG_LEVELS = {'0': logging.CRITICAL,
               '1': logging.ERROR,
@@ -133,7 +133,3 @@ def main(args):
     for thread in threads:
         while thread.isAlive():
             thread.join(1)
-
-if __name__ == '__main__':
-    import sys
-    main(sys.argv[1:])

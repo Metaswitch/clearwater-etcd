@@ -30,10 +30,8 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-from metaswitch.clearwater.config_manager.plugin_base import \
-    ConfigPluginBase
-from metaswitch.clearwater.config_manager.plugin_utils import \
-    run_command
+from metaswitch.clearwater.config_manager.plugin_base import ConfigPluginBase
+from metaswitch.clearwater.config_manager.plugin_utils import run_command
 import logging
 import shutil
 import os
@@ -57,20 +55,23 @@ class SharedConfigPlugin(ConfigPluginBase):
     def file(self):
         return _file
 
-    def on_config_changed(self, value):
+    def on_config_changed(self, value, alarm):
         if os.path.exists(_file) and not os.path.exists(_file + ".apply"):
             _log.debug("Ignoring shared config change - Shared config already learnt")
             return
 
         _log.info("Updating shared configuration")
         with open(_file + ".tmp", "w") as ofile:
-            ofile.write(value);
+            ofile.write(value)
         shutil.move(_file + ".tmp", _file)
 
         _log.info("Restarting services")
         run_command("service clearwater-infrastructure restart")
         for service in services:
-            run_command("service {} stop".format(service));
+            run_command("service {} stop".format(service))
+
+        # Config file is now up-to-date
+        alarm.update_file(_file)
 
         # Remove the apply file if present.
         try:
@@ -78,6 +79,5 @@ class SharedConfigPlugin(ConfigPluginBase):
         except OSError:
             pass
 
-
-def load_as_plugin(ip):
+def load_as_plugin():
     return SharedConfigPlugin()

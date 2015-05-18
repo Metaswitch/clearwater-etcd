@@ -62,19 +62,13 @@ import os
 from threading import Thread
 import signal
 
-_log = logging.getLogger("metaswitch.clearwater.config_manager.main")
+_log = logging.getLogger("config_manager.main")
 
 LOG_LEVELS = {'0': logging.CRITICAL,
               '1': logging.ERROR,
               '2': logging.WARNING,
               '3': logging.INFO,
               '4': logging.DEBUG}
-
-
-def install_sigquit_handler(plugins):
-    def sigquit_handler(sig, stack):
-        _log.debug("Handling SIGQUIT")
-    signal.signal(signal.SIGQUIT, sigquit_handler)
 
 
 def main(args):
@@ -98,31 +92,23 @@ def main(args):
         pidfile.write(str(pid) + "\n")
 
     plugins_dir = "/usr/share/clearwater/clearwater-config-manager/plugins/"
-    plugins = load_plugins_in_dir(plugins_dir, local_ip)
+    plugins = load_plugins_in_dir(plugins_dir)
     plugins.sort(key=lambda x: x.key())
-    synchronizers = []
     threads = []
 
-    files = map(lambda p: p.file(), plugins)
+    files = [p.file() for p in plugins]
     alarm = ConfigAlarm(files)
 
     for plugin in plugins:
-        syncer = EtcdSynchronizer(plugin, alarm)
+        syncer = EtcdSynchronizer(plugin, local_ip, alarm)
         thread = Thread(target=syncer.main)
         thread.start()
 
-        synchronizers.append(syncer)
         threads.append(thread)
         _log.info("Loaded plugin %s" % plugin)
-
-    install_sigquit_handler(synchronizers)
 
     for thread in threads:
         while thread.isAlive():
             thread.join(1)
 
     _log.info("Clearwater Configuration Manager shutting down")
-
-if __name__ == '__main__':
-    import sys
-    main(sys.argv[1:])

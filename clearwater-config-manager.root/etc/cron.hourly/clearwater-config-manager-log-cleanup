@@ -1,5 +1,5 @@
 #!/bin/bash
-ONE_HUNDRED_MEG=107374182
+ONE_HUNDRED_MEG=$((100 * 1024 * 1024))
 max_log_directory_size=$ONE_HUNDRED_MEG
 . /etc/clearwater/config
 

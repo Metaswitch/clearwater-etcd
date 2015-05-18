@@ -48,9 +48,10 @@ class ConfigPluginBase(object):
         pass
 
     @abstractmethod
-    def on_config_changed(self, value):
-
+    def on_config_changed(self, value, alarm):
         """This hook is called when the key that controls this plugin's config
         changes.  This hook should update associated configuration files and
-        restart any processes needed in order to apply the change"""
+        restart any processes needed in order to apply the change.  The hook
+        should also report the status of the controlled file to the alarm
+        manager."""
         pass

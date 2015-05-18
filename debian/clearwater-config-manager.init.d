@@ -73,30 +73,27 @@ SCRIPTNAME=/etc/init.d/$NAME
 #
 do_start()
 {
-	# Return
-	#   0 if daemon has been started
-	#   1 if daemon was already running
-	#   2 if daemon could not be started
-        [ -d /var/run/$NAME ] || install -m 755 -o $USER -g root -d /var/run/$NAME
+  # Return
+  #   0 if daemon has been started
+  #   1 if daemon was already running
+  #   2 if daemon could not be started
+  [ -e /etc/clearwater/no_config_manager ] && (echo "/etc/clearwater/no_config_manager exists, not starting config manager" && return 2)
 
-        [ -e /etc/clearwater/no_config_manager ] && (echo "/etc/clearwater/no_config_manager exists, not starting config manager" && return 2)
+  . /etc/clearwater/config
+  log_level=2
+  log_directory=/var/log/clearwater-config-manager
+  [ -r /etc/clearwater/user_settings ] && . /etc/clearwater/user_settings
 
-        . /etc/clearwater/config
-        log_level=2
-        log_directory=/var/log/clearwater-config-manager
-        [ -r /etc/clearwater/user_settings ] && . /etc/clearwater/user_settings
+  DAEMON_ARGS="--local-ip=$local_ip --log-level=$log_level --log-directory=$log_directory --pidfile=$PIDFILE"
 
-        DAEMON_ARGS="--local-ip=$local_ip --log-level=$log_level --log-directory=$log_directory --pidfile=$PIDFILE"
+  start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null \
+    || return 1
 
-	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null \
-		|| return 1
-
-        start-stop-daemon --start --quiet --chdir $DAEMON_DIR --pidfile $PIDFILE --exec $DAEMON -- \
-		$DAEMON_ARGS \
-		|| return 2
-	# Add code here, if necessary, that waits for the process to be ready
-	# to handle requests from services started subsequently which depend
-	# on this one.  As a last resort, sleep for some time.
+  start-stop-daemon --start --quiet --chdir $DAEMON_DIR --pidfile $PIDFILE --exec $DAEMON -- $DAEMON_ARGS \
+    || return 2
+  # Add code here, if necessary, that waits for the process to be ready
+  # to handle requests from services started subsequently which depend
+  # on this one.  As a last resort, sleep for some time.
 }
 
 #
@@ -116,25 +113,6 @@ do_stop()
 	rm -f $PIDFILE
 	return "$RETVAL"
 }
-
-#
-# Function that decommissions the daemon/service
-#
-do_decommission()
-{
-	# Return
-	#   0 if daemon has been stopped
-	#   1 if daemon was already stopped
-	#   2 if daemon could not be stopped within 20 minutes
-	#   other if a failure occurred
-	start-stop-daemon --stop --quiet --retry=QUIT/1200 --exec $ACTUAL_EXEC --pidfile $PIDFILE
-	RETVAL="$?"
-	[ "$RETVAL" = 2 ] && return 2
-	# Many daemons don't delete their pidfiles when they exit.
-	rm -f $PIDFILE
-	return "$RETVAL"
-}
-
 
 #
 # Function that aborts the daemon/service
@@ -213,7 +191,9 @@ case "$1" in
 	;;
   decommission)
 	log_daemon_msg "Decommissioning $DESC" "$NAME"
-	do_decommission
+
+  # There's no special function for decomissioning so just call stop
+	do_stop
 	;;
   abort-restart)
         log_daemon_msg "Abort-Restarting $DESC" "$NAME"

@@ -38,7 +38,12 @@ _log = logging.getLogger("config_manager.plugin_utils")
 
 
 def run_command(command):
-    """Runs the given shell command, logging the output and return code"""
+    """Runs the given shell command, logging the output and return code.
+
+    Note that this runs the provided command in a new shell, which will
+    apply shell replacements.  Ensure the input string is sanitized before
+    passing to this function.
+    """
     try:
         output = subprocess.check_output(command,
                                          shell=True,

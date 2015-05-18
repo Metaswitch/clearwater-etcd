@@ -46,7 +46,7 @@ from threading import Lock
 CLEAR_GLOBAL_CONFIG_NOT_SYNCHED = "6503.1"
 RAISE_GLOBAL_CONFIG_NOT_SYNCHED = "6503.3"
 
-_log = logging.getLogger("metaswitch.clearwater.config_manager.alarms")
+_log = logging.getLogger("config_manager.alarms")
 
 sendrequest = None
 

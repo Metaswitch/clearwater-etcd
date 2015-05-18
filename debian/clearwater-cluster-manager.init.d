@@ -73,30 +73,27 @@ SCRIPTNAME=/etc/init.d/$NAME
 #
 do_start()
 {
-	# Return
-	#   0 if daemon has been started
-	#   1 if daemon was already running
-	#   2 if daemon could not be started
-        [ -d /var/run/$NAME ] || install -m 755 -o $USER -g root -d /var/run/$NAME
+  # Return
+  #   0 if daemon has been started
+  #   1 if daemon was already running
+  #   2 if daemon could not be started
+  [ -e /etc/clearwater/no_cluster_manager ] && (echo "/etc/clearwater/no_cluster_manager exists, not starting cluster manager" && return 2)
 
-        [ -e /etc/clearwater/no_cluster_manager ] && (echo "/etc/clearwater/no_cluster_manager exists, not starting cluster manager" && return 2)
+  . /etc/clearwater/config
+  log_level=2
+  log_directory=/var/log/clearwater-cluster-manager
+  [ -r /etc/clearwater/user_settings ] && . /etc/clearwater/user_settings
 
-        . /etc/clearwater/config
-        log_level=2
-        log_directory=/var/log/clearwater-cluster-manager
-        [ -r /etc/clearwater/user_settings ] && . /etc/clearwater/user_settings
+  DAEMON_ARGS="--local-ip=$local_ip --log-level=$log_level --log-directory=$log_directory --pidfile=$PIDFILE"
 
-        DAEMON_ARGS="--local-ip=$local_ip --log-level=$log_level --log-directory=$log_directory --pidfile=$PIDFILE"
+  start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null \
+    || return 1
 
-	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null \
-		|| return 1
-
-        start-stop-daemon --start --quiet --chdir $DAEMON_DIR --pidfile $PIDFILE --exec $DAEMON -- \
-		$DAEMON_ARGS \
-		|| return 2
-	# Add code here, if necessary, that waits for the process to be ready
-	# to handle requests from services started subsequently which depend
-	# on this one.  As a last resort, sleep for some time.
+  start-stop-daemon --start --quiet --chdir $DAEMON_DIR --pidfile $PIDFILE --exec $DAEMON -- $DAEMON_ARGS \
+    || return 2
+  # Add code here, if necessary, that waits for the process to be ready
+  # to handle requests from services started subsequently which depend
+  # on this one.  As a last resort, sleep for some time.
 }
 
 #

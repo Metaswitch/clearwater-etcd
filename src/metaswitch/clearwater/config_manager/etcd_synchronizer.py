@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015 Metaswitch Networks Ltd
 #
@@ -39,58 +37,54 @@ from time import sleep
 import urllib3
 import logging
 
-_log = logging.getLogger("etcd_sync")
+_log = logging.getLogger("config_manager.etcd_synchronizer")
 
 
 class EtcdSynchronizer(object):
     PAUSE_BEFORE_RETRY = 30
 
-    def __init__(self, plugin, ip, alarm, etcd_ip=None, force_leave=False):
+    def __init__(self, plugin, ip, alarm, etcd_ip=None):
         self._ip = ip
         if etcd_ip:
             self._client = etcd.Client(etcd_ip, 4000)
         else:
-            self._client = etcd.Client(ip, 4000)
-        self._key = plugin.key()
+            self._client = etcd.Client(self._ip, 4000)
         self._plugin = plugin
         self._alarm = alarm
         self._index = None
         self._terminate_flag = False
-        self.thread = Thread(target=self.main)
-        self.force_leave = force_leave
 
     def main(self):
-        # Continue looping while the FSM is running.
+        # Continue looping while the service is running.
         while not self._terminate_flag:
             # This blocks on changes to the watched key in etcd.
             _log.debug("Waiting for change from etcd for key{}".format(
-                         self._key))
+                         self.plugin.key()))
             value = self.read_from_etcd()
             if self._terminate_flag:
                 break
 
             if len(value) > 0:
                 _log.debug("Got new config value from etcd:\n{}".format(value))
-                self._plugin.on_config_changed(value)
-                self._alarm.update_file(self._plugin.file())
+                self._plugin.on_config_changed(value, self._alarm)
 
     # Read the current value of the key from etcd (blocks until there's a
     # change).
     def read_from_etcd(self):
         value = None
         try:
-            result = self._client.get(self._key)
+            result = self._client.get(self.plugin.key())
 
             # If the key hasn't changed since we last saw it, then
             # wait for it to change before doing anything else.
             _log.info("Read config value for {} from etcd (epoch {})".format(
-                        self._key,
+                        self.plugin.key(),
                         result.modifiedIndex))
 
             if result.modifiedIndex == self._index:
                 while not self._terminate_flag:
                     try:
-                        result = self._client.watch(self._key,
+                        result = self._client.watch(self.plugin.key(),
                                                     index=result.modifiedIndex+1,
                                                     timeout=5,
                                                     recursive=False)

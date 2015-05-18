@@ -35,12 +35,12 @@ import logging
 import imp
 import os
 
-_log = logging.getLogger("metaswitch.clearwater.config_manager.plugin_loader")
+_log = logging.getLogger("config_manager.plugin_loader")
 
-def load_plugins_in_dir(dir, config):
+def load_plugins_in_dir(dir):
     """Loads plugins by:
         - looking for all .py files in the given directory
-        - calling their load_as_plugin() function, passing 'config'
+        - calling their load_as_plugin() function
         - returning a list containing the return values of all load_as_plugin()
         calls
         """
@@ -48,12 +48,12 @@ def load_plugins_in_dir(dir, config):
     plugins = []
     for filename in files:
         _log.info("Inspecting {}".format(filename))
-        module_name, suffix = filename.split(".")
-        if suffix == "py":
+        module_name, suffix = os.path.splitext(filename)
+        if suffix == ".py":
             file, pathname, description = imp.find_module(module_name, [dir])
             if file:
                 mod = imp.load_module(module_name, file, pathname, description)
                 if hasattr(mod, "load_as_plugin"):
                     _log.info("Loading {}".format(filename))
-                    plugins.append(mod.load_as_plugin(config))
+                    plugins.append(mod.load_as_plugin())
     return plugins

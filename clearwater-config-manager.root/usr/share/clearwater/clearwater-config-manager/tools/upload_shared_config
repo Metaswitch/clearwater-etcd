@@ -36,8 +36,7 @@ FILENAME=/etc/clearwater/shared_config
 
 # Check we can contact `etcd`
 . /etc/clearwater/config
-nc -z $local_ip 4000
-if [[ $? != 0 ]]
+if ! nc -z $local_ip 4000
 then
   echo "The Clearwater Configuration store (etcd) is not running"
   echo "Please start it before uploading configuration"
