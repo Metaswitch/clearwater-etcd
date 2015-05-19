@@ -73,6 +73,9 @@ DAEMON=/usr/bin/etcd
 
 . /etc/clearwater/config
 
+listen_ip=${management_local_ip:-$local_ip}
+advertisement_ip=${management_local_ip:-$local_ip}
+
 create_cluster()
 {
         # Creating a new cluster
@@ -117,7 +120,7 @@ join_cluster()
         # Tell the cluster we're joining, this prints useful environment
         # variables to stdout but also prints a success message so strip that
         # out before saving the variables to the temp file.
-        /usr/bin/etcdctl member add $ETCD_NAME http://$local_ip:2380 | grep -v "Added member" >> $TEMP_FILE
+        /usr/bin/etcdctl member add $ETCD_NAME http://$advertisement_ip:2380 | grep -v "Added member" >> $TEMP_FILE
         if [[ $? != 0 ]]
         then
           echo "Failed to add local node to cluster"
@@ -147,7 +150,7 @@ join_cluster()
 #
 join_or_create_cluster()
 {
-        if [[ $etcd_cluster =~ (^|,)$local_ip(,|$) ]]
+        if [[ $etcd_cluster =~ (^|,)$advertisement_ip(,|$) ]]
         then
           create_cluster
         else
@@ -159,7 +162,7 @@ wait_for_etcd()
 {
         # Wait for etcd to come up.
         while true; do
-          if nc -z $local_ip 4000; then
+          if nc -z $listen_ip 4000; then
             break;
           else
             sleep 1
@@ -179,9 +182,9 @@ do_start()
         start-stop-daemon --start --quiet --pidfile $PIDFILE --name $NAME --exec $DAEMON --test > /dev/null \
                 || return 1
 
-        ETCD_NAME=${local_ip//./-}
+        ETCD_NAME=${advertisement_ip//./-}
         CLUSTER_ARGS=
-        if [[ -d $DATA_DIR/$local_ip ]]
+        if [[ -d $DATA_DIR/$advertisement_ip ]]
         then
           # We'll start normally using the data we saved off on our last boot.
           echo "Rejoining cluster..."
@@ -197,12 +200,12 @@ do_start()
         fi
 
         # Common arguments
-        DAEMON_ARGS="--listen-client-urls http://$local_ip:4000
-                     --advertise-client-urls http://$local_ip:4000
-                     --listen-peer-urls http://$local_ip:2380
-                     --initial-advertise-peer-urls http://$local_ip:2380
+        DAEMON_ARGS="--listen-client-urls http://$listen_ip:4000
+                     --advertise-client-urls http://$advertisement_ip:4000
+                     --listen-peer-urls http://$listen_ip:2380
+                     --initial-advertise-peer-urls http://$advertisement_ip:2380
                      --initial-cluster-token $home_domain
-                     --data-dir $DATA_DIR/$local_ip
+                     --data-dir $DATA_DIR/$advertisement_ip
                      --name $ETCD_NAME"
 
         start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --exec $DAEMON --chuid $NAME -- $DAEMON_ARGS $CLUSTER_ARGS \
@@ -223,12 +226,13 @@ do_rebuild()
         create_cluster
 
         # Standard ports
-        DAEMON_ARGS="--listen-client-urls http://$local_ip:4000
-                     --advertise-client-urls http://$local_ip:4000
-                     --listen-peer-urls http://$local_ip:2380
-                     --initial-advertise-peer-urls http://$local_ip:2380
+        DAEMON_ARGS="--listen-client-urls http://$listen_ip:4000
+                     --advertise-client-urls http://$advertisement_ip:4000
+                     --listen-peer-urls http://$listen_ip:2380
+                     --initial-advertise-peer-urls http://$advertisement_ip:2380
                      --initial-cluster-token $home_domain
-                     --data-dir $DATA_DIR/$local_ip
+                     --data-dir $DATA_DIR/$advertisement_ip
+                     --name $ETCD_NAME
                      --force-new-cluster"
 
         start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --exec $DAEMON --chuid $NAME -- $DAEMON_ARGS $CLUSTER_ARGS \
@@ -297,7 +301,7 @@ do_decommission()
         # Return
         #   0 if successful
         #   2 on error
-        export ETCDCTL_PEERS=$local_ip:4000
+        export ETCDCTL_PEERS=$advertisement_ip:4000
         health=$(/usr/bin/etcdctl cluster-health)
         if [[ $health =~ unhealthy && $health =~ healthy ]]
         then
@@ -305,7 +309,7 @@ do_decommission()
           return 2
         fi
 
-        id=$(/usr/bin/etcdctl member list | grep ${local_ip//./-} | cut -f 1 -d :)
+        id=$(/usr/bin/etcdctl member list | grep ${advertisement_ip//./-} | cut -f 1 -d :)
         if [[ -z $id ]]
         then
           echo Local node does not appear in the cluster
@@ -326,7 +330,7 @@ do_decommission()
         rm -f $PIDFILE
 
         # Decommissioned so destroy the data directory
-        [[ -n $DATA_DIR ]] && [[ -n $local_ip ]] && rm -rf $DATA_DIR/$local_ip
+        [[ -n $DATA_DIR ]] && [[ -n $advertisement_ip ]] && rm -rf $DATA_DIR/$advertisement_ip
 }
 
 #
@@ -347,7 +351,7 @@ do_force_decommission()
         rm -f $PIDFILE
 
         # Decommissioned so destroy the data directory
-        [[ -n $DATA_DIR ]] && [[ -n $local_ip ]] && rm -rf $DATA_DIR/$local_ip
+        [[ -n $DATA_DIR ]] && [[ -n $advertisement_ip ]] && rm -rf $DATA_DIR/$advertisement_ip
 }
 
 

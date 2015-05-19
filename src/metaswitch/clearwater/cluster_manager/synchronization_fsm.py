@@ -44,8 +44,8 @@ _log = logging.getLogger("cluster_manager.synchronization_fsm")
 def safe_plugin(f, cluster_view, new_state=None):
     try:
         _log.info("Calling plugin method {}.{}".
-                      format(f.__self__.__class__.__name__,
-                             f.__name__))
+                  format(f.__self__.__class__.__name__,
+                         f.__name__))
         # Call into the plugin, and if it doesn't throw an exception,
         # return the state we should move into.
         f(cluster_view)
@@ -130,6 +130,17 @@ class SyncFSM(object):
         # Handle the abnormal cases first - where the local node isn't in the
         # cluster, and where the local node is in ERROR state. These can happen
         # in any cluster state, so don't fit neatly into the main function body.
+
+        if not self._plugin.should_be_in_cluster():
+            # This plugin is just monitoring a remote cluster
+            if cluster_state in [JOINING_CONFIG_CHANGING,
+                                 LEAVING_CONFIG_CHANGING]:
+                safe_plugin(self._plugin.on_cluster_changing,
+                            cluster_view)
+            elif cluster_state == STABLE:
+                safe_plugin(self._plugin.on_stable_cluster,
+                            cluster_view)
+            return None
 
         if local_state is None:
             if cluster_state in [EMPTY, STABLE, JOIN_PENDING]:
@@ -256,8 +267,8 @@ class SyncFSM(object):
                 local_state == NORMAL):
             return None
 
-        # STARTED_LEAVING state involves everyone acknowledging that scale-down is
-        # starting, so NORMAL or LEAVING nodes should move into the relevant
+        # STARTED_LEAVING state involves everyone acknowledging that scale-down
+        # is starting, so NORMAL or LEAVING nodes should move into the relevant
         # ACKNOWLEDGED_CHANGE state. (Once they're in that state, they don't
         # have to do anything else until everyone has switched to that state, at
         # which point the cluster is in LEAVING_CONFIG_CHANGING state).

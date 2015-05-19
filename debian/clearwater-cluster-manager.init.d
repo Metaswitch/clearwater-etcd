@@ -77,19 +77,23 @@ do_start()
   #   0 if daemon has been started
   #   1 if daemon was already running
   #   2 if daemon could not be started
+
   [ -e /etc/clearwater/no_cluster_manager ] && (echo "/etc/clearwater/no_cluster_manager exists, not starting cluster manager" && return 2)
 
+  local_site_name=site1
+  remote_site_name=""
   . /etc/clearwater/config
   log_level=2
   log_directory=/var/log/clearwater-cluster-manager
   [ -r /etc/clearwater/user_settings ] && . /etc/clearwater/user_settings
 
-  DAEMON_ARGS="--local-ip=$local_ip --log-level=$log_level --log-directory=$log_directory --pidfile=$PIDFILE"
+  DAEMON_ARGS="--local-ip=$local_ip --local-site=$local_site_name --remote-site=$remote_site_name --log-level=$log_level --log-directory=$log_directory --pidfile=$PIDFILE"
 
   start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null \
     || return 1
 
-  start-stop-daemon --start --quiet --chdir $DAEMON_DIR --pidfile $PIDFILE --exec $DAEMON -- $DAEMON_ARGS \
+  start-stop-daemon --start --quiet --chdir $DAEMON_DIR --pidfile $PIDFILE --exec $DAEMON -- \
+    $DAEMON_ARGS \
     || return 2
   # Add code here, if necessary, that waits for the process to be ready
   # to handle requests from services started subsequently which depend

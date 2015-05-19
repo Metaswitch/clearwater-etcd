@@ -18,6 +18,11 @@ class SynchroniserPluginBase(object):
         to avoid conflicts"""
         return []
 
+    def should_be_in_cluster(self):
+
+        """Allows a plugin to monitor, but not join, a remote cluster"""
+        return True
+
     @abstractmethod
     def on_cluster_changing(self, cluster_view):
 
