@@ -10,7 +10,7 @@ DEB_ARCH := all
 # The build has been seen to fail on Mac OSX when trying to build on i386. Enable this to build for x86_64 only
 X86_64_ONLY=0
 
-.DEFAULT_GOAL = all
+.DEFAULT_GOAL = deb
 
 .PHONY: test
 test: setup.py env
