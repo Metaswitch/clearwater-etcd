@@ -1,0 +1,16 @@
+#!/bin/bash
+
+. /etc/clearwater/config
+
+# Work out the IP address to contact etcd on. Look first for
+# management_local_ip and fall back to local_ip.
+target_ip=$management_local_ip
+[ -z "$target_ip" ] && target_ip=$local_ip
+
+if [ -z "$target_ip" ]; then
+  echo "Could not determine local IP address"
+  exit 1
+fi
+
+# Run the real etcdctl.
+etcdctl -C $target_ip:4000 "$@"
