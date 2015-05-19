@@ -59,7 +59,7 @@ class EtcdSynchronizer(object):
         while not self._terminate_flag:
             # This blocks on changes to the watched key in etcd.
             _log.debug("Waiting for change from etcd for key{}".format(
-                         self.plugin.key()))
+                         self._plugin.key()))
             value = self.read_from_etcd()
             if self._terminate_flag:
                 break
@@ -73,18 +73,18 @@ class EtcdSynchronizer(object):
     def read_from_etcd(self):
         value = None
         try:
-            result = self._client.get(self.plugin.key())
+            result = self._client.get(self._plugin.key())
 
             # If the key hasn't changed since we last saw it, then
             # wait for it to change before doing anything else.
             _log.info("Read config value for {} from etcd (epoch {})".format(
-                        self.plugin.key(),
+                        self._plugin.key(),
                         result.modifiedIndex))
 
             if result.modifiedIndex == self._index:
                 while not self._terminate_flag:
                     try:
-                        result = self._client.watch(self.plugin.key(),
+                        result = self._client.watch(self._plugin.key(),
                                                     index=result.modifiedIndex+1,
                                                     timeout=5,
                                                     recursive=False)
