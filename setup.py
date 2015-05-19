@@ -41,6 +41,7 @@ from setuptools import setup, find_packages
 setup(
     name='clearwater-cluster-manager',
     version='1.0',
+    namespace_packages = ['metaswitch'],
     packages=find_packages('src'),
     package_dir={'':'src'},
     package_data={

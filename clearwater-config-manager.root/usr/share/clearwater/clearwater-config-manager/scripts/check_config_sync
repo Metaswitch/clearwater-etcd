@@ -1,0 +1,17 @@
+#!/usr/share/clearwater/clearwater-config-manager/env/bin/python
+
+from metaswitch.clearwater.config_manager.plugin_loader import load_plugins_in_dir
+import os
+
+plugins_dir = "/usr/share/clearwater/clearwater-config-manager/plugins/"
+plugins = load_plugins_in_dir(plugins_dir)
+
+files = [p.file() for p in plugins]
+missing_files = [f for f in files if not os.path.isfile(f)]
+
+if not missing_files:
+    print "All shared configuration has been synchronized"
+else:
+    print "The following shared configuration files are absent:"
+    for f in missing_files:
+        print " - {}".format(f)
