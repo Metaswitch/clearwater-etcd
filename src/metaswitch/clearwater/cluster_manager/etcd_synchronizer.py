@@ -272,12 +272,12 @@ class EtcdSynchronizer(object):
             self._last_cluster_view = cluster_view.copy()
 
         except etcd.EtcdKeyError:
-            _log.debug("Key {} doesn't exist in etcd yet".format(self._key))
+            _log.info("Key {} doesn't exist in etcd yet".format(self._key))
             # If the key doesn't exist in etcd then there is currently no
             # cluster.
             self._index = None
             self._last_cluster_view = None
-            if self._plugin.should_be_in_cluster() is False:
+            if not self._plugin.should_be_in_cluster():
                 # We're watching a key managed by another plugin, and it
                 # doesn't exist yet - sleep to give the other plugin a chance to
                 # create it
