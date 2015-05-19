@@ -50,6 +50,7 @@ class EtcdSynchronizer(object):
     PAUSE_BEFORE_RETRY = 30
 
     def __init__(self, plugin, ip, etcd_ip=None, force_leave=False):
+        self._plugin = plugin
         self._fsm = SyncFSM(plugin, ip)
         self._ip = ip
         if etcd_ip:
@@ -271,11 +272,16 @@ class EtcdSynchronizer(object):
             self._last_cluster_view = cluster_view.copy()
 
         except etcd.EtcdKeyError:
+            _log.debug("Key {} doesn't exist in etcd yet".format(self._key))
             # If the key doesn't exist in etcd then there is currently no
             # cluster.
             self._index = None
             self._last_cluster_view = None
-            pass
+            if self._plugin.should_be_in_cluster() is False:
+                # We're watching a key managed by another plugin, and it
+                # doesn't exist yet - sleep to give the other plugin a chance to
+                # create it
+                sleep(self.PAUSE_BEFORE_RETRY)
         except Exception as e:
             # Catch-all error handler (for invalid requests, timeouts, etc -
             # start over.
