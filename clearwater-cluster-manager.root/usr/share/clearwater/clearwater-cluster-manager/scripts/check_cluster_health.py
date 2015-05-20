@@ -1,5 +1,3 @@
-#! /usr/bin/python
-#
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015  Metaswitch Networks Ltd
 #
@@ -37,24 +35,32 @@ import sys
 import etcd
 import json
 
-pairs = [
-    ("sprout", "memcached"),
-    ("sprout", "chronos"),
-    ("ralf", "memcached"),
-    ("ralf", "chronos"),
-    ("homestead", "cassandra"),
-    ("homer", "cassandra"),
-    ("memento", "memcached"),
-    ("memento", "cassandra")
+local_node = sys.argv[1]
+local_site = sys.argv[2]
+remote_site = sys.argv[3]
+
+datastores = [
+    ("sprout", "memcached", local_site),
+    ("sprout", "memcached", remote_site),
+    ("sprout", "chronos", local_site),
+    ("ralf", "memcached", local_site),
+    ("ralf", "memcached", remote_site),
+    ("ralf", "chronos", local_site),
+    ("homestead", "cassandra", ""),
+    ("homer", "cassandra", ""),
+    ("memento", "memcached", local_site),
+    ("memento", "memcached", remote_site),
+    ("memento", "cassandra", "")
 ]
 
-local_node = sys.argv[1]
 client = etcd.Client(local_node, 4000)
 
 
-def describe_cluster(node_type, store_name):
+def describe_cluster(node_type, site, store_name):
+    key = "/clearwater/{}/{}/clustering/{}".format(site, node_type, store_name)
+
     try:
-        result = client.get("{}/clustering/{}".format(node_type, store_name))
+        result = client.get(key)
     except etcd.EtcdKeyNotFound:
         # There's none of the particular node type in the deployment
         return
@@ -63,24 +69,28 @@ def describe_cluster(node_type, store_name):
         # Cluster does not exist
         return
 
-    print "Describing {} {} cluster:".format(node_type, store_name)
+    if site != "":
+        print "Describing {} {} cluster in site {}:".format(node_type, store_name, site)
+    else:
+        print "Describing {} {} cluster:".format(node_type, store_name)
+
     cluster = json.loads(result.value)
     cluster_ok = all([state == "normal"
                       for node, state in cluster.iteritems()])
 
     if local_node in cluster:
-        print "Local node is in this cluster"
+        print "  Local node is in this cluster"
     else:
-        print "Local node is *not* in this cluster"
+        print "  Local node is *not* in this cluster"
 
     if cluster_ok:
-        print "Cluster is healthy and stable"
+        print "  Cluster is healthy and stable"
     else:
-        print "Cluster is *not* healthy and stable"
+        print "  Cluster is *not* healthy and stable"
 
     for node, state in cluster.iteritems():
-        print "   {} is in state {}".format(node, state)
+        print "    {} is in state {}".format(node, state)
     print ""
 
-for node_type, store_name in pairs:
-    describe_cluster(node_type, store_name)
+for node_type, store_name, site in datastores:
+    describe_cluster(node_type, site, store_name)
