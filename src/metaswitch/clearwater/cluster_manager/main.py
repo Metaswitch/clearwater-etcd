@@ -100,7 +100,7 @@ def main(args):
     # urllib3 logs a WARNING log whenever it recreates a connection, but our
     # etcd usage does this frequently (to allow watch timeouts), so deliberately
     # ignore this log
-    urllib_logger = logging.getLogger('connectionpool.py')
+    urllib_logger = logging.getLogger('urllib3')
     urllib_logger.setLevel(logging.ERROR)
 
     utils.install_sigusr1_handler("cluster-manager")
