@@ -84,7 +84,7 @@ do_start()
         local_site_name=site1
         remote_site_name=""
         . /etc/clearwater/config
-        log_level=2
+        log_level=3
         log_directory=/var/log/clearwater-cluster-manager
         [ -r /etc/clearwater/user_settings ] && . /etc/clearwater/user_settings
 
