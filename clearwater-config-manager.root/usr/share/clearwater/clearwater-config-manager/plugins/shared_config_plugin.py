@@ -45,6 +45,7 @@ services = [ "sprout",
              "homestead",
              "ralf",
              "homestead-prov",
+             "memento",
              "ellis" ]
 
 
