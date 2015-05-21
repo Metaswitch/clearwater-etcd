@@ -98,7 +98,7 @@ class EtcdSynchronizer(object):
                                            cluster_view)
 
             # If we have a new state, try and write it to etcd.
-            if new_state:
+            if new_state is not None:
                 self.write_to_etcd(cluster_view, new_state)
             else:
                 _log.debug("No state change")
@@ -117,6 +117,7 @@ class EtcdSynchronizer(object):
     def leave_cluster(self):
         result = self._client.get(self._key)
         cluster_view = self.parse_cluster_view(result.value)
+        self._index = result.modifiedIndex
 
         cluster_state = self.calculate_cluster_state(cluster_view)
 
@@ -129,6 +130,7 @@ class EtcdSynchronizer(object):
     def mark_node_failed(self):
         result = self._client.get(self._key)
         cluster_view = self.parse_cluster_view(result.value)
+        self._index = result.modifiedIndex
 
         self.write_to_etcd(cluster_view, ERROR)
 
