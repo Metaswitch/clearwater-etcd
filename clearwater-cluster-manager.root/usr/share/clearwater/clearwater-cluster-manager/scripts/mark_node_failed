@@ -2,15 +2,17 @@
 
 set -ue
 
+local_site_name=site1
 . /etc/clearwater/config
 
-if [ $# -ne 2 ]
+if [ $# -ne 3 ]
 then
-  echo "Usage: mark_node_failed [etcd_key] [failed_node_ip]"
+  echo "Usage: mark_node_failed [node_type] [datastore] [failed_node_ip]"
   exit 1
 fi
 
-key=$1
-dead_node_ip=$2
+node_type=$1
+datastore=$2
+dead_node_ip=$3
 
-/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-cluster-manager/scripts/mark_node_failed.py $local_ip $key $dead_node_ip
+/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-cluster-manager/scripts/mark_node_failed.py $local_ip $local_site_name $node_type $datastore $dead_node_ip
