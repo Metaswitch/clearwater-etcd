@@ -56,6 +56,7 @@ set -e
 
 NAME=clearwater-etcd
 DATA_DIR=/var/lib/$NAME
+LOG_DIR=/var/log/$NAME
 
 #
 # Function to set up the user account for the daemon
@@ -74,10 +75,19 @@ setup_data_dir() {
     chown $NAME $DATA_DIR
 }
 
+setup_log_dir() {
+    if [ ! -d "$LOG_DIR" ]; then
+        mkdir -p $LOG_DIR
+    fi
+    chown $NAME $LOG_DIR
+
+}
+
 case "$1" in
     configure)
         setup_user
         setup_data_dir
+        setup_log_dir
         install -D --mode=0644 /usr/share/clearwater/conf/clearwater-etcd.monit /etc/monit/conf.d/
         reload clearwater-monit || /bin/true
     ;;
