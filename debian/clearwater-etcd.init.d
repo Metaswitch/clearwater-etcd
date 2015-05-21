@@ -120,6 +120,12 @@ join_cluster()
         # Tell the cluster we're joining, this prints useful environment
         # variables to stdout but also prints a success message so strip that
         # out before saving the variables to the temp file.
+        # If we're already in the member list, remove ourselves first
+        member=$(/usr/bin/etcdctl member list | grep $local_ip | cut -f1 -d:)
+        if [[ $member != '' ]]
+        then
+          /usr/bin/etcdctl member remove $member
+        fi
         /usr/bin/etcdctl member add $ETCD_NAME http://$advertisement_ip:2380 | grep -v "Added member" >> $TEMP_FILE
         if [[ $? != 0 ]]
         then
