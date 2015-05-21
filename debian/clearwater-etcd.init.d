@@ -56,6 +56,7 @@ NAME=clearwater-etcd
 DATA_DIR=/var/lib/$NAME
 PIDFILE=/var/run/$NAME.pid
 DAEMON=/usr/bin/etcd
+DAEMONWRAPPER=/usr/bin/etcdwrapper
 
 # Exit if the package is not installed
 [ -x "$DAEMON" ] || exit 0
@@ -208,7 +209,7 @@ do_start()
                      --data-dir $DATA_DIR/$advertisement_ip
                      --name $ETCD_NAME"
 
-        start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --exec $DAEMON --chuid $NAME -- $DAEMON_ARGS $CLUSTER_ARGS \
+        start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --exec $DAEMONWRAPPER --chuid $NAME -- $DAEMON_ARGS $CLUSTER_ARGS \
                 || return 2
 
         wait_for_etcd

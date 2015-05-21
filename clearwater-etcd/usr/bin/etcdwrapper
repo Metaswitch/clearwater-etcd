@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# Tiny wrapper script to redirect etcd's stdout and stderr to a file
+
+exec /usr/bin/etcd $@ > /var/log/clearwater-etcd.log 2>&1
