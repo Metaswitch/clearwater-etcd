@@ -37,7 +37,7 @@ import shutil
 import os
 
 _log = logging.getLogger("shared_config_plugin")
-_file = "/etc/clearwater/config"
+_file = "/etc/clearwater/shared_config"
 
 services = [ "sprout",
              "bono",
