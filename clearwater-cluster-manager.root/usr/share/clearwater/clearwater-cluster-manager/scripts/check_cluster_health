@@ -2,6 +2,7 @@
 
 set -ue
 
+local_site_name=site1
 . /etc/clearwater/config
 
 if [ $# -ne 0 ]
