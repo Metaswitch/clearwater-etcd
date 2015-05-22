@@ -72,7 +72,7 @@ def describe_cluster(node_type, site, store_name):
     if site != "":
         print "Describing the {} {} cluster in site {}:".format(node_type.capitalize(), store_name.capitalize(), site) 
     else:
-        print "Describing the {} {} cluster in site {}:".format(node_type.capitalize(), store_name.capitalize(), site) 
+        print "Describing the {} {} cluster:".format(node_type.capitalize(), store_name.capitalize()) 
 
     cluster = json.loads(result.value)
     cluster_ok = all([state == "normal"
