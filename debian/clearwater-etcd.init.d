@@ -56,6 +56,7 @@ NAME=clearwater-etcd
 DATA_DIR=/var/lib/$NAME
 PIDFILE=/var/run/$NAME.pid
 DAEMON=/usr/bin/etcd
+DAEMONWRAPPER=/usr/bin/etcdwrapper
 
 # Exit if the package is not installed
 [ -x "$DAEMON" ] || exit 0
@@ -179,7 +180,7 @@ do_start()
         #   0 if daemon has been started
         #   1 if daemon was already running
         #   2 if daemon could not be started
-        start-stop-daemon --start --quiet --pidfile $PIDFILE --name $NAME --exec $DAEMON --test > /dev/null \
+        start-stop-daemon --start --quiet --pidfile $PIDFILE --name $NAME --startas $DAEMONWRAPPER --test > /dev/null \
                 || return 1
 
         ETCD_NAME=${advertisement_ip//./-}
@@ -208,7 +209,7 @@ do_start()
                      --data-dir $DATA_DIR/$advertisement_ip
                      --name $ETCD_NAME"
 
-        start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --exec $DAEMON --chuid $NAME -- $DAEMON_ARGS $CLUSTER_ARGS \
+        start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --startas $DAEMONWRAPPER --chuid $NAME -- $DAEMON_ARGS $CLUSTER_ARGS \
                 || return 2
 
         wait_for_etcd
@@ -220,9 +221,10 @@ do_rebuild()
         #   0 if daemon has been started
         #   1 if daemon was already running
         #   2 if daemon could not be started
-        start-stop-daemon --start --quiet --pidfile $PIDFILE --name $NAME --exec $DAEMON --test > /dev/null \
+        start-stop-daemon --start --quiet --pidfile $PIDFILE --name $NAME --startas $DAEMONWRAPPER --test > /dev/null \
                 || (echo "Cannot recreate cluster while etcd is running; stop it first" && return 1)
 
+        ETCD_NAME=${advertisement_ip//./-}
         create_cluster
 
         # Standard ports
@@ -235,7 +237,7 @@ do_rebuild()
                      --name $ETCD_NAME
                      --force-new-cluster"
 
-        start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --exec $DAEMON --chuid $NAME -- $DAEMON_ARGS $CLUSTER_ARGS \
+        start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --startas $DAEMONWRAPPER --chuid $NAME -- $DAEMON_ARGS $CLUSTER_ARGS \
                 || return 2
 
         wait_for_etcd
@@ -252,7 +254,7 @@ do_stop()
         #   1 if daemon was already stopped
         #   2 if daemon could not be stopped
         #   other if a failure occurred
-        start-stop-daemon --stop --quiet --retry=TERM/30/KILL/5 --pidfile $PIDFILE --exec $DAEMON
+        start-stop-daemon --stop --quiet --retry=TERM/30/KILL/5 --pidfile $PIDFILE --startas $DAEMONWRAPPER
         RETVAL="$?"
         [ "$RETVAL" = 2 ] && return 2
         # Wait for children to finish too if this is a daemon that forks
@@ -261,7 +263,7 @@ do_stop()
         # that waits for the process to drop all resources that could be
         # needed by services started subsequently.  A last resort is to
         # sleep for some time.
-        #start-stop-daemon --stop --quiet --oknodo --retry=0/30/KILL/5 --exec $DAEMON
+        #start-stop-daemon --stop --quiet --oknodo --retry=0/30/KILL/5 --startas $DAEMONWRAPPER
         [ "$?" = 2 ] && return 2
         # Many daemons don't delete their pidfiles when they exit.
         rm -f $PIDFILE
@@ -281,7 +283,7 @@ do_abort()
         #   1 if daemon was already stopped
         #   2 if daemon could not be stopped
         #   other if a failure occurred
-        start-stop-daemon --stop --retry=ABRT/60/KILL/5 --pidfile $PIDFILE --exec $DAEMON
+        start-stop-daemon --stop --retry=ABRT/60/KILL/5 --pidfile $PIDFILE --startas $DAEMONWRAPPER
         RETVAL="$?"
         [ "$RETVAL" = 2 ] && return 2
         # Many daemons don't delete their pidfiles when they exit.
@@ -323,7 +325,7 @@ do_decommission()
           return 2
         fi
 
-        start-stop-daemon --stop --retry=USR2/60/KILL/5 --pidfile $PIDFILE --exec $DAEMON
+        start-stop-daemon --stop --retry=USR2/60/KILL/5 --pidfile $PIDFILE --startas $DAEMONWRAPPER
         RETVAL=$?
         [[ $RETVAL == 2 ]] && return 2
 
@@ -344,11 +346,11 @@ do_force_decommission()
         # Return
         #   0 if successful
         #   2 on error
-        start-stop-daemon --stop --retry=USR2/60/KILL/5 --pidfile $PIDFILE --exec $DAEMON
+        start-stop-daemon --stop --retry=USR2/60/KILL/5 --pidfile $PIDFILE --startas $DAEMONWRAPPER
         RETVAL=$?
         [[ $RETVAL == 2 ]] && return 2
 
-        rm -f $PIDFILE
+        [[ -n $PIDFILE ]] && rm -f $PIDFILE
 
         # Decommissioned so destroy the data directory
         [[ -n $DATA_DIR ]] && [[ -n $advertisement_ip ]] && rm -rf $DATA_DIR/$advertisement_ip
@@ -431,11 +433,14 @@ case "$1" in
   force-decommission)
         echo "Forcibly decommissioning $DESC on $public_hostname."
         echo
-        echo "This should only be done when following the documented disaster recovery process. It deletes data from this node, so you should make sure you have:"
+        echo "This should only be done when following the documented disaster "
+        echo "recovery process. It deletes data from this node, so you should "
+        echo "make sure you have:"
         echo
-        echo "* confirmed that the etcd_cluster setting in /etc/clearwater/config ($etcd_cluster) is correct"
+        echo "* confirmed that the etcd_cluster setting in "
+        echo "/etc/clearwater/config ($etcd_cluster) is correct"
         echo "* created a working one-node cluster to begin the recovery process"
-        echo "* backed up the data"
+        echo 
         echo "Do you want to proceed with this decommission? [y/N]"
         read -r REPLY
         if [[ $REPLY = "y" ]]
@@ -447,10 +452,13 @@ case "$1" in
   force-new-cluster)
         echo "Forcibly recreating a cluster for $DESC on $public_hostname."
         echo
-        echo "This should only be done when following the documented disaster recovery process. It deletes the cluster configuration from this node, so you should make sure you have:"
+        echo "This should only be done when following the documented disaster "
+        echo "recovery process. It deletes the etcd cluster configuration from "
+        echo "this node, so you should make sure you have:"
         echo
-        echo "* confirmed that the etcd_cluster setting in /etc/clearwater/config ($etcd_cluster) is correct"
-        echo "* backed up the data"
+        echo "* confirmed that the etcd_cluster setting in "
+        echo "/etc/clearwater/local_config ($etcd_cluster) is correct"
+        echo 
         echo "Do you want to proceed with this rebuild? [y/N]"
         read -r REPLY
         if [[ $REPLY = "y" ]]
