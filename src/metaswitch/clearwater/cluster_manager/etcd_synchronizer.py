@@ -81,27 +81,31 @@ class EtcdSynchronizer(object):
             cluster_view = self.read_from_etcd()
             if self._terminate_flag:
                 break
-            _log.debug("Got new state %s from etcd" % cluster_view)
-            cluster_state = self.calculate_cluster_state(cluster_view)
+            if cluster_view is not None:
+                _log.debug("Got new state %s from etcd" % cluster_view)
+                cluster_state = self.calculate_cluster_state(cluster_view)
 
-            # This node can only leave the cluster if the cluster is in a stable
-            # state. Check the leaving flag and the cluster state. If necessary,
-            # set this node to WAITING_TO_LEAVE. Otherwise, kick the FSM.
-            if self._leaving_flag and \
-                    (cluster_state == STABLE or
-                     (self.force_leave and cluster_state == STABLE_WITH_ERRORS)):
-                new_state = WAITING_TO_LEAVE
-            else:
-                local_state = self.calculate_local_state(cluster_view)
-                new_state = self._fsm.next(local_state,
-                                           cluster_state,
-                                           cluster_view)
+                # This node can only leave the cluster if the cluster is in a stable
+                # state. Check the leaving flag and the cluster state. If necessary,
+                # set this node to WAITING_TO_LEAVE. Otherwise, kick the FSM.
+                if self._leaving_flag and \
+                        (cluster_state == STABLE or
+                        (self.force_leave and cluster_state == STABLE_WITH_ERRORS)):
+                    new_state = WAITING_TO_LEAVE
+                else:
+                    local_state = self.calculate_local_state(cluster_view)
+                    new_state = self._fsm.next(local_state,
+                                            cluster_state,
+                                            cluster_view)
 
-            # If we have a new state, try and write it to etcd.
-            if new_state is not None:
-                self.write_to_etcd(cluster_view, new_state)
+                # If we have a new state, try and write it to etcd.
+                if new_state is not None:
+                    self.write_to_etcd(cluster_view, new_state)
+                else:
+                    _log.debug("No state change")
             else:
-                _log.debug("No state change")
+                log.warning("read_from_etcd returned None, indicating a failure to get data from etcd")
+
         _log.info("Quitting FSM")
         self._fsm.quit()
 
@@ -219,9 +223,10 @@ class EtcdSynchronizer(object):
     def calculate_local_state(self, cluster_view):
         return cluster_view.get(self._ip)
 
-    # Read the state of the cluster from etcd.
+    # Read the state of the cluster from etcd. Returns None if nothing could be
+    # read.
     def read_from_etcd(self):
-        cluster_view = {}
+        cluster_view = None
 
         try:
             result = self._client.get(self._key)
@@ -277,6 +282,7 @@ class EtcdSynchronizer(object):
             _log.info("Key {} doesn't exist in etcd yet".format(self._key))
             # If the key doesn't exist in etcd then there is currently no
             # cluster.
+            cluster_view = {}
             self._index = None
             self._last_cluster_view = None
             if not self._plugin.should_be_in_cluster():
