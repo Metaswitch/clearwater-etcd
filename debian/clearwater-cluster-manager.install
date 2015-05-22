@@ -1,2 +1,2 @@
-eggs usr/share/clearwater/clearwater-cluster-manager/
+cluster_mgr_eggs/* usr/share/clearwater/clearwater-cluster-manager/eggs/
 clearwater-cluster-manager.root/* /

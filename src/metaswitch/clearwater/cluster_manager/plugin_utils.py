@@ -39,6 +39,7 @@ import yaml
 from textwrap import dedent
 import subprocess
 from metaswitch.clearwater.cluster_manager import constants
+from metaswitch.clearwater.etcd_shared.plugin_utils import run_command
 
 _log = logging.getLogger("cluster_manager.plugin_utils")
 
@@ -75,23 +76,6 @@ def write_memcached_cluster_settings(filename, cluster_view):
         new_file_contents))
     with open(filename, "w") as f:
         f.write(new_file_contents)
-
-
-def run_command(command):
-    """Runs the given shell command, logging the output and return code"""
-    try:
-        output = subprocess.check_output(command,
-                                         shell=True,
-                                         stderr=subprocess.STDOUT)
-        _log.info("Command {} succeeded and printed output {!r}".
-                  format(command, output))
-        return 0
-    except subprocess.CalledProcessError as e:
-        _log.error("Command {} failed with return code {}"
-                   " and printed output {!r}".format(command,
-                                                     e.returncode,
-                                                     e.output))
-        return e.returncode
 
 
 # Edits cassandra.yaml and restarts Cassandra in order to join a Cassandra

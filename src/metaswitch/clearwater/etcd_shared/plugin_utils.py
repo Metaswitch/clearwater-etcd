@@ -1,5 +1,3 @@
-# @file setup.py
-#
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015 Metaswitch Networks Ltd
 #
@@ -32,22 +30,30 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
+
+import subprocess
 import logging
-import sys
-import multiprocessing
 
-from setuptools import setup, find_packages
+_log = logging.getLogger("etcd_shared.plugin_utils")
 
-setup(
-    name='clearwater-cluster-manager',
-    version='1.0',
-    namespace_packages = ['metaswitch'],
-    packages=find_packages('src'),
-    package_dir={'':'src'},
-    package_data={
-        '': ['*.eml'],
-        },
-    test_suite='metaswitch.clearwater.cluster_manager.test',
-    install_requires=["docopt", "python-etcd", "pyzmq", "pyyaml"],
-    tests_require=["Mock"],
-    )
+
+def run_command(command):
+    """Runs the given shell command, logging the output and return code.
+
+    Note that this runs the provided command in a new shell, which will
+    apply shell replacements.  Ensure the input string is sanitized before
+    passing to this function.
+    """
+    try:
+        output = subprocess.check_output(command,
+                                         shell=True,
+                                         stderr=subprocess.STDOUT)
+        _log.info("Command {} succeeded and printed output {!r}".
+                  format(command, output))
+        return 0
+    except subprocess.CalledProcessError as e:
+        _log.error("Command {} failed with return code {}"
+                   " and printed output {!r}".format(command,
+                                                     e.returncode,
+                                                     e.output))
+        return e.returncode

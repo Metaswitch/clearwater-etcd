@@ -35,9 +35,9 @@ import logging
 import imp
 import os
 
-_log = logging.getLogger("config_manager.plugin_loader")
+_log = logging.getLogger("etcd_shared.plugin_loader")
 
-def load_plugins_in_dir(dir):
+def load_plugins_in_dir(dir, *optional_config):
     """Loads plugins by:
         - looking for all .py files in the given directory
         - calling their load_as_plugin() function
@@ -54,6 +54,11 @@ def load_plugins_in_dir(dir):
             if file:
                 mod = imp.load_module(module_name, file, pathname, description)
                 if hasattr(mod, "load_as_plugin"):
+                    plugin = mod.load_as_plugin(*optional_config)
                     _log.info("Loading {}".format(filename))
-                    plugins.append(mod.load_as_plugin())
+                    if plugin is not None:
+                        _log.info("Loaded {} successfully".format(filename))
+                        plugins.append(plugin)
+                    else:
+                        _log.info("{} did not load (load_as_plugin returned None)".format(filename))
     return plugins
