@@ -1,0 +1,23 @@
+#!/bin/bash
+
+set -ue
+
+. /etc/clearwater/config
+
+if [ -z $remote_site_name ]
+then
+  echo "remote_site_name setting must be set"
+  exit 1
+fi
+
+if [ $# -ne 3 ]
+then
+  echo "Usage: mark_remote_node_failed [node_type] [datastore] [failed_node_ip]"
+  exit 1
+fi
+
+node_type=$1
+datastore=$2
+dead_node_ip=$3
+
+/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-cluster-manager/scripts/mark_node_failed.py $local_ip $remote_site_name $node_type $datastore $dead_node_ip
