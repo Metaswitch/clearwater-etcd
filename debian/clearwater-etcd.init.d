@@ -224,6 +224,7 @@ do_rebuild()
         start-stop-daemon --start --quiet --pidfile $PIDFILE --name $NAME --startas $DAEMONWRAPPER --test > /dev/null \
                 || (echo "Cannot recreate cluster while etcd is running; stop it first" && return 1)
 
+        ETCD_NAME=${advertisement_ip//./-}
         create_cluster
 
         # Standard ports
@@ -349,7 +350,7 @@ do_force_decommission()
         RETVAL=$?
         [[ $RETVAL == 2 ]] && return 2
 
-        rm -f $PIDFILE
+        [[ -n $PIDFILE ]] && rm -f $PIDFILE
 
         # Decommissioned so destroy the data directory
         [[ -n $DATA_DIR ]] && [[ -n $advertisement_ip ]] && rm -rf $DATA_DIR/$advertisement_ip
@@ -432,11 +433,14 @@ case "$1" in
   force-decommission)
         echo "Forcibly decommissioning $DESC on $public_hostname."
         echo
-        echo "This should only be done when following the documented disaster recovery process. It deletes data from this node, so you should make sure you have:"
+        echo "This should only be done when following the documented disaster "
+        echo "recovery process. It deletes data from this node, so you should "
+        echo "make sure you have:"
         echo
-        echo "* confirmed that the etcd_cluster setting in /etc/clearwater/config ($etcd_cluster) is correct"
+        echo "* confirmed that the etcd_cluster setting in "
+        echo "/etc/clearwater/config ($etcd_cluster) is correct"
         echo "* created a working one-node cluster to begin the recovery process"
-        echo "* backed up the data"
+        echo 
         echo "Do you want to proceed with this decommission? [y/N]"
         read -r REPLY
         if [[ $REPLY = "y" ]]
@@ -448,10 +452,13 @@ case "$1" in
   force-new-cluster)
         echo "Forcibly recreating a cluster for $DESC on $public_hostname."
         echo
-        echo "This should only be done when following the documented disaster recovery process. It deletes the cluster configuration from this node, so you should make sure you have:"
+        echo "This should only be done when following the documented disaster "
+        echo "recovery process. It deletes the etcd cluster configuration from "
+        echo "this node, so you should make sure you have:"
         echo
-        echo "* confirmed that the etcd_cluster setting in /etc/clearwater/config ($etcd_cluster) is correct"
-        echo "* backed up the data"
+        echo "* confirmed that the etcd_cluster setting in "
+        echo "/etc/clearwater/local_config ($etcd_cluster) is correct"
+        echo 
         echo "Do you want to proceed with this rebuild? [y/N]"
         read -r REPLY
         if [[ $REPLY = "y" ]]
