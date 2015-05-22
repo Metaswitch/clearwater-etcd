@@ -54,7 +54,7 @@ Options:
 from docopt import docopt
 
 from metaswitch.common import logging_config, utils
-from metaswitch.clearwater.cluster_manager.plugin_loader \
+from metaswitch.clearwater.etcd_shared.plugin_loader \
     import load_plugins_in_dir
 from metaswitch.clearwater.cluster_manager.etcd_synchronizer \
     import EtcdSynchronizer

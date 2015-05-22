@@ -1,3 +1,5 @@
+# @file setup.py
+#
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015 Metaswitch Networks Ltd
 #
@@ -30,28 +32,21 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
+import logging
+import sys
+import multiprocessing
 
-import imp
-import os
+from setuptools import setup, find_packages
 
-
-def load_plugins_in_dir(dir, *config):
-    """Loads plugins by:
-        - looking for all .py files in the given directory
-        - calling their load_as_plugin() function, passing 'config'
-        - returning a list containing the return values of all load_as_plugin()
-        calls
-        """
-    files = os.listdir(dir)
-    plugins = []
-    for filename in files:
-        module_name, suffix = filename.split(".")
-        if suffix == "py":
-            file, pathname, description = imp.find_module(module_name, [dir])
-            if file:
-                mod = imp.load_module(module_name, file, pathname, description)
-                if hasattr(mod, "load_as_plugin"):
-                    plugin = mod.load_as_plugin(*config)
-                    if plugin:
-                        plugins.append(plugin)
-    return plugins
+setup(
+    name='clearwater-config-manager',
+    version='1.0',
+    namespace_packages = ['metaswitch'],
+    packages=['metaswitch.clearwater.config_manager'],
+    package_dir={'':'src'},
+    package_data={
+        '': ['*.eml'],
+        },
+    install_requires=["docopt", "python-etcd", "pyzmq", "pyyaml"],
+    tests_require=["Mock"],
+    )
