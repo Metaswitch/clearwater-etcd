@@ -4,7 +4,7 @@ PYTHON_BIN := $(shell which python)
 
 DEB_COMPONENT := clearwater-etcd
 DEB_MAJOR_VERSION := 1.0${DEB_VERSION_QUALIFIER}
-DEB_NAMES := clearwater-etcd clearwater-cluster-manager clearwater-config-manager
+DEB_NAMES := clearwater-etcd clearwater-cluster-manager clearwater-config-manager clearwater-management
 DEB_ARCH := all
 
 # The build has been seen to fail on Mac OSX when trying to build on i386. Enable this to build for x86_64 only
