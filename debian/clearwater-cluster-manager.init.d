@@ -57,6 +57,7 @@ SCRIPTNAME=/etc/init.d/$NAME
 
 # Exit if the package is not installed
 [ -x $DAEMON ] || exit 0
+[ -x $ACTUAL_EXEC ] || exit 0
 
 # Read configuration variable file if it is present
 [ -r /etc/default/$NAME ] && . /etc/default/$NAME
