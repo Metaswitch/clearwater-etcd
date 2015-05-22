@@ -64,7 +64,7 @@ class EtcdSynchronizer(object):
             if self._terminate_flag:
                 break
 
-            if len(value) > 0:
+            if value:
                 _log.debug("Got new config value from etcd:\n{}".format(value))
                 self._plugin.on_config_changed(value, self._alarm)
 
