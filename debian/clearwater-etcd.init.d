@@ -211,7 +211,6 @@ do_start()
                      --advertise-client-urls http://$advertisement_ip:4000
                      --listen-peer-urls http://$listen_ip:2380
                      --initial-advertise-peer-urls http://$advertisement_ip:2380
-                     --initial-cluster-token $home_domain
                      --data-dir $DATA_DIR/$advertisement_ip
                      --name $ETCD_NAME"
 
@@ -237,7 +236,6 @@ do_rebuild()
                      --advertise-client-urls http://$advertisement_ip:4000
                      --listen-peer-urls http://$listen_ip:2380
                      --initial-advertise-peer-urls http://$advertisement_ip:2380
-                     --initial-cluster-token $home_domain
                      --data-dir $DATA_DIR/$advertisement_ip
                      --name $ETCD_NAME
                      --force-new-cluster"
