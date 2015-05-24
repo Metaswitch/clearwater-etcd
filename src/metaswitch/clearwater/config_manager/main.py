@@ -86,6 +86,13 @@ def main(args):
         utils.daemonize(stdout_err_log)
 
     logging_config.configure_logging(log_level, log_dir, "config-manager")
+
+    # urllib3 logs a WARNING log whenever it recreates a connection, but our
+    # etcd usage does this frequently (to allow watch timeouts), so deliberately
+    # ignore this log
+    urllib_logger = logging.getLogger('urllib3')
+    urllib_logger.setLevel(logging.ERROR)
+
     utils.install_sigusr1_handler("config-manager")
 
     # Drop a pidfile.

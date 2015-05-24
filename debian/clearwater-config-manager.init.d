@@ -80,7 +80,7 @@ do_start()
   [ -e /etc/clearwater/no_config_manager ] && (echo "/etc/clearwater/no_config_manager exists, not starting config manager" && return 2)
 
   . /etc/clearwater/config
-  log_level=2
+  log_level=3
   log_directory=/var/log/clearwater-config-manager
   [ -r /etc/clearwater/user_settings ] && . /etc/clearwater/user_settings
 
