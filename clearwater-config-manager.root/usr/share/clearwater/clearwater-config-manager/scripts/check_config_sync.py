@@ -48,7 +48,8 @@ plugins = load_plugins_in_dir(plugins_dir)
 
 for plugin in plugins:
     try:
-        value = client.get("/clearwater/" + site + "/" + plugin.key())
+        result = client.get("/clearwater/" + site + "/configuration/" + plugin.key())
+        value = result.value
     except etcd.EtcdKeyNotFound:
         value = ""
 

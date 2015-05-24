@@ -71,7 +71,7 @@ class EtcdSynchronizer(object):
     def read_from_etcd(self):
         value = None
         try:
-            result = self._client.get("/clearwater/" + self._site + "/" + self._plugin.key())
+            result = self._client.get("/clearwater/" + self._site + "/configuration/" + self._plugin.key())
 
             # If the key hasn't changed since we last saw it, then
             # wait for it to change before doing anything else.

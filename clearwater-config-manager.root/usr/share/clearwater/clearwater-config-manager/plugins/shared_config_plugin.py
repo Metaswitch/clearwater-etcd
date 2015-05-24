@@ -58,7 +58,7 @@ class SharedConfigPlugin(ConfigPluginBase):
 
     def status(self, value):
         try:
-            with open(self._file, "r") as ifile:
+            with open(_file, "r") as ifile:
                 current = ifile.read()
                 if current == value:
                     return FileStatus.UP_TO_DATE
