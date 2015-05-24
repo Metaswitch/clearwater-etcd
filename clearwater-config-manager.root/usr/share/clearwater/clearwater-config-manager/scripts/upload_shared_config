@@ -51,6 +51,6 @@ fi
 
 # Upload the file to etcd
 curl -X PUT \
-     http://$local_ip:4000/v2/keys/configuration/shared_config \
+     http://$local_ip:4000/v2/keys/clearwater/$local_site_name/configuration/shared_config \
      --data-urlencode \
      value@$FILENAME > /dev/null

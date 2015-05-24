@@ -41,6 +41,7 @@ Usage:
 Options:
   -h --help                   Show this screen.
   --local-ip=IP               IP address
+  --local-site=NAME           Local site name
   --foreground                Don't daemonise
   --log-level=LVL             Level to log at, 0-4 [default: 3]
   --log-directory=DIR         Directory to log to [default: ./]
@@ -75,6 +76,7 @@ def main(args):
     arguments = docopt(__doc__, argv=args)
 
     local_ip = arguments['--local-ip']
+    local_site = arguments['--local-site']
     log_dir = arguments['--log-directory']
     log_level = LOG_LEVELS.get(arguments['--log-level'], logging.DEBUG)
 
@@ -100,7 +102,7 @@ def main(args):
     alarm = ConfigAlarm(files)
 
     for plugin in plugins:
-        syncer = EtcdSynchronizer(plugin, local_ip, alarm)
+        syncer = EtcdSynchronizer(plugin, local_ip, local_site, alarm)
         thread = Thread(target=syncer.main)
         thread.start()
 

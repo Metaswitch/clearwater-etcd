@@ -43,12 +43,10 @@ _log = logging.getLogger("config_manager.etcd_synchronizer")
 class EtcdSynchronizer(object):
     PAUSE_BEFORE_RETRY = 30
 
-    def __init__(self, plugin, ip, alarm, etcd_ip=None):
+    def __init__(self, plugin, ip, site, alarm):
         self._ip = ip
-        if etcd_ip:
-            self._client = etcd.Client(etcd_ip, 4000)
-        else:
-            self._client = etcd.Client(self._ip, 4000)
+        self._site = site
+        self._client = etcd.Client(self._ip, 4000)
         self._plugin = plugin
         self._alarm = alarm
         self._index = None
@@ -73,7 +71,7 @@ class EtcdSynchronizer(object):
     def read_from_etcd(self):
         value = None
         try:
-            result = self._client.get(self._plugin.key())
+            result = self._client.get("/clearwater/" + self._site + "/" + self._plugin.key())
 
             # If the key hasn't changed since we last saw it, then
             # wait for it to change before doing anything else.
