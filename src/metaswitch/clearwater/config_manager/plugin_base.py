@@ -31,6 +31,10 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 from abc import ABCMeta, abstractmethod
 
+class FileStatus:
+    UP_TO_DATE = 0
+    OUT_OF_SYNC = 1
+    MISSING = 2
 
 class ConfigPluginBase(object):
     __metaclass__ = ABCMeta
@@ -45,6 +49,12 @@ class ConfigPluginBase(object):
     def file(self):
         """This should return the name of the file on disk that is managed
         by this plugin."""
+        pass
+
+    @abstractmethod
+    def status(self, value):
+        """This should report the status of the file using the FileStatus enum
+        values."""
         pass
 
     @abstractmethod
