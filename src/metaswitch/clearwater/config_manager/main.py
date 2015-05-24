@@ -35,7 +35,7 @@
 """Clearwater Config Manager
 
 Usage:
-  main.py --local-ip=IP [--foreground] [--log-level=LVL] [--log-directory=DIR]
+  main.py --local-ip=IP --local-site=SITE [--foreground] [--log-level=LVL] [--log-directory=DIR]
           [--pidfile=FILE]
 
 Options:
