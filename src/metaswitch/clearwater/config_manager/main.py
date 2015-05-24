@@ -32,22 +32,20 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-"""Clearwater Cluster Manager
+"""Clearwater Config Manager
 
 Usage:
-  main.py --local-ip=IP --local-site=NAME --remote-site=NAME
-          [--foreground] [--log-level=LVL] [--log-directory=DIR]
+  main.py --local-ip=IP --local-site=SITE [--foreground] [--log-level=LVL] [--log-directory=DIR]
           [--pidfile=FILE]
 
 Options:
   -h --help                   Show this screen.
   --local-ip=IP               IP address
-  --local-site=NAME           Name of local site
-  --remote-site=NAME          Name of remote site
+  --local-site=NAME           Local site name
   --foreground                Don't daemonise
   --log-level=LVL             Level to log at, 0-4 [default: 3]
   --log-directory=DIR         Directory to log to [default: ./]
-  --pidfile=FILE              Pidfile to write [default: ./cluster-manager.pid]
+  --pidfile=FILE              Pidfile to write [default: ./config-manager.pid]
 
 """
 
@@ -56,14 +54,16 @@ from docopt import docopt
 from metaswitch.common import logging_config, utils
 from metaswitch.clearwater.etcd_shared.plugin_loader \
     import load_plugins_in_dir
-from metaswitch.clearwater.cluster_manager.etcd_synchronizer \
+from metaswitch.clearwater.config_manager.etcd_synchronizer \
     import EtcdSynchronizer
+from metaswitch.clearwater.config_manager.alarms \
+    import ConfigAlarm
 import logging
 import os
 from threading import Thread
 import signal
 
-_log = logging.getLogger("cluster_manager.main")
+_log = logging.getLogger("config_manager.main")
 
 LOG_LEVELS = {'0': logging.CRITICAL,
               '1': logging.ERROR,
@@ -72,30 +72,20 @@ LOG_LEVELS = {'0': logging.CRITICAL,
               '4': logging.DEBUG}
 
 
-def install_sigquit_handler(plugins):
-    def sigquit_handler(sig, stack):
-        _log.debug("Handling SIGQUIT")
-        for plugin in plugins:
-            _log.debug("{} leaving cluster".format(plugin))
-            plugin.leave_cluster()
-    signal.signal(signal.SIGQUIT, sigquit_handler)
-
-
 def main(args):
     arguments = docopt(__doc__, argv=args)
 
-    listen_ip = arguments['--local-ip']
-    local_site_name = arguments['--local-site']
-    remote_site_name = arguments['--remote-site']
+    local_ip = arguments['--local-ip']
+    local_site = arguments['--local-site']
     log_dir = arguments['--log-directory']
     log_level = LOG_LEVELS.get(arguments['--log-level'], logging.DEBUG)
 
-    stdout_err_log = os.path.join(log_dir, "cluster-manager.output.log")
+    stdout_err_log = os.path.join(log_dir, "config-manager.output.log")
 
     if not arguments['--foreground']:
         utils.daemonize(stdout_err_log)
 
-    logging_config.configure_logging(log_level, log_dir, "cluster-manager")
+    logging_config.configure_logging(log_level, log_dir, "config-manager")
 
     # urllib3 logs a WARNING log whenever it recreates a connection, but our
     # etcd usage does this frequently (to allow watch timeouts), so deliberately
@@ -103,48 +93,31 @@ def main(args):
     urllib_logger = logging.getLogger('urllib3')
     urllib_logger.setLevel(logging.ERROR)
 
-    utils.install_sigusr1_handler("cluster-manager")
+    utils.install_sigusr1_handler("config-manager")
 
     # Drop a pidfile.
     pid = os.getpid()
     with open(arguments['--pidfile'], "w") as pidfile:
         pidfile.write(str(pid) + "\n")
 
-    plugins_dir = "/usr/share/clearwater/clearwater-cluster-manager/plugins/"
-    plugins = load_plugins_in_dir(plugins_dir,
-                                  listen_ip,
-                                  local_site_name,
-                                  remote_site_name)
+    plugins_dir = "/usr/share/clearwater/clearwater-config-manager/plugins/"
+    plugins = load_plugins_in_dir(plugins_dir)
     plugins.sort(key=lambda x: x.key())
-    plugins_to_use = []
-    files = []
-    skip = False
-    for plugin in plugins:
-        for plugin_file in plugin.files():
-            if plugin_file in files:
-                _log.info("Skipping plugin {} because {} "
-                          "is already managed by another plugin"
-                          .format(plugin, plugin_file))
-                skip = True
-
-        if not skip:
-            plugins_to_use.append(plugin)
-            files.extend(plugin.files())
-
-    synchronizers = []
     threads = []
-    for plugin in plugins_to_use:
-        syncer = EtcdSynchronizer(plugin, listen_ip)
+
+    files = [p.file() for p in plugins]
+    alarm = ConfigAlarm(files)
+
+    for plugin in plugins:
+        syncer = EtcdSynchronizer(plugin, local_ip, local_site, alarm)
         thread = Thread(target=syncer.main)
-        thread.daemon = True
         thread.start()
 
-        synchronizers.append(syncer)
         threads.append(thread)
         _log.info("Loaded plugin %s" % plugin)
-
-    install_sigquit_handler(synchronizers)
 
     for thread in threads:
         while thread.isAlive():
             thread.join(1)
+
+    _log.info("Clearwater Configuration Manager shutting down")

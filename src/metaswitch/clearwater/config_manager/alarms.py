@@ -1,7 +1,7 @@
-#!/usr/bin/env python
-
+# @file alarms.py
+#
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015 Metaswitch Networks Ltd
+# Copyright (C) 2014  Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -32,19 +32,53 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-import unittest
-from metaswitch.clearwater.etcd_shared.plugin_loader \
-    import load_plugins_in_dir
+
+# This module provides a method for transporting alarm requests to a net-
+# snmp alarm sub-agent for further handling. If the agent is unavailable,
+# the request will timeout after 2 seconds and be dropped.
+
+
+import logging
+import imp
 import os
+from threading import Lock
 
+CLEAR_GLOBAL_CONFIG_NOT_SYNCHED = "6503.1"
+RAISE_GLOBAL_CONFIG_NOT_SYNCHED = "6503.3"
 
-class TestPluginLoading(unittest.TestCase):
+_log = logging.getLogger("config_manager.alarms")
 
-    def test_load(self):
-        plugin_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                   "plugins")
-        plugins = load_plugins_in_dir(plugin_path, None)
+sendrequest = None
 
-        # Check that the plugin loaded successfully
-        self.assertEqual(plugins[0].__class__.__name__,
-                         "PluginLoaderTestPlugin")
+try:
+    file, pathname, description = imp.find_module("alarms", ["/usr/share/clearwater/bin"])
+    mod = imp.load_module("alarms", file, pathname, description)
+    sendrequest = mod.sendrequest
+except ImportError:
+    _log.error("Could not import /usr/share/clearwater/bin/alarms.py, alarms will not be sent")
+
+def issue_alarm(identifier):
+    if sendrequest:
+        sendrequest(["issue-alarm", "config-manager", identifier])
+
+class ConfigAlarm(object):
+    def __init__(self, files=[]):
+        self._files = {}
+        self._lock = Lock()
+        self._lock.acquire()
+        for file in files:
+            self._files[file] = os.path.isfile(file)
+        self.check_alarm()
+        self._lock.release()
+
+    def update_file(self, filename):
+        self._lock.acquire()
+        self._files[filename] = True;
+        self.check_alarm()
+        self._lock.release()
+
+    def check_alarm(self):
+        if all(self._files.values()):
+            issue_alarm(CLEAR_GLOBAL_CONFIG_NOT_SYNCHED)
+        else:
+            issue_alarm(RAISE_GLOBAL_CONFIG_NOT_SYNCHED)

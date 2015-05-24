@@ -43,7 +43,7 @@ from .synchronization_fsm import SyncFSM
 import urllib3
 import logging
 
-_log = logging.getLogger("etcd_sync")
+_log = logging.getLogger("cluster_manager.etcd_synchronizer")
 
 
 class EtcdSynchronizer(object):

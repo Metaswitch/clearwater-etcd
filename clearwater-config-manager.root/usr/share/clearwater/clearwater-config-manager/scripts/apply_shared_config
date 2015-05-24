@@ -1,7 +1,7 @@
-#!/usr/bin/env python
+#!/bin/bash
 
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015 Metaswitch Networks Ltd
+# Copyright (C) 2015  Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -32,19 +32,7 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-import unittest
-from metaswitch.clearwater.etcd_shared.plugin_loader \
-    import load_plugins_in_dir
-import os
+FILENAME=/etc/clearwater/shared_config.apply
 
-
-class TestPluginLoading(unittest.TestCase):
-
-    def test_load(self):
-        plugin_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                   "plugins")
-        plugins = load_plugins_in_dir(plugin_path, None)
-
-        # Check that the plugin loaded successfully
-        self.assertEqual(plugins[0].__class__.__name__,
-                         "PluginLoaderTestPlugin")
+touch $FILENAME
+service clearwater-config-manager restart

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# @file clearwater-cluster-manager.init.d
+# @file clearwater-config-manager.init.d
 #
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015 Metaswitch Networks Ltd
@@ -35,29 +35,28 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 ### BEGIN INIT INFO
-# Provides:          clearwater-cluster-manager
+# Provides:          clearwater-config-manager
 # Required-Start:    $network $local_fs
 # Required-Stop:
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: clearwater-cluster-manager
-# Description:       clearwater-cluster-manager
+# Short-Description: clearwater-config-manager
+# Description:       clearwater-config-manager
 ### END INIT INFO
 
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
-DESC=clearwater-cluster-manager       # Introduce a short description here
-NAME=clearwater-cluster-manager       # Introduce the short server's name here (not suitable for --name)
-USER=clearwater-cluster-manager       # Username to run as
-DAEMON=/usr/share/clearwater/bin/clearwater-cluster-manager # Introduce the server's location here
-ACTUAL_EXEC=/usr/share/clearwater/clearwater-cluster-manager/env/bin/python
-DAEMON_DIR=/usr/share/clearwater/clearwater-cluster-manager/
+DESC=clearwater-config-manager       # Introduce a short description here
+NAME=clearwater-config-manager       # Introduce the short server's name here (not suitable for --name)
+USER=clearwater-config-manager       # Username to run as
+DAEMON=/usr/share/clearwater/bin/clearwater-config-manager # Introduce the server's location here
+ACTUAL_EXEC=/usr/share/clearwater/clearwater-config-manager/env/bin/python
+DAEMON_DIR=/usr/share/clearwater/clearwater-config-manager/
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
 # Exit if the package is not installed
 [ -x $DAEMON ] || exit 0
-[ -x $ACTUAL_EXEC ] || exit 0
 
 # Read configuration variable file if it is present
 [ -r /etc/default/$NAME ] && . /etc/default/$NAME
@@ -78,23 +77,19 @@ do_start()
   #   0 if daemon has been started
   #   1 if daemon was already running
   #   2 if daemon could not be started
+  [ -e /etc/clearwater/no_config_manager ] && (echo "/etc/clearwater/no_config_manager exists, not starting config manager" && return 2)
 
-  [ -e /etc/clearwater/no_cluster_manager ] && (echo "/etc/clearwater/no_cluster_manager exists, not starting cluster manager" && return 2)
-
-  local_site_name=site1
-  remote_site_name=""
   . /etc/clearwater/config
   log_level=3
-  log_directory=/var/log/clearwater-cluster-manager
+  log_directory=/var/log/clearwater-config-manager
   [ -r /etc/clearwater/user_settings ] && . /etc/clearwater/user_settings
 
-  DAEMON_ARGS="--local-ip=$local_ip --local-site=$local_site_name --remote-site=$remote_site_name --log-level=$log_level --log-directory=$log_directory --pidfile=$PIDFILE"
+  DAEMON_ARGS="--local-ip=$local_ip --local-site=$local_site_name --log-level=$log_level --log-directory=$log_directory --pidfile=$PIDFILE"
 
   start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null \
     || return 1
 
-  start-stop-daemon --start --quiet --chdir $DAEMON_DIR --pidfile $PIDFILE --exec $DAEMON -- \
-    $DAEMON_ARGS \
+  start-stop-daemon --start --quiet --chdir $DAEMON_DIR --pidfile $PIDFILE --exec $DAEMON -- $DAEMON_ARGS \
     || return 2
   # Add code here, if necessary, that waits for the process to be ready
   # to handle requests from services started subsequently which depend
@@ -118,25 +113,6 @@ do_stop()
 	rm -f $PIDFILE
 	return "$RETVAL"
 }
-
-#
-# Function that decommissions the daemon/service
-#
-do_decommission()
-{
-	# Return
-	#   0 if daemon has been stopped
-	#   1 if daemon was already stopped
-	#   2 if daemon could not be stopped within 20 minutes
-	#   other if a failure occurred
-	start-stop-daemon --stop --quiet --retry=QUIT/1200 --exec $ACTUAL_EXEC --pidfile $PIDFILE
-	RETVAL="$?"
-	[ "$RETVAL" = 2 ] && return 2
-	# Many daemons don't delete their pidfiles when they exit.
-	rm -f $PIDFILE
-	return "$RETVAL"
-}
-
 
 #
 # Function that aborts the daemon/service
@@ -215,7 +191,9 @@ case "$1" in
 	;;
   decommission)
 	log_daemon_msg "Decommissioning $DESC" "$NAME"
-	do_decommission
+
+  # There's no special function for decomissioning so just call stop
+	do_stop
 	;;
   abort-restart)
         log_daemon_msg "Abort-Restarting $DESC" "$NAME"

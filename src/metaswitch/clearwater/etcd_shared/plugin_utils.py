@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015 Metaswitch Networks Ltd
 #
@@ -32,19 +30,30 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-import unittest
-from metaswitch.clearwater.etcd_shared.plugin_loader \
-    import load_plugins_in_dir
-import os
+
+import subprocess
+import logging
+
+_log = logging.getLogger("etcd_shared.plugin_utils")
 
 
-class TestPluginLoading(unittest.TestCase):
+def run_command(command):
+    """Runs the given shell command, logging the output and return code.
 
-    def test_load(self):
-        plugin_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                   "plugins")
-        plugins = load_plugins_in_dir(plugin_path, None)
-
-        # Check that the plugin loaded successfully
-        self.assertEqual(plugins[0].__class__.__name__,
-                         "PluginLoaderTestPlugin")
+    Note that this runs the provided command in a new shell, which will
+    apply shell replacements.  Ensure the input string is sanitized before
+    passing to this function.
+    """
+    try:
+        output = subprocess.check_output(command,
+                                         shell=True,
+                                         stderr=subprocess.STDOUT)
+        _log.info("Command {} succeeded and printed output {!r}".
+                  format(command, output))
+        return 0
+    except subprocess.CalledProcessError as e:
+        _log.error("Command {} failed with return code {}"
+                   " and printed output {!r}".format(command,
+                                                     e.returncode,
+                                                     e.output))
+        return e.returncode

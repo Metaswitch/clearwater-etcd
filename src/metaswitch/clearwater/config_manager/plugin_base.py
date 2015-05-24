@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015 Metaswitch Networks Ltd
 #
@@ -31,20 +29,39 @@
 # "OpenSSL Licenses" means the OpenSSL License and Original SSLeay License
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
+from abc import ABCMeta, abstractmethod
 
-import unittest
-from metaswitch.clearwater.etcd_shared.plugin_loader \
-    import load_plugins_in_dir
-import os
+class FileStatus:
+    UP_TO_DATE = 0
+    OUT_OF_SYNC = 1
+    MISSING = 2
 
+class ConfigPluginBase(object):
+    __metaclass__ = ABCMeta
 
-class TestPluginLoading(unittest.TestCase):
+    @abstractmethod
+    def key(self):
+        """This should return the etcd key that holds the config managed by
+        this plugin"""
+        pass
 
-    def test_load(self):
-        plugin_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                   "plugins")
-        plugins = load_plugins_in_dir(plugin_path, None)
+    @abstractmethod
+    def file(self):
+        """This should return the name of the file on disk that is managed
+        by this plugin."""
+        pass
 
-        # Check that the plugin loaded successfully
-        self.assertEqual(plugins[0].__class__.__name__,
-                         "PluginLoaderTestPlugin")
+    @abstractmethod
+    def status(self, value):
+        """This should report the status of the file using the FileStatus enum
+        values."""
+        pass
+
+    @abstractmethod
+    def on_config_changed(self, value, alarm):
+        """This hook is called when the key that controls this plugin's config
+        changes.  This hook should update associated configuration files and
+        restart any processes needed in order to apply the change.  The hook
+        should also report the status of the controlled file to the alarm
+        manager."""
+        pass

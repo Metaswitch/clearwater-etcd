@@ -43,7 +43,7 @@ from threading import Thread, Condition
 from .constants import RAISE_TOO_LONG_CLUSTERING, CLEAR_TOO_LONG_CLUSTERING
 import imp
 
-_log = logging.getLogger("metaswitch.clearwater.cluster_manager.alarms")
+_log = logging.getLogger("cluster_manager.alarms")
 
 sendrequest = None
 

@@ -1,5 +1,5 @@
-#!/usr/bin/env python
-
+# @file setup.py
+#
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015 Metaswitch Networks Ltd
 #
@@ -32,19 +32,21 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-import unittest
-from metaswitch.clearwater.etcd_shared.plugin_loader \
-    import load_plugins_in_dir
-import os
+import logging
+import sys
+import multiprocessing
 
+from setuptools import setup, find_packages
 
-class TestPluginLoading(unittest.TestCase):
-
-    def test_load(self):
-        plugin_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                   "plugins")
-        plugins = load_plugins_in_dir(plugin_path, None)
-
-        # Check that the plugin loaded successfully
-        self.assertEqual(plugins[0].__class__.__name__,
-                         "PluginLoaderTestPlugin")
+setup(
+    name='clearwater-config-manager',
+    version='1.0',
+    namespace_packages = ['metaswitch'],
+    packages=['metaswitch.clearwater.config_manager'],
+    package_dir={'':'src'},
+    package_data={
+        '': ['*.eml'],
+        },
+    install_requires=["docopt", "python-etcd", "pyzmq", "pyyaml"],
+    tests_require=["Mock"],
+    )

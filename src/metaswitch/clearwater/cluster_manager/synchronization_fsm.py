@@ -36,7 +36,7 @@ from .constants import *
 from .alarms import TooLongAlarm
 import logging
 
-_log = logging.getLogger("cluster_manager.fsm")
+_log = logging.getLogger("cluster_manager.synchronization_fsm")
 
 
 # Decorator to call a plugin function, and catch and log any exceptions it

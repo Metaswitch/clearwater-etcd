@@ -1,7 +1,7 @@
-# @file setup.py
-#
+#!/bin/bash
+
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015 Metaswitch Networks Ltd
+# Copyright (C) 2015  Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -32,21 +32,25 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-import logging
-import sys
-import multiprocessing
+FILENAME=/etc/clearwater/shared_config
 
-from setuptools import setup, find_packages
+# Check we can contact `etcd`
+. /etc/clearwater/config
+if ! nc -z $local_ip 4000
+then
+  echo "The Clearwater Configuration store (etcd) is not running"
+  echo "Please start it before uploading configuration"
+  exit 2
+fi
 
-setup(
-    name='clearwater-cluster-manager',
-    version='1.0',
-    packages=find_packages('src'),
-    package_dir={'':'src'},
-    package_data={
-        '': ['*.eml'],
-        },
-    test_suite='metaswitch.clearwater.cluster_manager.test',
-    install_requires=["docopt", "python-etcd", "pyzmq", "pyyaml"],
-    tests_require=["Mock"],
-    )
+if [[ ! -f $FILENAME ]]
+then
+  echo "No shared configuration detected, have you run the migration script?"
+  exit 2
+fi
+
+# Upload the file to etcd
+curl -X PUT \
+     http://$local_ip:4000/v2/keys/clearwater/$local_site_name/configuration/shared_config \
+     --data-urlencode \
+     value@$FILENAME > /dev/null

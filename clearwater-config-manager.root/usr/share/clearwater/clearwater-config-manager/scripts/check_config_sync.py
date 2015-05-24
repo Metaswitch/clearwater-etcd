@@ -1,7 +1,7 @@
-#!/usr/bin/env python
+#!/usr/share/clearwater/clearwater-config-manager/env/bin/python
 
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015 Metaswitch Networks Ltd
+# Copyright (C) 2015  Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -32,19 +32,32 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-import unittest
-from metaswitch.clearwater.etcd_shared.plugin_loader \
-    import load_plugins_in_dir
+from metaswitch.clearwater.config_manager.plugin_loader import load_plugins_in_dir
+from metaswitch.clearwater.config_manager.plugin_base import FileStatus
+import etcd
 import os
+import sys
 
+etcd_ip = sys.argv[1]
+site = sys.argv[2]
 
-class TestPluginLoading(unittest.TestCase):
+client = etcd.Client(etcd_ip, 4000)
 
-    def test_load(self):
-        plugin_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                   "plugins")
-        plugins = load_plugins_in_dir(plugin_path, None)
+plugins_dir = "/usr/share/clearwater/clearwater-config-manager/plugins/"
+plugins = load_plugins_in_dir(plugins_dir)
 
-        # Check that the plugin loaded successfully
-        self.assertEqual(plugins[0].__class__.__name__,
-                         "PluginLoaderTestPlugin")
+for plugin in plugins:
+    try:
+        result = client.get("/clearwater/" + site + "/configuration/" + plugin.key())
+        value = result.value
+    except etcd.EtcdKeyNotFound:
+        value = ""
+
+    state = plugin.status(value)
+
+    if state == FileStatus.UP_TO_DATE:
+        print " - {} is up to date".format(plugin.file())
+    elif state == FileStatus.OUT_OF_SYNC:
+        print " - {} is present but is out of sync".format(plugin.file())
+    else:
+        print " - {} is missing".format(plugin.file())
