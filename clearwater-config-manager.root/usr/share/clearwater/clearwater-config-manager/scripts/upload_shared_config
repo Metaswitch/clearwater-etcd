@@ -35,6 +35,7 @@
 FILENAME=/etc/clearwater/shared_config
 
 # Check we can contact `etcd`
+local_site_name=site1
 . /etc/clearwater/config
 if ! nc -z $local_ip 4000
 then
