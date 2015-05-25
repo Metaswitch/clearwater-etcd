@@ -51,7 +51,7 @@ services = { "sprout": "quiesce",
 
 class SharedConfigPlugin(ConfigPluginBase):
     def key(self):
-        return "/configuration/shared_config"
+        return "shared_config"
 
     def file(self):
         return _file

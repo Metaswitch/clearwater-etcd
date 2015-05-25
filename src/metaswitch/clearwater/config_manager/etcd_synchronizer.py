@@ -71,7 +71,8 @@ class EtcdSynchronizer(object):
     def read_from_etcd(self):
         value = None
         try:
-            result = self._client.get("/clearwater/" + self._site + "/configuration/" + self._plugin.key())
+            full_key = "/clearwater/" + self._site + "/configuration/" + self._plugin.key()
+            result = self._client.get(full_key)
 
             # If the key hasn't changed since we last saw it, then
             # wait for it to change before doing anything else.
@@ -82,7 +83,7 @@ class EtcdSynchronizer(object):
             if result.modifiedIndex == self._index:
                 while not self._terminate_flag:
                     try:
-                        result = self._client.watch(self._plugin.key(),
+                        result = self._client.watch(full_key,
                                                     index=result.modifiedIndex+1,
                                                     timeout=5,
                                                     recursive=False)
