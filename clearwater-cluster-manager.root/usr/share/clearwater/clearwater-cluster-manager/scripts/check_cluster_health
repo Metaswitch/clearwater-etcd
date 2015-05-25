@@ -3,6 +3,7 @@
 set -ue
 
 local_site_name=site1
+remote_site_name=
 . /etc/clearwater/config
 
 if [ $# -ne 0 ]
