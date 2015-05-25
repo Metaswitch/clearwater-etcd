@@ -79,6 +79,7 @@ do_start()
   #   2 if daemon could not be started
   [ -e /etc/clearwater/no_config_manager ] && (echo "/etc/clearwater/no_config_manager exists, not starting config manager" && return 2)
 
+  local_site_name=site1
   . /etc/clearwater/config
   log_level=3
   log_directory=/var/log/clearwater-config-manager
