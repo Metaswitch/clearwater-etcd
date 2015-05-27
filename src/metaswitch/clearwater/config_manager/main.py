@@ -61,7 +61,6 @@ from metaswitch.clearwater.config_manager.alarms \
 import logging
 import os
 from threading import Thread
-import signal
 
 _log = logging.getLogger("config_manager.main")
 

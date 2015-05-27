@@ -31,7 +31,6 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 import etcd
-from threading import Thread
 from time import sleep
 
 import urllib3
