@@ -39,7 +39,7 @@ _log = logging.getLogger("example_plugin")
 
 
 class PluginLoaderTestPlugin(SynchroniserPluginBase):
-    def __init__(self, ip):
+    def __init__(self, params):
         pass
 
     def key(self):
@@ -61,5 +61,5 @@ class PluginLoaderTestPlugin(SynchroniserPluginBase):
     def on_leaving_cluster(self, cluster_view):
         _log.info("I'm out of the cluster")
 
-def load_as_plugin(x):
-    return PluginLoaderTestPlugin(x)
+def load_as_plugin(params):
+    return PluginLoaderTestPlugin(params)

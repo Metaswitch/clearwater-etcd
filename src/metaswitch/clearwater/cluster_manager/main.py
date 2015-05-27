@@ -54,10 +54,9 @@ Options:
 from docopt import docopt
 
 from metaswitch.common import logging_config, utils
-from metaswitch.clearwater.etcd_shared.plugin_loader \
-    import load_plugins_in_dir
-from metaswitch.clearwater.cluster_manager.etcd_synchronizer \
-    import EtcdSynchronizer
+from metaswitch.clearwater.etcd_shared.plugin_loader import load_plugins_in_dir
+from metaswitch.clearwater.cluster_manager.etcd_synchronizer import EtcdSynchronizer
+from metaswitch.clearwater.cluster_manager.plugin_base import PluginParams
 import logging
 import os
 from threading import Thread
@@ -112,9 +111,10 @@ def main(args):
 
     plugins_dir = "/usr/share/clearwater/clearwater-cluster-manager/plugins/"
     plugins = load_plugins_in_dir(plugins_dir,
-                                  listen_ip,
-                                  local_site_name,
-                                  remote_site_name)
+                                  PluginParams(ip=listen_ip,
+                                               local_site=local_site_name,
+                                               remote_site=remote_site_name,
+                                               signaling_namespace=None))
     plugins.sort(key=lambda x: x.key())
     plugins_to_use = []
     files = []
