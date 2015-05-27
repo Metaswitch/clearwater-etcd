@@ -42,7 +42,7 @@ setup(
     name='clearwater-config-manager',
     version='1.0',
     namespace_packages = ['metaswitch'],
-    packages=['metaswitch.clearwater.config_manager'],
+    packages=['metaswitch', 'metaswitch.clearwater', 'metaswitch.clearwater.config_manager'],
     package_dir={'':'src'},
     package_data={
         '': ['*.eml'],
