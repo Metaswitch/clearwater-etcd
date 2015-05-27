@@ -37,13 +37,18 @@ import logging
 _log = logging.getLogger("etcd_shared.plugin_utils")
 
 
-def run_command(command):
+def run_command(command, namespace=None):
     """Runs the given shell command, logging the output and return code.
+
+    If a namespace is supplied the command is run in the specified namespace.
 
     Note that this runs the provided command in a new shell, which will
     apply shell replacements.  Ensure the input string is sanitized before
     passing to this function.
     """
+    if namespace:
+        command += "ip netns exec {} ".format(namespace) + command
+
     try:
         output = subprocess.check_output(command,
                                          shell=True,
