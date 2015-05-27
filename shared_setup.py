@@ -41,7 +41,7 @@ from setuptools import setup, find_packages
 setup(
     name='clearwater-etcd-shared',
     version='1.0',
-    packages=['metaswitch.clearwater.etcd_shared'],
+    packages=['metaswitch', 'metaswitch.clearwater', 'metaswitch.clearwater.etcd_shared'],
     package_dir={'':'src'},
     package_data={
         '': ['*.eml'],

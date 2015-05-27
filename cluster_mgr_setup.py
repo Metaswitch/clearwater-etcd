@@ -42,7 +42,7 @@ setup(
     name='clearwater-cluster-manager',
     version='1.0',
     namespace_packages = ['metaswitch'],
-    packages=['metaswitch.clearwater.cluster_manager'],
+    packages=['metaswitch', 'metaswitch.clearwater', 'metaswitch.clearwater.cluster_manager'],
     package_dir={'':'src'},
     package_data={
         '': ['*.eml'],
