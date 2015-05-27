@@ -82,9 +82,10 @@ class EtcdSynchronizer(object):
             if result.modifiedIndex == self._index:
                 while not self._terminate_flag:
                     try:
+                        _log.info("Watching for changes")
                         result = self._client.watch(full_key,
                                                     index=result.modifiedIndex+1,
-                                                    timeout=5,
+                                                    timeout=0,
                                                     recursive=False)
                         break
                     except urllib3.exceptions.TimeoutError:

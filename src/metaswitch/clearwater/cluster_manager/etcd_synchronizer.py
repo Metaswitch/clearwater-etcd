@@ -95,8 +95,8 @@ class EtcdSynchronizer(object):
                 else:
                     local_state = self.calculate_local_state(cluster_view)
                     new_state = self._fsm.next(local_state,
-                                            cluster_state,
-                                            cluster_view)
+                                               cluster_state,
+                                               cluster_view)
 
                 # If we have a new state, try and write it to etcd.
                 if new_state is not None:
@@ -241,9 +241,10 @@ class EtcdSynchronizer(object):
             if cluster_view == self._last_cluster_view:
                 while not self._terminate_flag and self._fsm.is_running():
                     try:
+                        _log.info("Watching for changes")
                         result = self._client.watch(self._key,
                                                     index=result.modifiedIndex+1,
-                                                    timeout=5,
+                                                    timeout=0,
                                                     recursive=False)
                         break
                     except urllib3.exceptions.TimeoutError:
