@@ -14,7 +14,7 @@ X86_64_ONLY=0
 
 .PHONY: test
 test: cluster_mgr_setup.py env
-	${PYTHON_BIN} cluster_mgr_setup.py test -v
+	$(ENV_DIR)/bin/python cluster_mgr_setup.py test -v
 
 ${ENV_DIR}/bin/flake8: env
 	${ENV_DIR}/bin/pip install flake8
