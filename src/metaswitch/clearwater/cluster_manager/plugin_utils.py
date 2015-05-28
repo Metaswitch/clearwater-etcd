@@ -32,12 +32,10 @@
 
 
 import logging
-import os
 import socket
 import time
 import yaml
 from textwrap import dedent
-import subprocess
 from metaswitch.clearwater.cluster_manager import constants
 from metaswitch.clearwater.etcd_shared.plugin_utils import run_command
 
