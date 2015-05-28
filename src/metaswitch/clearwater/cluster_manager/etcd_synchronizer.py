@@ -104,7 +104,7 @@ class EtcdSynchronizer(object):
                 else:
                     _log.debug("No state change")
             else:
-                log.warning("read_from_etcd returned None, indicating a failure to get data from etcd")
+                _log.warning("read_from_etcd returned None, indicating a failure to get data from etcd")
 
         _log.info("Quitting FSM")
         self._fsm.quit()
