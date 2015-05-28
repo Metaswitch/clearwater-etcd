@@ -32,7 +32,7 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-from metaswitch.clearwater.config_manager.plugin_loader import load_plugins_in_dir
+from metaswitch.clearwater.etcd_shared.plugin_loader import load_plugins_in_dir
 from metaswitch.clearwater.config_manager.plugin_base import FileStatus
 import etcd
 import os
