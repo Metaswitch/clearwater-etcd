@@ -104,6 +104,10 @@ join_cluster()
         # Joining existing cluster
         echo Joining existing cluster...
 
+        # If this fails, then hold off trying again for a time. This stops us
+        # overwhelming the etcd elections on a large scale-up.
+        sleep $[$RANDOM%30]
+
         # We need a temp file to deal with the environment variables.
         TEMP_FILE=$(mktemp)
 
@@ -126,7 +130,13 @@ join_cluster()
         if [[ $member != '' ]]
         then
           /usr/bin/etcdctl member remove $member
+          if [[ $? != 0 ]]
+          then
+            echo "Failed to remove local node from cluster"
+            exit 2
+          fi
         fi
+        
         /usr/bin/etcdctl member add $ETCD_NAME http://$advertisement_ip:2380 | grep -v "Added member" >> $TEMP_FILE
         if [[ $? != 0 ]]
         then
@@ -311,7 +321,7 @@ do_decommission()
         health=$(/usr/bin/etcdctl cluster-health)
         if [[ $health =~ unhealthy && $health =~ healthy ]]
         then
-          echo Cannot decommision while cluster is unhealthy
+          echo Cannot decommission while cluster is unhealthy
           return 2
         fi
 

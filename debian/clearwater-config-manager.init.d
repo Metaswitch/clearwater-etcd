@@ -193,7 +193,7 @@ case "$1" in
   decommission)
 	log_daemon_msg "Decommissioning $DESC" "$NAME"
 
-  # There's no special function for decomissioning so just call stop
+  # There's no special function for decommissioning so just call stop
 	do_stop
 	;;
   abort-restart)
