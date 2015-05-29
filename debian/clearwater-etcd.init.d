@@ -319,7 +319,7 @@ do_decommission()
         #   2 on error
         export ETCDCTL_PEERS=$advertisement_ip:4000
         health=$(/usr/bin/etcdctl cluster-health)
-        if [[ $health =~ unhealthy && $health =~ healthy ]]
+        if [[ $health =~ unhealthy ]]
         then
           echo Cannot decommission while cluster is unhealthy
           return 2
