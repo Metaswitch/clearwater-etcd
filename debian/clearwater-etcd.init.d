@@ -134,7 +134,10 @@ join_cluster()
           then
             echo "Failed to remove local node from cluster"
             exit 2
-          fi
+          elif [[ -d $DATA_DIR/$advertisement_ip ]]
+          then 
+            rm -r $DATA_DIR/$advertisement_ip
+          fi 
         fi
         
         /usr/bin/etcdctl member add $ETCD_NAME http://$advertisement_ip:2380 | grep -v "Added member" >> $TEMP_FILE
