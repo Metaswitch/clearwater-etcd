@@ -44,10 +44,10 @@ class FailPlugin(SynchroniserPluginBase):
         return "/test"
 
     def on_cluster_changing(self, cluster_view):
-        raise Exception
+        raise AssertionError
 
     def on_joining_cluster(self, cluster_view):
-        raise Exception
+        raise AssertionError
 
     def on_new_cluster_config_ready(self, cluster_view):
         _log.info("All nodes have updated configuration")

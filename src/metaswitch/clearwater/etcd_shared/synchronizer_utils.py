@@ -53,7 +53,7 @@ def read(client, key, **kwdargs):
     timeout = kwdargs.get('timeout', None)
 
     response = client.api_execute(client.key_endpoint + key, 
-                                  client._MGET, 
+                                  'GET', 
                                   params=params,
                                   timeout=timeout)
     return client._result_from_response(response)

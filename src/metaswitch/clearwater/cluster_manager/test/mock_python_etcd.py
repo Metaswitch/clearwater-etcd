@@ -111,6 +111,21 @@ class MockEtcdClient(object):
         global_condvar.release()
         return ret
 
+    def _sanitize_key(self, key):
+        assert(key == allowed_key)
+        return key
+
+    def api_execute(self, key, mget, params, timeout):
+        pass
+
+    @property
+    def key_endpoint(self):
+        return '/keys'
+
+    def _result_from_response(self, response):
+        ret = self.fake_result()
+        return ret
+
     def eternal_watch(self, key, index=None):
         return self.watch(key, index, 36000)
 
