@@ -136,7 +136,7 @@ join_cluster()
             exit 2
           elif [[ -d $DATA_DIR/$advertisement_ip ]]
           then 
-            rm -rf $DATA_DIR/$advertisement_ip
+            rm -r $DATA_DIR/$advertisement_ip
           fi 
         fi
         
