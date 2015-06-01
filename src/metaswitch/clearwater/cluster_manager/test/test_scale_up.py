@@ -58,7 +58,7 @@ class TestScaleUp(BaseClusterTest):
 
         # Check that the third node joins the cluster
         self.wait_for_all_normal(mock_client, required_number=3)
-        end = json.loads(mock_client.get("/test").value)
+        end = json.loads(mock_client.read("/test").value)
         self.assertEqual("normal", end.get("10.0.0.3"))
         for s in [sync1, sync2, sync3]:
             s.terminate()
@@ -79,7 +79,7 @@ class TestScaleUp(BaseClusterTest):
 
         # Check that the third and fourth nodes join the cluster
         self.wait_for_all_normal(mock_client, required_number=4)
-        end = json.loads(mock_client.get("/test").value)
+        end = json.loads(mock_client.read("/test").value)
         self.assertEqual("normal", end.get("10.0.0.3"))
         self.assertEqual("normal", end.get("10.0.0.4"))
         for s in [sync1, sync2, sync3, sync4]:

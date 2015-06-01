@@ -51,7 +51,7 @@ class TestNewCluster(BaseClusterTest):
         mock_client = self.syncs[0]._client
         self.wait_for_all_normal(mock_client, required_number=3)
 
-        end = json.loads(mock_client.get("/test").value)
+        end = json.loads(mock_client.read("/test").value)
         self.assertEqual("normal", end.get("10.0.0.0"))
         self.assertEqual("normal", end.get("10.0.0.1"))
         self.assertEqual("normal", end.get("10.0.0.2"))
@@ -65,7 +65,7 @@ class TestNewCluster(BaseClusterTest):
         mock_client = self.syncs[0]._client
         self.wait_for_all_normal(mock_client, required_number=30, tries=300)
 
-        end = json.loads(mock_client.get("/test").value)
+        end = json.loads(mock_client.read("/test").value)
         self.assertEqual("normal", end.get("10.0.0.3"))
         self.assertEqual("normal", end.get("10.0.0.19"))
         self.assertEqual("normal", end.get("10.0.0.29"))
@@ -83,7 +83,7 @@ class TestNewCluster(BaseClusterTest):
         mock_client = self.syncs[0]._client
         self.wait_for_all_normal(mock_client, required_number=30, tries=300)
 
-        end = json.loads(mock_client.get("/test").value)
+        end = json.loads(mock_client.read("/test").value)
         self.assertEqual("normal", end.get("10.0.0.3"))
         self.assertEqual("normal", end.get("10.0.0.19"))
         self.assertEqual("normal", end.get("10.0.0.29"))

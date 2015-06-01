@@ -119,7 +119,7 @@ class EtcdSynchronizer(object):
     # a stable state, in which case we can leave. Otherwise, set a flag and
     # leave at the next available opportunity.
     def leave_cluster(self):
-        result = self._client.get(self._key)
+        result = self._client.read(self._key, quorum=True)
         cluster_view = self.parse_cluster_view(result.value)
         self._index = result.modifiedIndex
 
@@ -132,7 +132,7 @@ class EtcdSynchronizer(object):
             self._leaving_flag = True
 
     def mark_node_failed(self):
-        result = self._client.get(self._key)
+        result = self._client.read(self._key, quorum=True)
         cluster_view = self.parse_cluster_view(result.value)
         self._index = result.modifiedIndex
 
@@ -229,7 +229,7 @@ class EtcdSynchronizer(object):
         cluster_view = None
 
         try:
-            result = self._client.get(self._key)
+            result = self._client.read(self._key, quorum=True)
             cluster_view = self.parse_cluster_view(result.value)
 
             # If the cluster view hasn't changed since we last saw it, then
@@ -242,10 +242,12 @@ class EtcdSynchronizer(object):
                 while not self._terminate_flag and self._fsm.is_running():
                     try:
                         _log.info("Watching for changes")
-                        result = self._client.watch(self._key,
-                                                    index=result.modifiedIndex+1,
-                                                    timeout=0,
-                                                    recursive=False)
+                        result = self._client.read(self._key,
+                                                   wait=True,
+                                                   waitIndex=result.modifiedIndex+1,
+                                                   timeout=0,
+                                                   recursive=False, 
+                                                   quorum=True)
                         break
                     except urllib3.exceptions.TimeoutError:
                         # Timeouts after 5 seconds are expected, so ignore them
@@ -339,7 +341,7 @@ class EtcdSynchronizer(object):
             if isinstance(new_state, str):
                 # We're just trying to update our own state, so it may be safe
                 # to take the new state, update our own state in it, and retry.
-                result = self._client.get(self._key)
+                result = self._client.read(self._key, quorum=True)
                 cluster_view = self.parse_cluster_view(result.value)
 
                 # This isn't safe if someone else has changed our state for us,

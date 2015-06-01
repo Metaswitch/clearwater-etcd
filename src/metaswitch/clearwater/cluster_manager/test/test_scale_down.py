@@ -61,7 +61,7 @@ class TestScaleDown(BaseClusterTest):
         self.wait_for_all_normal(mock_client, required_number=1)
 
         # Check that it's left and the cluster is stable
-        end = json.loads(mock_client.get("/test").value)
+        end = json.loads(mock_client.read("/test").value)
         self.assertEqual(None, end.get("10.0.1.2"))
         self.assertEqual("normal", end.get("10.0.1.1"))
         sync1.terminate()

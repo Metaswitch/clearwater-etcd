@@ -74,16 +74,6 @@ class MockEtcdClient(object):
         r.modifiedIndex = global_index
         return r
 
-    def get(self, key):
-        global_condvar.acquire()
-        assert(key == allowed_key)
-        if global_index == 0:
-            global_condvar.release()
-            raise etcd.EtcdKeyError()
-        ret = self.fake_result()
-        global_condvar.release()
-        return ret
-
     def write(self, key, value, prevIndex=0, prevExist=None):
         global global_index
         global global_data
@@ -99,9 +89,12 @@ class MockEtcdClient(object):
         global_condvar.release()
         return self.fake_result()
 
-    def watch(self, key, index=None, timeout=None, recursive=None):
+    def read(self, key, index=None, timeout=None, recursive=None, quorum=True):
         assert(key == allowed_key)
         global_condvar.acquire()
+        if global_index == 0:
+            global_condvar.release()
+            raise etcd.EtcdKeyError()
         if index > global_index:
             global_condvar.wait(0.1)
         if index > global_index:
