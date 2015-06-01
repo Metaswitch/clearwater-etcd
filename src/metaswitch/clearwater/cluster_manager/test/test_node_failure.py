@@ -38,6 +38,7 @@ from .mock_python_etcd import EtcdFactory
 from metaswitch.clearwater.cluster_manager.etcd_synchronizer \
     import EtcdSynchronizer
 from metaswitch.clearwater.cluster_manager.null_plugin import NullPlugin
+from metaswitch.clearwater.etcd_shared.synchronizer_utils import read
 from .dummy_plugin import DummyPlugin
 from .fail_partway_through_plugin import FailPlugin
 from time import sleep
@@ -61,7 +62,7 @@ class TestNodeFailure(BaseClusterTest):
 
         # After a few seconds, the scale-up will still not have completed
         sleep(3)
-        end = json.loads(mock_client.get("/test").value)
+        end = json.loads(read(mock_client, "/test").value)
         self.assertNotEqual("normal", end.get("10.0.0.1"))
         self.assertNotEqual("normal", end.get("10.0.0.2"))
         self.assertNotEqual("normal", end.get("10.0.0.3"))
@@ -78,7 +79,7 @@ class TestNodeFailure(BaseClusterTest):
         # 10.0.0.2 will be removed from the cluster, and the cluster will
         # stabilise
         sleep(3)
-        end = json.loads(mock_client.get("/test").value)
+        end = json.loads(read(mock_client, "/test").value)
         self.assertEqual("normal", end.get("10.0.0.1"))
         self.assertEqual("normal", end.get("10.0.0.3"))
         self.assertEqual(None, end.get("10.0.0.2"))
