@@ -125,6 +125,7 @@ def join_cassandra_cluster(cluster_view,
         _log.debug("Restarting Cassandra")
         run_command("monit unmonitor -g cassandra")
         run_command("service cassandra stop")
+        run_command("killall $(cat /var/lib/cassandra/cassandra.pid")
         run_command("rm -rf /var/lib/cassandra/")
         run_command("mkdir -m 755 /var/lib/cassandra")
         run_command("chown -R cassandra /var/lib/cassandra")
