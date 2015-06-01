@@ -243,7 +243,8 @@ class EtcdSynchronizer(object):
                     try:
                         _log.info("Watching for changes")
                         result = self._client.read(self._key,
-                                                   index=result.modifiedIndex+1,
+                                                   wait=True,
+                                                   waitIndex=result.modifiedIndex+1,
                                                    timeout=0,
                                                    recursive=False, 
                                                    quorum=True)
