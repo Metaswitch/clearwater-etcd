@@ -57,7 +57,7 @@ def safe_plugin(f, cluster_view, new_state=None):
     except Exception as e:
         # If the plugin fails (which is unexpected), log the error and then
         # return None. This will keep this node in the same state, pausing the
-        # scale-up (which will raise an alarm) until someone looks into it anhd
+        # scale-up (which will raise an alarm) until someone looks into it and
         # fixes the issue.
         _log.error("Call to {}.{} with cluster {} caused exception {!r}".
                    format(f.__self__.__class__.__name__,

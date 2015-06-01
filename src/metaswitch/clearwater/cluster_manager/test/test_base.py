@@ -53,7 +53,7 @@ class BaseClusterTest(unittest.TestCase):
     def wait_for_all_normal(self, client, required_number=-1, tries=20):
         for i in range(tries):
             try:
-                end = json.loads(client.get("/test").value)
+                end = json.loads(client.read("/test").value)
                 if all([v == "normal" for k, v in end.iteritems()]) and \
                    (required_number == -1 or len(end) == required_number):
                     return

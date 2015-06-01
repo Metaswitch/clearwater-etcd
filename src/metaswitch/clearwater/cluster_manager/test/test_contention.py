@@ -54,7 +54,7 @@ class TestContention(BaseClusterTest):
         self.make_and_start_synchronizers(30, klass=ContentionDetectingPlugin)
         mock_client = self.syncs[0]._client
         self.wait_for_all_normal(mock_client, required_number=30, tries=300)
-        end = json.loads(mock_client.get("/test").value)
+        end = json.loads(mock_client.read("/test").value)
 
         # Check that the cluster ended up in a stable state (which won't have
         # happened if the plugin has hit an assertion)

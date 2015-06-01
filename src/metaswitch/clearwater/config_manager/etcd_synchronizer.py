@@ -71,7 +71,7 @@ class EtcdSynchronizer(object):
         value = None
         try:
             full_key = "/clearwater/" + self._site + "/configuration/" + self._plugin.key()
-            result = self._client.get(full_key)
+            result = self._client.read(full_key, quorum=True)
 
             # If the key hasn't changed since we last saw it, then
             # wait for it to change before doing anything else.
@@ -83,10 +83,11 @@ class EtcdSynchronizer(object):
                 while not self._terminate_flag:
                     try:
                         _log.info("Watching for changes")
-                        result = self._client.watch(full_key,
-                                                    index=result.modifiedIndex+1,
-                                                    timeout=0,
-                                                    recursive=False)
+                        result = self._client.read(full_key,
+                                                   index=result.modifiedIndex+1,
+                                                   timeout=0,
+                                                   recursive=False,
+                                                   quorum=True)
                         break
                     except urllib3.exceptions.TimeoutError:
                         # Timeouts after 5 seconds are expected, so ignore them
