@@ -36,6 +36,7 @@
 
 set -ue
 
+signaling_namespace=
 . /etc/clearwater/config
 
 if [ $# -ne 1 ]
