@@ -79,7 +79,11 @@ do_start()
   #   1 if daemon was already running
   #   2 if daemon could not be started
 
-  [ -e /etc/clearwater/no_cluster_manager ] && (echo "/etc/clearwater/no_cluster_manager exists, not starting cluster manager" && return 2)
+  if [ -e /etc/clearwater/no_cluster_manager ]
+  then
+    echo "/etc/clearwater/no_cluster_manager exists, not starting cluster manager"
+    return 2
+  fi
 
   local_site_name=site1
   remote_site_name=""
