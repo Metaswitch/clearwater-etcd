@@ -139,7 +139,7 @@ def join_cassandra_cluster(cluster_view,
         _log.warning("No Cassandra cluster defined in etcd - unable to join")
 
 
-def leave_cassandra_cluster():
+def leave_cassandra_cluster(namespace=None):
     # We need Cassandra to be running so that we can connect on port 9160 and
     # decommission it. Check if we can connect on port 9160.
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -149,7 +149,7 @@ def leave_cassandra_cluster():
         start_cassandra()
 
     run_command("monit unmonitor -g cassandra")
-    run_command("nodetool decommission")
+    run_command("nodetool decommission", namespace)
 
 
 def start_cassandra():

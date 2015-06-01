@@ -6,6 +6,7 @@ import json
 
 local_ip = sys.argv[1]
 node_type = sys.argv[2]
+sig_namespace = sys.argv[3]
 
 assert node_type in ["homestead", "homer", "memento"], \
     "Node type must be 'homestead', 'homer' or 'memento'"
@@ -16,8 +17,11 @@ try:
     # Use nodetool describecluster to find the nodes in the existing cluster.
     # This returns a yaml document, but in order for pyyaml to recognise the
     # output as valid yaml, we need to use tr to replace tabs with spaces.
-    desc_cluster_output = subprocess.check_output(
-        "nodetool describecluster | tr \"\t\" \" \"", shell=True)
+    command = "nodetool describecluster | tr \"\t\" \" \""
+    if sig_namespace:
+        command = "ip netns exec {} ".format(sig_namespace) + command
+
+    desc_cluster_output = subprocess.check_output(command, shell=True)
     doc = yaml.load(desc_cluster_output)
     servers = doc["Cluster Information"]["Schema versions"].values()[0]
     data = json.dumps({server: "normal" for server in servers})

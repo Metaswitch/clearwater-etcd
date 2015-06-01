@@ -50,6 +50,9 @@ services = { "sprout": "quiesce",
 
 
 class SharedConfigPlugin(ConfigPluginBase):
+    def __init__(self, _params):
+        pass
+
     def key(self):
         return "shared_config"
 
@@ -91,5 +94,5 @@ class SharedConfigPlugin(ConfigPluginBase):
         except OSError:
             pass
 
-def load_as_plugin():
-    return SharedConfigPlugin()
+def load_as_plugin(params):
+    return SharedConfigPlugin(params)
