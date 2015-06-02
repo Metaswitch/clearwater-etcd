@@ -33,6 +33,7 @@
 import sys
 import etcd
 import json
+import os
 
 local_ip = sys.argv[1]
 local_site = sys.argv[2]
@@ -72,7 +73,10 @@ def load_file_into_etcd(filename, etcd_key):
     else:
         print "Update failed"
 
-load_file_into_etcd('/etc/clearwater/cluster_settings', local_etcd_key)
+if node_type == 'memento' and os.path.isfile('/etc/clearwater/memento_cluster_settings'):
+    load_file_into_etcd('/etc/clearwater/memento_cluster_settings', local_etcd_key)
+else:
+    load_file_into_etcd('/etc/clearwater/cluster_settings', local_etcd_key)
 
 if remote_site != "":
     load_file_into_etcd('/etc/clearwater/remote_cluster_settings', remote_etcd_key)
