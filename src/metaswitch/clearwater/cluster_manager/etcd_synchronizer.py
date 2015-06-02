@@ -258,6 +258,10 @@ class EtcdSynchronizer(object):
                 while not self._terminate_flag and self._fsm.is_running():
                     try:
                         _log.info("Watching for changes")
+                        # Use a concurrent.futures.Executor to run the etcd poll
+                        # asynchronously. This means that, if we're told to quit
+                        # before etcd returns, we'll spot that we've been told
+                        # to quit and do so.
                         result_future = self.executor.submit(self._client.read,
                                                              self._key,
                                                              wait=True,
