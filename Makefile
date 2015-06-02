@@ -76,8 +76,8 @@ cluster-mgr-build-eggs: cluster_mgr_setup.py shared_setup.py common/setup.py src
 .PHONY: install-eggs
 install-eggs: cluster_mgr_eggs config_mgr_eggs
 	# Install the downloaded egg files (this should match the Debian postinst)
-	${ENV_DIR}/bin/easy_install --allow-hosts=None -f cluster_mgr_eggs/ cluster_mgr_eggs/*.egg
-	${ENV_DIR}/bin/easy_install --allow-hosts=None -f config_mgr_eggs/ config_mgr_eggs/*.egg
+	${ENV_DIR}/bin/easy_install --allow-hosts=None -f cluster_mgr_eggs/ cluster_mgr_eggs/clearwater_cluster_manager-1.0-py2.7.egg
+	${ENV_DIR}/bin/easy_install --allow-hosts=None -f config_mgr_eggs/ config_mgr_eggs/clearwater_config_manager-1.0-py2.7.egg
 
 .PHONY: deb
 deb: env build-eggs deb-only
