@@ -82,8 +82,9 @@ class SharedConfigPlugin(ConfigPluginBase):
 
         _log.info("Restarting services")
         run_command("service clearwater-infrastructure restart")
-        for service, command in services.iteritems():
-            run_command("service {} {}".format(service, command))
+        for service, command in services.iteritems():          
+            if os.path.exists("/etc/init.d/" + service): 
+                run_command("service {} {}".format(service, command))
 
         # Config file is now up-to-date
         alarm.update_file(_file)
