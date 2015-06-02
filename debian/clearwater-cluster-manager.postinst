@@ -63,7 +63,7 @@ case "$1" in
         chown -R $NAME:root /var/log/$NAME
 
         virtualenv --python=$(which python) $BASE_DIR/env
-        $BASE_DIR/env/bin/easy_install --allow-hosts=None -f $BASE_DIR/eggs/ $BASE_DIR/eggs/*.egg
+        $BASE_DIR/env/bin/easy_install --allow-hosts=None -f $BASE_DIR/eggs/ $BASE_DIR/eggs/clearwater_cluster_manager-1.0-py2.7.egg
         chown -R $NAME:root $BASE_DIR/env
         
         mkdir -p $BASE_DIR/plugins
