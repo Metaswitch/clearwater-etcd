@@ -60,7 +60,9 @@ from metaswitch.clearwater.cluster_manager.etcd_synchronizer import EtcdSynchron
 from metaswitch.clearwater.cluster_manager.plugin_base import PluginParams
 import logging
 import os
-from threading import Thread
+import sys
+from threading import Thread, activeCount
+from time import sleep
 import signal
 
 _log = logging.getLogger("cluster_manager.main")
@@ -75,9 +77,10 @@ should_quit = False
 
 def install_sigquit_handler(plugins):
     def sigquit_handler(sig, stack):
-        _log.debug("Handling SIGQUIT")
+        global should_quit
+        _log.info("Handling SIGQUIT")
         for plugin in plugins:
-            _log.debug("{} leaving cluster".format(plugin))
+            _log.info("{} leaving cluster".format(plugin))
             plugin.leave_cluster()
         should_quit = True
     signal.signal(signal.SIGQUIT, sigquit_handler)
@@ -85,9 +88,10 @@ def install_sigquit_handler(plugins):
 
 def install_sigterm_handler(plugins):
     def sigterm_handler(sig, stack):
-        _log.debug("Handling SIGTERM")
+        global should_quit
+        _log.info("Handling SIGTERM")
         for plugin in plugins:
-            _log.debug("{} exiting cleanly".format(plugin))
+            _log.info("{} exiting cleanly".format(plugin))
             plugin.terminate()
         should_quit = True
     signal.signal(signal.SIGTERM, sigterm_handler)
@@ -151,7 +155,7 @@ def main(args):
         syncer.start_thread()
 
         synchronizers.append(syncer)
-        threads.append(thread)
+        threads.append(syncer.thread)
         _log.info("Loaded plugin %s" % plugin)
 
     install_sigquit_handler(synchronizers)
@@ -165,3 +169,7 @@ def main(args):
     while not should_quit:
         sleep(1)
     _log.info("Quitting")
+    _log.debug("%d threads outstanding at exit" % activeCount())
+    # Use os.exit to skip exit handlers - otherwise the concurrent.futures exit
+    # handler waits for an infinite wait to end
+    os._exit(0)

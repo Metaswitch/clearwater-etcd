@@ -89,7 +89,7 @@ class MockEtcdClient(object):
         global_condvar.release()
         return self.fake_result()
 
-    def read(self, key, index=None, timeout=None, recursive=None, quorum=True):
+    def read(self, key, index=None, timeout=None, recursive=None, quorum=True, **kwargs):
         assert(key == allowed_key)
         global_condvar.acquire()
         if global_index == 0:
