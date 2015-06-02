@@ -71,6 +71,7 @@ LOG_LEVELS = {'0': logging.CRITICAL,
               '3': logging.INFO,
               '4': logging.DEBUG}
 
+should_quit = False
 
 def install_sigquit_handler(plugins):
     def sigquit_handler(sig, stack):
@@ -78,8 +79,18 @@ def install_sigquit_handler(plugins):
         for plugin in plugins:
             _log.debug("{} leaving cluster".format(plugin))
             plugin.leave_cluster()
+        should_quit = True
     signal.signal(signal.SIGQUIT, sigquit_handler)
 
+
+def install_sigterm_handler(plugins):
+    def sigterm_handler(sig, stack):
+        _log.debug("Handling SIGTERM")
+        for plugin in plugins:
+            _log.debug("{} exiting cleanly".format(plugin))
+            plugin.terminate()
+        should_quit = True
+    signal.signal(signal.SIGTERM, sigterm_handler)
 
 def main(args):
     arguments = docopt(__doc__, argv=args)
@@ -137,16 +148,20 @@ def main(args):
     threads = []
     for plugin in plugins_to_use:
         syncer = EtcdSynchronizer(plugin, listen_ip)
-        thread = Thread(target=syncer.main)
-        thread.daemon = True
-        thread.start()
+        syncer.start_thread()
 
         synchronizers.append(syncer)
         threads.append(thread)
         _log.info("Loaded plugin %s" % plugin)
 
     install_sigquit_handler(synchronizers)
+    install_sigterm_handler(synchronizers)
 
     for thread in threads:
         while thread.isAlive():
             thread.join(1)
+
+    _log.info("No plugin threads running, waiting for a SIGTERM or SIGQUIT")
+    while not should_quit:
+        sleep(1)
+    _log.info("Quitting")

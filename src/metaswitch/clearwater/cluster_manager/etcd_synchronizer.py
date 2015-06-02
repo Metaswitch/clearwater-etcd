@@ -119,6 +119,10 @@ class EtcdSynchronizer(object):
     # a stable state, in which case we can leave. Otherwise, set a flag and
     # leave at the next available opportunity.
     def leave_cluster(self):
+        if not self._plugin.should_be_in_cluster():
+            # We're just monitoring this cluster, not in it, so leaving is a
+            # no-op
+            return
         result = self._client.read(self._key, quorum=True)
         cluster_view = self.parse_cluster_view(result.value)
         self._index = result.modifiedIndex
@@ -132,6 +136,10 @@ class EtcdSynchronizer(object):
             self._leaving_flag = True
 
     def mark_node_failed(self):
+        if not self._plugin.should_be_in_cluster():
+            # We're just monitoring this cluster, not in it, so leaving is a
+            # no-op
+            return
         result = self._client.read(self._key, quorum=True)
         cluster_view = self.parse_cluster_view(result.value)
         self._index = result.modifiedIndex
@@ -246,7 +254,7 @@ class EtcdSynchronizer(object):
                                                    wait=True,
                                                    waitIndex=result.modifiedIndex+1,
                                                    timeout=0,
-                                                   recursive=False, 
+                                                   recursive=False,
                                                    quorum=True)
                         break
                     except urllib3.exceptions.TimeoutError:
