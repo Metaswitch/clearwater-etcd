@@ -58,7 +58,9 @@ config-mgr-build-eggs: config_mgr_setup.py shared_setup.py common/setup.py src
 	cd common && ${ENV_DIR}/bin/python setup.py bdist_egg -d ../config_mgr_eggs
 
 	# Download the egg files they depend upon
-	${ENV_DIR}/bin/easy_install -zmaxd config_mgr_eggs/ config_mgr_eggs/*.egg
+	${ENV_DIR}/bin/easy_install -zmaxd config_mgr_eggs/ config_mgr_eggs/clearwater_config_manager-1.0-py2.7.egg
+	${ENV_DIR}/bin/easy_install -zmaxd config_mgr_eggs/ config_mgr_eggs/clearwater_etcd_shared-1.0-py2.7.egg
+	${ENV_DIR}/bin/easy_install -zmaxd config_mgr_eggs/ config_mgr_eggs/metaswitchcommon-0.1-py2.7.egg
 
 .PHONY: build-eggs
 build-eggs: cluster-mgr-build-eggs config-mgr-build-eggs
@@ -71,7 +73,9 @@ cluster-mgr-build-eggs: cluster_mgr_setup.py shared_setup.py common/setup.py src
 	cd common && ${ENV_DIR}/bin/python setup.py bdist_egg -d ../cluster_mgr_eggs
 
 	# Download the egg files they depend upon
-	${ENV_DIR}/bin/easy_install -zmaxd cluster_mgr_eggs/ cluster_mgr_eggs/*.egg
+	${ENV_DIR}/bin/easy_install -zmaxd cluster_mgr_eggs/ cluster_mgr_eggs/clearwater_cluster_manager-1.0-py2.7.egg
+	${ENV_DIR}/bin/easy_install -zmaxd cluster_mgr_eggs/ cluster_mgr_eggs/clearwater_etcd_shared-1.0-py2.7.egg
+	${ENV_DIR}/bin/easy_install -zmaxd cluster_mgr_eggs/ cluster_mgr_eggs/metaswitchcommon-0.1-py2.7.egg
 
 .PHONY: install-eggs
 install-eggs: cluster_mgr_eggs config_mgr_eggs
