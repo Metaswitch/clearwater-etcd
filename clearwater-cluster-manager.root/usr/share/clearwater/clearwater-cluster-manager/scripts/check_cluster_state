@@ -39,7 +39,7 @@ remote_site_name=
 
 if [ $# -ne 0 ]
 then
-  echo "Usage: check_cluster_health"
+  echo "Usage: check_cluster_state"
   exit 1
 fi
 
