@@ -37,7 +37,7 @@ import logging
 _log = logging.getLogger("etcd_shared.plugin_utils")
 
 
-def run_command(command, namespace=None):
+def run_command(command, namespace=None, log_error=True):
     """Runs the given shell command, logging the output and return code.
 
     If a namespace is supplied the command is run in the specified namespace.
@@ -53,12 +53,13 @@ def run_command(command, namespace=None):
         output = subprocess.check_output(command,
                                          shell=True,
                                          stderr=subprocess.STDOUT)
-        _log.info("Command {} succeeded and printed output {!r}".
-                  format(command, output))
+        _log.debug("Command {} succeeded and printed output {!r}".
+                   format(command, output))
         return 0
     except subprocess.CalledProcessError as e:
-        _log.error("Command {} failed with return code {}"
-                   " and printed output {!r}".format(command,
-                                                     e.returncode,
-                                                     e.output))
+        if log_error:
+            _log.error("Command {} failed with return code {}"
+                       " and printed output {!r}".format(command,
+                                                         e.returncode,
+                                                         e.output))
         return e.returncode
