@@ -109,7 +109,7 @@ def main(args):
 
     for plugin in plugins:
         syncer = EtcdSynchronizer(plugin, local_ip, local_site, alarm)
-        thread = Thread(target=syncer.main)
+        thread = Thread(target=syncer.main, name=plugin.__class__.__name__)
         thread.start()
 
         threads.append(thread)

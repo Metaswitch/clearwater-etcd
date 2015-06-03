@@ -178,6 +178,7 @@ class SyncFSM(object):
 
         elif (cluster_state == JOIN_PENDING and
                 local_state == WAITING_TO_JOIN):
+            _log.info("Pausing for %d seconds in case more nodes are joining the cluster" % SyncFSM.DELAY)
             sleep(SyncFSM.DELAY)
             return self._switch_all_to_joining(cluster_view)
         elif (cluster_state == JOIN_PENDING and
@@ -261,6 +262,7 @@ class SyncFSM(object):
         # Remaining nodes (in NORMAL state) should do nothing.
         elif (cluster_state == LEAVE_PENDING and
                 local_state == WAITING_TO_LEAVE):
+            _log.info("Pausing for %d seconds in case more nodes are leaving the cluster" % SyncFSM.DELAY)
             sleep(SyncFSM.DELAY)
             return self._switch_all_to_leaving(cluster_view)
         elif (cluster_state == LEAVE_PENDING and
