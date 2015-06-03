@@ -37,6 +37,11 @@ STARTUP = PDLog(desc="clearwater-cluster-manager has started",
                 effect="Normal",
                 action="None",
                 priority=PDLog.LOG_NOTICE)
+EXITING = PDLog(desc="clearwater-cluster-manager is exiting",
+                cause="The application is exiting",
+                effect="???",
+                action="???",
+                priority=PDLog.LOG_NOTICE)
 NODE_JOINING = PDLog(desc="A node is joining a datastore cluster",
                      cause="Node {ip} has started to join the {cluster_description} cluster",
                      effect="Normal",

@@ -1,9 +1,5 @@
-#!/bin/bash
-
-# @file poll_etcd.sh
-#
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015  Metaswitch Networks Ltd
+# Copyright (C) 2015 Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -34,15 +30,30 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-# This script polls the local etcd process and checks whether it is healthy by
-# checking that the 4000 port is open.
-. /etc/clearwater/config
-/usr/share/clearwater/bin/poll-tcp 4000 $local_ip
-ret=$?
+from metaswitch.common.pdlog import PDLog
 
-if [ $ret != 0 ]
-then
-  /usr/share/clearwater/bin/ent_log.py CL_ETCD_POLL_FAILED
-fi
+STARTUP = PDLog(desc="clearwater-cluster-manager has started",
+                cause="The application is starting",
+                effect="Normal",
+                action="None",
+                priority=PDLog.LOG_NOTICE)
+EXITING = PDLog(desc="clearwater-cluster-manager is exiting",
+                cause="The application is exiting",
+                effect="???",
+                action="???",
+                priority=PDLog.LOG_NOTICE)
+FILE_CHANGED = PDLog(desc="A shared configuration file has been changed",
+                     cause="The shared state of {filename} has changed",
+                     effect="Normal",
+                     action="None",
+                     priority=PDLog.LOG_NOTICE)
 
-exit $ret
+NO_SHARED_CONFIG_ALARM = \
+    PDLog(desc="This node has no shared config",
+          cause="This node has not yet retrieved its shared config",
+          effect="This node will alarm until it retrieves shared config",
+          action="Wait for this node to retrieve /etc/clearwater/shared_config. If this "+\
+          "does not happen, ensure that clearwater-etcd and "+\
+          "clearwater-config-manager have started up, and "+\
+          "fix any other errors relating to them.",
+          priority=PDLog.LOG_ERR)
