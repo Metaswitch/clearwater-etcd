@@ -31,6 +31,10 @@
 # "OpenSSL Licenses" means the OpenSSL License and Original SSLeay License
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
+if [[ $EUID -ne 0 ]]; then
+   echo "You must run this script with root permissions"
+   exit 1
+fi
 
 local_site_name=site1
 . /etc/clearwater/local_config
