@@ -90,6 +90,7 @@ class EtcdSynchronizer(object):
                 # set this node to WAITING_TO_LEAVE. Otherwise, kick the FSM.
                 if self._leaving_flag and \
                         (cluster_state == STABLE or
+                         cluster_state == LEAVE_PENDING or
                         (self.force_leave and cluster_state == STABLE_WITH_ERRORS)):
                     new_state = WAITING_TO_LEAVE
                 else:
@@ -126,6 +127,7 @@ class EtcdSynchronizer(object):
         cluster_state = self.calculate_cluster_state(cluster_view)
 
         if cluster_state == STABLE or \
+           cluster_state == LEAVE_PENDING or \
                 (self.force_leave and cluster_state == STABLE_WITH_ERRORS):
             self.write_to_etcd(cluster_view, WAITING_TO_LEAVE)
         else:
