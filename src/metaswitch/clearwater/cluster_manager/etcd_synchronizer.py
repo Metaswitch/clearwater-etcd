@@ -62,7 +62,7 @@ class EtcdSynchronizer(object):
         self._last_cluster_view = None
         self._leaving_flag = False
         self._terminate_flag = False
-        self.thread = Thread(target=self.main)
+        self.thread = Thread(target=self.main, name=plugin.__class__.__name__)
         self.force_leave = force_leave
 
     def start_thread(self):
@@ -91,6 +91,7 @@ class EtcdSynchronizer(object):
                 if self._leaving_flag and \
                         (cluster_state == STABLE or
                         (self.force_leave and cluster_state == STABLE_WITH_ERRORS)):
+                    _log.info("Cluster is in a stable state, so leaving the cluster now")
                     new_state = WAITING_TO_LEAVE
                 else:
                     local_state = self.calculate_local_state(cluster_view)
@@ -119,6 +120,7 @@ class EtcdSynchronizer(object):
     # a stable state, in which case we can leave. Otherwise, set a flag and
     # leave at the next available opportunity.
     def leave_cluster(self):
+        _log.info("Trying to leave the cluster")
         result = self._client.read(self._key, quorum=True)
         cluster_view = self.parse_cluster_view(result.value)
         self._index = result.modifiedIndex
@@ -127,8 +129,10 @@ class EtcdSynchronizer(object):
 
         if cluster_state == STABLE or \
                 (self.force_leave and cluster_state == STABLE_WITH_ERRORS):
+            _log.info("Cluster is in a stable state, so leaving the cluster immediately")
             self.write_to_etcd(cluster_view, WAITING_TO_LEAVE)
         else:
+            _log.info("Can't leave the cluster immediately - will do so when the cluster next stabilises")
             self._leaving_flag = True
 
     def mark_node_failed(self):
@@ -246,7 +250,7 @@ class EtcdSynchronizer(object):
                                                    wait=True,
                                                    waitIndex=result.modifiedIndex+1,
                                                    timeout=0,
-                                                   recursive=False, 
+                                                   recursive=False,
                                                    quorum=True)
                         break
                     except urllib3.exceptions.TimeoutError:
