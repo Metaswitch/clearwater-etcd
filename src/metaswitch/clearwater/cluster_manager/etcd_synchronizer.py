@@ -129,11 +129,10 @@ class EtcdSynchronizer(object):
     # a stable state, in which case we can leave. Otherwise, set a flag and
     # leave at the next available opportunity.
     def leave_cluster(self):
-        _log.info("Trying to leave the cluster")
+        _log.info("Trying to leave the cluster - plugin %s" % self._plugin.__class__.__name)
         if not self._plugin.should_be_in_cluster():
-            _log.debug("No need to leave remote cluster - doing nothing")
-            # We're just monitoring this cluster, not in it, so leaving is a
-            # no-op
+            _log.info("No need to leave remote cluster - just exit")
+            self._terminate_flag = True
             return
         result = self._client.read(self._key, quorum=True)
         cluster_view = self.parse_cluster_view(result.value)
