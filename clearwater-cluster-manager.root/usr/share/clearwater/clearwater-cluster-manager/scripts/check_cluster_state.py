@@ -81,14 +81,14 @@ def describe_cluster(node_type, site, store_name):
                       for node, state in cluster.iteritems()])
 
     if local_node in cluster:
-        print "  Local node is in this cluster"
+        print "  The local node is in this cluster"
     else:
-        print "  Local node is *not* in this cluster"
+        print "  The local node is *not* in this cluster"
 
     if cluster_ok:
-        print "  Cluster is healthy and stable"
+        print "  The cluster is stable"
     else:
-        print "  Cluster is *not* healthy and stable"
+        print "  The cluster is *not* stable"
 
     for node, state in cluster.iteritems():
         print "    {} is in state {}".format(node, state)
