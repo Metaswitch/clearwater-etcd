@@ -111,7 +111,7 @@ def main(args):
     if not arguments['--foreground']:
         utils.daemonize(stdout_err_log)
 
-    logging_config.configure_logging(log_level, log_dir, "cluster-manager")
+    logging_config.configure_logging(log_level, log_dir, "cluster-manager", show_thread=True)
 
     # urllib3 logs a WARNING log whenever it recreates a connection, but our
     # etcd usage does this frequently (to allow watch timeouts), so deliberately
