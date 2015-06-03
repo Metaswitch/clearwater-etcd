@@ -37,6 +37,7 @@ import json
 from collections import defaultdict
 from threading import Thread
 from time import sleep
+from concurrent import futures
 
 from .constants import *
 from .synchronization_fsm import SyncFSM
@@ -62,8 +63,10 @@ class EtcdSynchronizer(object):
         self._last_cluster_view = None
         self._leaving_flag = False
         self._terminate_flag = False
-        self.thread = Thread(target=self.main)
+        self.thread = Thread(target=self.main, name=plugin.__class__.__name__)
         self.force_leave = force_leave
+        self.executor = futures.ThreadPoolExecutor(10)
+        self.terminate_future = self.executor.submit(self.wait_for_terminate)
 
     def start_thread(self):
         self.thread.daemon = True
@@ -72,6 +75,10 @@ class EtcdSynchronizer(object):
     def terminate(self):
         self._terminate_flag = True
         self.thread.join()
+
+    def wait_for_terminate(self):
+        while not self._terminate_flag:
+            sleep(1)
 
     def main(self):
         # Continue looping while the FSM is running.
@@ -90,7 +97,9 @@ class EtcdSynchronizer(object):
                 # set this node to WAITING_TO_LEAVE. Otherwise, kick the FSM.
                 if self._leaving_flag and \
                         (cluster_state == STABLE or
+                         cluster_state == LEAVE_PENDING or
                         (self.force_leave and cluster_state == STABLE_WITH_ERRORS)):
+                    _log.info("Cluster is in a stable state, so leaving the cluster now")
                     new_state = WAITING_TO_LEAVE
                 else:
                     local_state = self.calculate_local_state(cluster_view)
@@ -108,6 +117,7 @@ class EtcdSynchronizer(object):
 
         _log.info("Quitting FSM")
         self._fsm.quit()
+        self.executor.shutdown(wait=False)
 
     def parse_cluster_view(self, view):
         try:
@@ -119,6 +129,11 @@ class EtcdSynchronizer(object):
     # a stable state, in which case we can leave. Otherwise, set a flag and
     # leave at the next available opportunity.
     def leave_cluster(self):
+        _log.info("Trying to leave the cluster - plugin %s" % self._plugin.__class__.__name__)
+        if not self._plugin.should_be_in_cluster():
+            _log.info("No need to leave remote cluster - just exit")
+            self._terminate_flag = True
+            return
         result = self._client.read(self._key, quorum=True)
         cluster_view = self.parse_cluster_view(result.value)
         self._index = result.modifiedIndex
@@ -126,12 +141,20 @@ class EtcdSynchronizer(object):
         cluster_state = self.calculate_cluster_state(cluster_view)
 
         if cluster_state == STABLE or \
+           cluster_state == LEAVE_PENDING or \
                 (self.force_leave and cluster_state == STABLE_WITH_ERRORS):
+            _log.info("Cluster is in a stable state, so leaving the cluster immediately")
             self.write_to_etcd(cluster_view, WAITING_TO_LEAVE)
         else:
+            _log.info("Can't leave the cluster immediately - will do so when the cluster next stabilises")
             self._leaving_flag = True
 
     def mark_node_failed(self):
+        if not self._plugin.should_be_in_cluster():
+            _log.debug("No need to mark failure in remote cluster - doing nothing")
+            # We're just monitoring this cluster, not in it, so leaving is a
+            # no-op
+            return
         result = self._client.read(self._key, quorum=True)
         cluster_view = self.parse_cluster_view(result.value)
         self._index = result.modifiedIndex
@@ -242,12 +265,24 @@ class EtcdSynchronizer(object):
                 while not self._terminate_flag and self._fsm.is_running():
                     try:
                         _log.info("Watching for changes")
-                        result = self._client.read(self._key,
-                                                   wait=True,
-                                                   waitIndex=result.modifiedIndex+1,
-                                                   timeout=0,
-                                                   recursive=False, 
-                                                   quorum=True)
+                        # Use a concurrent.futures.Executor to run the etcd poll
+                        # asynchronously. This means that, if we're told to quit
+                        # before etcd returns, we'll spot that we've been told
+                        # to quit and do so.
+                        result_future = self.executor.submit(self._client.read,
+                                                             self._key,
+                                                             wait=True,
+                                                             waitIndex=result.modifiedIndex+1,
+                                                             timeout=0,
+                                                             recursive=False,
+                                                             quorum=True)
+                        futures.wait([result_future, self.terminate_future], return_when=futures.FIRST_COMPLETED)
+                        if result_future.done():
+                            # This should always be the case unless we're about
+                            # to quit
+                            result = result_future.result(timeout=0)
+                        else:
+                            assert(self._terminate_flag)
                         break
                     except urllib3.exceptions.TimeoutError:
                         # Timeouts after 5 seconds are expected, so ignore them

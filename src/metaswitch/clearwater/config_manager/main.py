@@ -84,7 +84,7 @@ def main(args):
     if not arguments['--foreground']:
         utils.daemonize(stdout_err_log)
 
-    logging_config.configure_logging(log_level, log_dir, "config-manager")
+    logging_config.configure_logging(log_level, log_dir, "config-manager", show_thread=True)
 
     # urllib3 logs a WARNING log whenever it recreates a connection, but our
     # etcd usage does this frequently (to allow watch timeouts), so deliberately
@@ -109,7 +109,7 @@ def main(args):
 
     for plugin in plugins:
         syncer = EtcdSynchronizer(plugin, local_ip, local_site, alarm)
-        thread = Thread(target=syncer.main)
+        thread = Thread(target=syncer.main, name=plugin.__class__.__name__)
         thread.start()
 
         threads.append(thread)
