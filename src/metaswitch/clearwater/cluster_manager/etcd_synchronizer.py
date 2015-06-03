@@ -128,6 +128,7 @@ class EtcdSynchronizer(object):
     # leave at the next available opportunity.
     def leave_cluster(self):
         if not self._plugin.should_be_in_cluster():
+            _log.debug("No need to leave remote cluster - doing nothing")
             # We're just monitoring this cluster, not in it, so leaving is a
             # no-op
             return
@@ -145,6 +146,7 @@ class EtcdSynchronizer(object):
 
     def mark_node_failed(self):
         if not self._plugin.should_be_in_cluster():
+            _log.debug("No need to mark failure in remote cluster - doing nothing")
             # We're just monitoring this cluster, not in it, so leaving is a
             # no-op
             return
