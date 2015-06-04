@@ -30,7 +30,7 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-from metaswitch.common.pdlog import PDLog
+from metaswitch.common.pdlogs import PDLog
 
 STARTUP = PDLog(desc="clearwater-cluster-manager has started",
                 cause="The application is starting",
@@ -43,12 +43,12 @@ EXITING = PDLog(desc="clearwater-cluster-manager is exiting",
                 action="???",
                 priority=PDLog.LOG_NOTICE)
 NODE_JOINING = PDLog(desc="A node is joining a datastore cluster",
-                     cause="Node {ip} has started to join the {cluster_description} cluster",
+                     cause="Node {ip} has started to join the {cluster_desc}",
                      effect="Normal",
                      action="None",
                      priority=PDLog.LOG_NOTICE)
 NODE_LEAVING = PDLog(desc="A node is leaving a datastore cluster",
-                     cause="Node {ip} has started to leave the {cluster_description} cluster",
+                     cause="Node {ip} has started to leave the {cluster_desc}",
                      effect="Normal",
                      action="None",
                      priority=PDLog.LOG_NOTICE)

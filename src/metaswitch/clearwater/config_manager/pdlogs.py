@@ -30,7 +30,7 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-from metaswitch.common.pdlog import PDLog
+from metaswitch.common.pdlogs import PDLog
 
 STARTUP = PDLog(desc="clearwater-cluster-manager has started",
                 cause="The application is starting",

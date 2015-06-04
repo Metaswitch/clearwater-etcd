@@ -49,6 +49,9 @@ class SynchroniserPluginBase(object):
         state"""
         pass
 
+    def cluster_description(self):
+        """A brief description of the cluster managed by this plugin, for use in logs"""
+        return "[unknown] cluster"
 
     def files(self):
 

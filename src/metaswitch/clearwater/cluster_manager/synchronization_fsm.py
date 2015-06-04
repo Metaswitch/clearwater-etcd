@@ -34,6 +34,7 @@
 from time import sleep
 from .constants import *
 from .alarms import TooLongAlarm
+from . import pdlogs
 import logging
 
 _log = logging.getLogger("cluster_manager.synchronization_fsm")
@@ -96,6 +97,18 @@ class SyncFSM(object):
 
     def _delete_myself(self, cluster_view):
         return {k: v for k, v in cluster_view.iteritems() if k != self._id}
+
+    def _log_joining_nodes(self, cluster_view):
+        for node, state in cluster_view.iteritems():
+            if state in [JOINING, JOINING_ACKNOWLEDGED_CHANGE]:
+                pdlogs.NODE_JOINING.log(ip=node,
+                                        cluster_desc=self._plugin.cluster_description())
+
+    def _log_leaving_nodes(self, cluster_view):
+        for node, state in cluster_view.iteritems():
+            if state in [LEAVING, LEAVING_ACKNOWLEDGED_CHANGE]:
+                pdlogs.NODE_LEAVING.log(ip=node,
+                                        cluster_desc=self._plugin.cluster_description())
 
     def next(self, local_state, cluster_state, cluster_view):  # noqa
         """Main state machine function.
@@ -199,9 +212,11 @@ class SyncFSM(object):
             return None
         elif (cluster_state == STARTED_JOINING and
                 local_state == NORMAL):
+            self._log_joining_nodes(cluster_view)
             return NORMAL_ACKNOWLEDGED_CHANGE
         elif (cluster_state == STARTED_JOINING and
                 local_state == JOINING):
+            self._log_joining_nodes(cluster_view)
             return JOINING_ACKNOWLEDGED_CHANGE
 
         # JOINING_CONFIG_CHANGING state starts when everyone has acknowledged
@@ -283,9 +298,11 @@ class SyncFSM(object):
             return None
         elif (cluster_state == STARTED_LEAVING and
                 local_state == NORMAL):
+            self._log_leaving_nodes(cluster_view)
             return NORMAL_ACKNOWLEDGED_CHANGE
         elif (cluster_state == STARTED_LEAVING and
                 local_state == LEAVING):
+            self._log_leaving_nodes(cluster_view)
             return LEAVING_ACKNOWLEDGED_CHANGE
 
         # LEAVING_CONFIG_CHANGING state starts when everyone has acknowledged

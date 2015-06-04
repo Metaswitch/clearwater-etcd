@@ -58,6 +58,7 @@ from metaswitch.common import logging_config, utils
 from metaswitch.clearwater.etcd_shared.plugin_loader import load_plugins_in_dir
 from metaswitch.clearwater.cluster_manager.etcd_synchronizer import EtcdSynchronizer
 from metaswitch.clearwater.cluster_manager.plugin_base import PluginParams
+from metaswitch.clearwater.cluster_manager.pdlogs import STARTUP, EXITING
 import logging
 import os
 import sys
@@ -97,6 +98,7 @@ def install_sigterm_handler(plugins):
     signal.signal(signal.SIGTERM, sigterm_handler)
 
 def main(args):
+    STARTUP.log()
     arguments = docopt(__doc__, argv=args)
 
     listen_ip = arguments['--local-ip']
@@ -170,6 +172,7 @@ def main(args):
         sleep(1)
     _log.info("Quitting")
     _log.debug("%d threads outstanding at exit" % activeCount())
+    EXITING.log()
     # Use os.exit to skip exit handlers - otherwise the concurrent.futures exit
     # handler waits for an infinite wait to end
     os._exit(0)
