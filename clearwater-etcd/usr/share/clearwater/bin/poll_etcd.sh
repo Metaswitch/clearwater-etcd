@@ -42,7 +42,7 @@ ret=$?
 
 if [ $ret != 0 ]
 then
-  /usr/share/clearwater/bin/ent_log.py CL_ETCD_POLL_FAILED
+  /usr/share/clearwater/bin/ent_log.py "etcd" CL_ETCD_POLL_FAILED
 fi
 
 exit $ret
