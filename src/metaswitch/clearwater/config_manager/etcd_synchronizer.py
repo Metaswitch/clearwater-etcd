@@ -32,6 +32,9 @@
 
 import etcd
 from time import sleep
+from hashlib import md5
+
+from .pdlogs import FILE_CHANGED
 
 import urllib3
 import logging
@@ -62,8 +65,13 @@ class EtcdSynchronizer(object):
                 break
 
             if value:
+                _log.info("Got new config value from etcd - filename {}, file size {}, MD5 hash {}".format(
+                    self._plugin.file(),
+                    len(value),
+                    md5(value).hexdigest()))
                 _log.debug("Got new config value from etcd:\n{}".format(value))
                 self._plugin.on_config_changed(value, self._alarm)
+                FILE_CHANGED.log(filename=self._plugin.file())
 
     # Read the current value of the key from etcd (blocks until there's a
     # change).

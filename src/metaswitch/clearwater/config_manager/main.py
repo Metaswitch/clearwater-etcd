@@ -58,6 +58,8 @@ from metaswitch.clearwater.config_manager.etcd_synchronizer \
     import EtcdSynchronizer
 from metaswitch.clearwater.config_manager.alarms \
     import ConfigAlarm
+from metaswitch.clearwater.config_manager import pdlogs
+import syslog
 import logging
 import os
 from threading import Thread
@@ -72,6 +74,8 @@ LOG_LEVELS = {'0': logging.CRITICAL,
 
 
 def main(args):
+    syslog.openlog()
+    pdlogs.STARTUP.log()
     arguments = docopt(__doc__, argv=args)
 
     local_ip = arguments['--local-ip']
@@ -120,3 +124,5 @@ def main(args):
             thread.join(1)
 
     _log.info("Clearwater Configuration Manager shutting down")
+    pdlogs.EXITING.log()
+    syslog.closelog()
