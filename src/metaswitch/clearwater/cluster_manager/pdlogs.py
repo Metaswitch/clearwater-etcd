@@ -39,9 +39,14 @@ STARTUP = PDLog(desc="clearwater-cluster-manager has started",
                 priority=PDLog.LOG_NOTICE)
 EXITING = PDLog(desc="clearwater-cluster-manager is exiting",
                 cause="The application is exiting",
-                effect="???",
-                action="???",
-                priority=PDLog.LOG_NOTICE)
+                effect="Datastore cluster management services are no longer available",
+                action="This occurs normally when the application is stopped. Wait for monit to restart the application",
+                priority=PDLog.LOG_ERR)
+EXITING_BAD_CONFIG = PDLog(desc="clearwater-cluster-manager is exiting due to bad configuration",
+                           cause="clearwater-cluster-manager was started with incorrect configuration",
+                           effect="Datastore cluster management services are no longer available",
+                           action="Verify that the configuration files in /etc/clearwater/ are correct according to the documentation. In particular, ensure that local_ip, management_local_ip, log_level, local_site_name and remote_site_name are set correctly.",
+                           priority=PDLog.LOG_ERR)
 NODE_JOINING = PDLog(desc="A node is joining a datastore cluster",
                      cause="Node {ip} has started to join the {cluster_desc}",
                      effect="Normal",

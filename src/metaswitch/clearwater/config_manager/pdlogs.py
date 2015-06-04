@@ -32,16 +32,21 @@
 
 from metaswitch.common.pdlogs import PDLog
 
-STARTUP = PDLog(desc="clearwater-cluster-manager has started",
+STARTUP = PDLog(desc="clearwater-config-manager has started",
                 cause="The application is starting",
                 effect="Normal",
                 action="None",
                 priority=PDLog.LOG_NOTICE)
-EXITING = PDLog(desc="clearwater-cluster-manager is exiting",
+EXITING = PDLog(desc="clearwater-config-manager is exiting",
                 cause="The application is exiting",
-                effect="???",
-                action="???",
-                priority=PDLog.LOG_NOTICE)
+                effect="Configuration management services are no longer available",
+                action="This occurs normally when the application is stopped. Wait for monit to restart the application",
+                priority=PDLog.LOG_ERR)
+EXITING_BAD_CONFIG = PDLog(desc="clearwater-config-manager is exiting due to bad configuration",
+                           cause="clearwater-config-manager was started with incorrect configuration",
+                           effect="Configuration management services are no longer available",
+                           action="Verify that the configuration files in /etc/clearwater/ are correct according to the documentation. In particular, ensure that local_ip, management_local_ip, log_level and local_site_name are set correctly.",
+                           priority=PDLog.LOG_ERR)
 FILE_CHANGED = PDLog(desc="A shared configuration file has been changed",
                      cause="The shared state of {filename} has changed",
                      effect="Normal",

@@ -52,13 +52,13 @@ Options:
 
 """
 
-from docopt import docopt
+from docopt import docopt, DocoptExit
 
 from metaswitch.common import logging_config, utils
 from metaswitch.clearwater.etcd_shared.plugin_loader import load_plugins_in_dir
 from metaswitch.clearwater.cluster_manager.etcd_synchronizer import EtcdSynchronizer
 from metaswitch.clearwater.cluster_manager.plugin_base import PluginParams
-from metaswitch.clearwater.cluster_manager.pdlogs import STARTUP, EXITING
+from metaswitch.clearwater.cluster_manager import pdlogs
 import logging
 import os
 import sys
@@ -98,8 +98,14 @@ def install_sigterm_handler(plugins):
     signal.signal(signal.SIGTERM, sigterm_handler)
 
 def main(args):
-    STARTUP.log()
-    arguments = docopt(__doc__, argv=args)
+    syslog.openlog("cluster-manager", syslog.LOG_PID)
+    pdlogs.STARTUP.log()
+    arguments = {}
+    try:
+        docopt(__doc__, argv=args)
+    except DocoptExit:
+        pdlogs.EXITING_BAD_CONFIG.log()
+        raise
 
     listen_ip = arguments['--local-ip']
     local_site_name = arguments['--local-site']
@@ -172,7 +178,8 @@ def main(args):
         sleep(1)
     _log.info("Quitting")
     _log.debug("%d threads outstanding at exit" % activeCount())
-    EXITING.log()
+    pdlogs.EXITING.log()
+    syslog.closelog()
     # Use os.exit to skip exit handlers - otherwise the concurrent.futures exit
     # handler waits for an infinite wait to end
     os._exit(0)
