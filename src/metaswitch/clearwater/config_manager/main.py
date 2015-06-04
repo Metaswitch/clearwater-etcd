@@ -77,7 +77,7 @@ def main(args):
     syslog.openlog("config-manager", syslog.LOG_PID)
     pdlogs.STARTUP.log()
     try:
-        docopt(__doc__, argv=args)
+        arguments = docopt(__doc__, argv=args)
     except DocoptExit:
         pdlogs.EXITING_BAD_CONFIG.log()
         raise

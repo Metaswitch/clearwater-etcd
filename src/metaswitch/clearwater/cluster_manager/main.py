@@ -62,6 +62,7 @@ from metaswitch.clearwater.cluster_manager import pdlogs
 import logging
 import os
 import sys
+import syslog
 from threading import Thread, activeCount
 from time import sleep
 import signal
@@ -100,9 +101,8 @@ def install_sigterm_handler(plugins):
 def main(args):
     syslog.openlog("cluster-manager", syslog.LOG_PID)
     pdlogs.STARTUP.log()
-    arguments = {}
     try:
-        docopt(__doc__, argv=args)
+        arguments = docopt(__doc__, argv=args)
     except DocoptExit:
         pdlogs.EXITING_BAD_CONFIG.log()
         raise
