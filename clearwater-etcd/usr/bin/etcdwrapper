@@ -1,5 +1,7 @@
 #!/bin/bash
 
-# Tiny wrapper script to redirect etcd's stdout and stderr to a file
+# Tiny wrapper script to redirect etcd's stdout and stderr to a file and raise appropriate ENT logs
 
+/usr/share/clearwater/bin/ent_log.py "etcd" CL_ETCD_STARTED
 exec /usr/bin/etcd $@ >> /var/log/clearwater-etcd/clearwater-etcd.log 2>&1
+/usr/share/clearwater/bin/ent_log.py "etcd" CL_ETCD_EXITED
