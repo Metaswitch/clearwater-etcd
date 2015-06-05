@@ -82,7 +82,7 @@ NOT_YET_CLUSTERED_ALARM = PDLog(
 
 TOO_LONG_ALARM = PDLog(
     number=PDLog.CL_CLUSTER_MGR_ID+7,
-    desc="A scaling operation has taken too long".,
+    desc="A scaling operation has taken too long.",
     cause="A scaling operation for the {cluster_desc} has been in progress for more than 15 minutes.",
     effect="This node will alarm until the operation finishes. "+\
       "No further scaling operations can begin until this one completes.",
