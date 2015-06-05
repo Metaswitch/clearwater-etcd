@@ -38,11 +38,4 @@
 # checking that the 4000 port is open.
 . /etc/clearwater/config
 /usr/share/clearwater/bin/poll-tcp 4000 $local_ip
-ret=$?
-
-if [ $ret != 0 ]
-then
-  /usr/share/clearwater/bin/ent_log.py "etcd" CL_ETCD_POLL_FAILED
-fi
-
-exit $ret
+exit $?
