@@ -98,7 +98,7 @@ pyclean:
 
 .PHONY: envclean
 envclean:
-	rm -rf bin eggs develop-eggs parts .installed.cfg bootstrap.py .downloads .buildout_downloads *.egg .eggs *.egg-info
+	rm -rf bin cluster_mgr_eggs config_mgr_eggs develop-eggs parts .installed.cfg bootstrap.py .downloads .buildout_downloads *.egg .eggs *.egg-info
 	rm -rf distribute-*.tar.gz
 	rm -rf $(ENV_DIR)
 
