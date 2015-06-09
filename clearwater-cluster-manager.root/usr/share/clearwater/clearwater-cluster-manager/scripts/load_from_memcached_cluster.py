@@ -57,12 +57,13 @@ c = etcd.Client(local_ip, 4000)
 def load_file_into_etcd(filename, etcd_key):
     with open(filename) as f:
         for line in f.readlines():
-            key, value = line.split("=")
-            assert key != "new_servers", \
-                "Must not have a new_servers line when running this script"
-            if key == "servers":
-                data = json.dumps({strip_port(server): "normal"
-                                for server in value.split(",")})
+            if '=' in line:
+                key, value = line.split("=")
+                assert key != "new_servers", \
+                    "Must not have a new_servers line when running this script"
+                if key == "servers":
+                    data = json.dumps({strip_port(server): "normal"
+                                    for server in value.split(",")})
 
     print "Inserting data %s into etcd key %s" % (data, etcd_key)
 
