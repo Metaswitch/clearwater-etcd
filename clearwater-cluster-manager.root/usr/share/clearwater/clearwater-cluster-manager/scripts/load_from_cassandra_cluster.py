@@ -51,7 +51,7 @@ try:
     # output as valid yaml, we need to use tr to replace tabs with spaces.
     # We remove any xss=.., as this can be printed out by 
     # cassandra-env.sh
-    command = "nodetool describecluster | grep -v xss | tr \"\t\" \" \""
+    command = "nodetool describecluster | grep -v \"^xss = \" | tr \"\t\" \" \""
     if sig_namespace:
         command = "ip netns exec {} ".format(sig_namespace) + command
 
