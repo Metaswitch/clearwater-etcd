@@ -161,12 +161,14 @@ def leave_cassandra_cluster(namespace=None):
 
 
 def start_cassandra():
-    run_command("monit monitor -g cassandra")
+    cassandra_monit_still_to_do = True
 
     # Wait until we can connect on port 9160 - i.e. Cassandra is running.
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     while True:
         try:
+            if cassandra_monit_still_to_do:
+                cassandra_monit_still_to_do = run_command("monit monitor -g cassandra")
             s.connect(("localhost", 9160))
             break
         except:
