@@ -93,7 +93,13 @@ do_start()
   log_directory=/var/log/clearwater-cluster-manager
   [ -r /etc/clearwater/user_settings ] && . /etc/clearwater/user_settings
 
-  DAEMON_ARGS="--local-ip=$local_ip
+  if [ -z $management_local_ip ]
+  then
+    management_local_ip=$local_ip
+  fi
+
+  DAEMON_ARGS="--mgmt-local-ip=$management_local_ip
+               --sig-local-ip=$local_ip
                --local-site=$local_site_name
                --remote-site=$remote_site_name
                --signaling-namespace=$signaling_namespace

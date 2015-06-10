@@ -36,7 +36,7 @@ import collections
 
 PluginParams = collections.namedtuple(
                  'PluginParams',
-                 ['ip', 'local_site', 'remote_site', 'signaling_namespace'])
+                 ['ip', 'mgmt_ip', 'local_site', 'remote_site', 'signaling_namespace'])
 
 
 class SynchroniserPluginBase(object):
