@@ -146,14 +146,15 @@ def join_cassandra_cluster(cluster_view,
         # etcd (at the very least).
         _log.warning("No Cassandra cluster defined in etcd - unable to join")
 
+def can_contact_cassandra():
+    # Use poll-tcp to allow us to contact the signalling namespace
+    rc = run_command("/usr/share/clearwater/bin/poll-tcp 9160")
+    return (rc == 0)
 
 def leave_cassandra_cluster(namespace=None):
     # We need Cassandra to be running so that we can connect on port 9160 and
     # decommission it. Check if we can connect on port 9160.
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        s.connect(("localhost", 9160))
-    except:
+    if not can_contact_cassandra():
         start_cassandra()
 
     run_command("monit unmonitor -g cassandra")
@@ -164,12 +165,10 @@ def start_cassandra():
     run_command("monit monitor -g cassandra")
 
     # Wait until we can connect on port 9160 - i.e. Cassandra is running.
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     while True:
-        try:
-            s.connect(("localhost", 9160))
+        if can_contact_cassandra():
             break
-        except:
+        else:
             time.sleep(1)
 
 

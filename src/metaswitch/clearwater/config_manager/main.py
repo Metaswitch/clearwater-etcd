@@ -64,12 +64,13 @@ from threading import Thread
 
 _log = logging.getLogger("config_manager.main")
 
-LOG_LEVELS = {'0': logging.CRITICAL,
-              '1': logging.ERROR,
-              '2': logging.WARNING,
+LOG_LEVELS = {'0': logging.ERROR,
+              '1': logging.WARNING,
+              # INFO-level logging is really useful, and not very spammy because
+              # we're not on the call path, so produce INFO logs even at level 2
+              '2': logging.INFO,
               '3': logging.INFO,
               '4': logging.DEBUG}
-
 
 def main(args):
     arguments = docopt(__doc__, argv=args)
