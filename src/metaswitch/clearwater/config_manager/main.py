@@ -49,7 +49,7 @@ Options:
 
 """
 
-from docopt import docopt
+from docopt import docopt, DocoptExit
 
 from metaswitch.common import logging_config, utils
 from metaswitch.clearwater.etcd_shared.plugin_loader \
@@ -58,6 +58,8 @@ from metaswitch.clearwater.config_manager.etcd_synchronizer \
     import EtcdSynchronizer
 from metaswitch.clearwater.config_manager.alarms \
     import ConfigAlarm
+from metaswitch.clearwater.config_manager import pdlogs
+import syslog
 import logging
 import os
 from threading import Thread
@@ -73,7 +75,13 @@ LOG_LEVELS = {'0': logging.ERROR,
               '4': logging.DEBUG}
 
 def main(args):
-    arguments = docopt(__doc__, argv=args)
+    syslog.openlog("config-manager", syslog.LOG_PID)
+    pdlogs.STARTUP.log()
+    try:
+        arguments = docopt(__doc__, argv=args)
+    except DocoptExit:
+        pdlogs.EXITING_BAD_CONFIG.log()
+        raise
 
     local_ip = arguments['--local-ip']
     local_site = arguments['--local-site']
@@ -121,3 +129,5 @@ def main(args):
             thread.join(1)
 
     _log.info("Clearwater Configuration Manager shutting down")
+    pdlogs.EXITING.log()
+    syslog.closelog()

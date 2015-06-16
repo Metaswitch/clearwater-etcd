@@ -42,6 +42,7 @@ import logging
 import imp
 import os
 from threading import Lock
+from . import pdlogs
 
 CLEAR_GLOBAL_CONFIG_NOT_SYNCHED = "6503.1"
 RAISE_GLOBAL_CONFIG_NOT_SYNCHED = "6503.3"
@@ -82,3 +83,4 @@ class ConfigAlarm(object):
             issue_alarm(CLEAR_GLOBAL_CONFIG_NOT_SYNCHED)
         else:
             issue_alarm(RAISE_GLOBAL_CONFIG_NOT_SYNCHED)
+            pdlogs.NO_SHARED_CONFIG_ALARM.log()
