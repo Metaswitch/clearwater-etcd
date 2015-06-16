@@ -42,7 +42,7 @@ Usage:
 Options:
   -h --help                   Show this screen.
   --mgmt-local-ip=IP          Management IP address
-  --sig-local-ip=IP           Signalling IP address
+  --sig-local-ip=IP           Signaling IP address
   --local-site=NAME           Name of local site
   --remote-site=NAME          Name of remote site
   --signaling-namespace=NAME  Name of the signaling namespace
