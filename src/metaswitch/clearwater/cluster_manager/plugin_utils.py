@@ -112,7 +112,7 @@ def join_cassandra_cluster(cluster_view,
         with open(cassandra_yaml_file) as f:
             doc = yaml.load(f)
 
-        # Fill in the correct listen_address and seeds values in the yaml 
+        # Fill in the correct listen_address and seeds values in the yaml
         # document.
         doc["listen_address"] = ip
         doc["seed_provider"][0]["parameters"][0]["seeds"] = seeds_list_str
