@@ -112,9 +112,10 @@ def join_cassandra_cluster(cluster_view,
         with open(cassandra_yaml_file) as f:
             doc = yaml.load(f)
 
-        # Fill in the correct listen_address and seeds values in the yaml
-        # document.
+        # Fill in the correct listen_address, rpc_address and seeds values 
+        # in the yaml document.
         doc["listen_address"] = ip
+        doc["rpc_address"] = ip
         doc["seed_provider"][0]["parameters"][0]["seeds"] = seeds_list_str
         doc["endpoint_snitch"] = "GossipingPropertyFileSnitch"
 
@@ -166,15 +167,14 @@ def start_cassandra():
 
     # Wait until we can connect on port 9160 - i.e. Cassandra is running.
     while True:
-        try:
-            if cassandra_not_monitored:
-                # The monit command can fail because monit is still processing
-                # the unmonitor command from before (even though it has
-                # finished unmonitoring cassandra)
-                rc = run_command("monit monitor -g cassandra")
-                cassandra_not_monitored = (rc != 0)
-            elif can_contact_cassandra():
-                break
+        if cassandra_not_monitored:
+            # The monit command can fail because monit is still processing
+            # the unmonitor command from before (even though it has
+            # finished unmonitoring cassandra)
+            rc = run_command("monit monitor -g cassandra")
+            cassandra_not_monitored = (rc != 0)
+        elif can_contact_cassandra():
+            break
         else:
             time.sleep(1)
 
