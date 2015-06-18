@@ -58,7 +58,7 @@ class EtcdSynchronizer(object):
         # Continue looping while the service is running.
         while not self._terminate_flag:
             # This blocks on changes to the watched key in etcd.
-            _log.debug("Waiting for change from etcd for key{}".format(
+            _log.debug("Waiting for change from etcd for key {}".format(
                          self._plugin.key()))
             value = self.read_from_etcd()
             if self._terminate_flag:
