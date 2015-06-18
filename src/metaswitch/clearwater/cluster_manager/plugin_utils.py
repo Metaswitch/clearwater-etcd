@@ -112,7 +112,8 @@ def join_cassandra_cluster(cluster_view,
         with open(cassandra_yaml_file) as f:
             doc = yaml.load(f)
 
-        # Fill in the correct listen_address and seeds values yaml document.
+        # Fill in the correct listen_address and seeds values in the yaml 
+        # document.
         doc["listen_address"] = ip
         doc["seed_provider"][0]["parameters"][0]["seeds"] = seeds_list_str
         doc["endpoint_snitch"] = "GossipingPropertyFileSnitch"
@@ -173,8 +174,9 @@ def start_cassandra():
             cassandra_not_monitored = (rc != 0)
         elif can_contact_cassandra():
             break
-        else:
-            time.sleep(1)
+
+        # Sleep so we don't tight loop
+        time.sleep(1)
 
 
 def write_chronos_cluster_settings(filename, cluster_view, current_server):
