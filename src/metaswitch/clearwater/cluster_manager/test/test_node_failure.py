@@ -82,5 +82,5 @@ class TestNodeFailure(BaseClusterTest):
         self.assertEqual("normal", end.get("10.0.0.1"))
         self.assertEqual("normal", end.get("10.0.0.3"))
         self.assertEqual(None, end.get("10.0.0.2"))
-        for s in [sync1, sync3]:
+        for s in [sync1, sync3, error_syncer]:
             s.terminate()
