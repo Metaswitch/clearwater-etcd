@@ -1,7 +1,5 @@
 ENV_DIR := $(shell pwd)/_env
 ENV_PYTHON := ${ENV_DIR}/bin/python
-TEST_ENV_DIR := $(shell pwd)/_test_env
-TEST_ENV_PYTHON := ${TEST_ENV_DIR}/bin/python
 PYTHON_BIN := $(shell which python)
 
 DEB_COMPONENT := clearwater-etcd
@@ -15,8 +13,8 @@ X86_64_ONLY=0
 .DEFAULT_GOAL = deb
 
 .PHONY: test
-test: cluster_mgr_setup.py ${TEST_ENV_PYTHON}
-	PYTHONPATH=src:common ${TEST_ENV_PYTHON} cluster_mgr_setup.py test -v
+test: cluster_mgr_setup.py env
+	PYTHONPATH=src:common ${ENV_PYTHON} cluster_mgr_setup.py test -v
 
 ${ENV_DIR}/bin/flake8: env
 	${ENV_DIR}/bin/pip install flake8
@@ -42,13 +40,7 @@ coverage: ${ENV_DIR}/bin/coverage cluster_mgr_setup.py
 	${ENV_DIR}/bin/coverage html
 
 .PHONY: env
-env: cluster_mgr_setup.py config_mgr_setup.py shared_setup.py $(ENV_DIR)/bin/python build-eggs install-eggs
-
-$(TEST_ENV_PYTHON):
-	# Set up the virtual environment
-	virtualenv --setuptools --python=$(PYTHON_BIN) $(TEST_ENV_DIR)
-	$(TEST_ENV_DIR)/bin/easy_install "setuptools>0.7"
-	$(TEST_ENV_DIR)/bin/easy_install distribute
+env: cluster_mgr_setup.py config_mgr_setup.py shared_setup.py $(ENV_DIR)/bin/python build-eggs
 
 $(ENV_DIR)/bin/python:
 	# Set up the virtual environment
@@ -85,12 +77,6 @@ cluster-mgr-build-eggs: cluster_mgr_setup.py shared_setup.py common/setup.py src
 	${ENV_DIR}/bin/easy_install -zmaxd cluster_mgr_eggs/ cluster_mgr_eggs/clearwater_etcd_shared-1.0-py2.7.egg
 	${ENV_DIR}/bin/easy_install -zmaxd cluster_mgr_eggs/ cluster_mgr_eggs/metaswitchcommon-0.1-py2.7.egg
 
-.PHONY: install-eggs
-install-eggs: cluster_mgr_eggs config_mgr_eggs
-	# Install the downloaded egg files (this should match the Debian postinst)
-	${ENV_DIR}/bin/easy_install --allow-hosts=None -f cluster_mgr_eggs/ cluster_mgr_eggs/clearwater_cluster_manager-1.0-py2.7.egg
-	${ENV_DIR}/bin/easy_install --allow-hosts=None -f config_mgr_eggs/ config_mgr_eggs/clearwater_config_manager-1.0-py2.7.egg
-
 .PHONY: deb
 deb: env build-eggs deb-only
 
@@ -109,5 +95,4 @@ envclean:
 	rm -rf bin cluster_mgr_eggs config_mgr_eggs develop-eggs parts .installed.cfg bootstrap.py .downloads .buildout_downloads *.egg .eggs *.egg-info
 	rm -rf distribute-*.tar.gz
 	rm -rf $(ENV_DIR)
-	rm -rf $(TEST_ENV_DIR)
 
