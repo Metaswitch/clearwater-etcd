@@ -124,9 +124,10 @@ def main(args):
         threads.append(thread)
         _log.info("Loaded plugin %s" % plugin)
 
-    for thread in threads:
-        while thread.isAlive():
-            thread.join(1)
+    while any([thread.isAlive() for thread in threads]):
+        for thread in threads:
+            if thread.isAlive():
+                thread.join(1)
 
     _log.info("Clearwater Configuration Manager shutting down")
     pdlogs.EXITING.log()
