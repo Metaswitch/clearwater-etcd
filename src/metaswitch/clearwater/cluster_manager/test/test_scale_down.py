@@ -58,6 +58,7 @@ class TestScaleDown(BaseClusterTest):
         # Make the second node leave
         sync2.leave_cluster()
         sync2.thread.join(20)
+        sync2.terminate()
         self.wait_for_all_normal(mock_client, required_number=1)
 
         # Check that it's left and the cluster is stable

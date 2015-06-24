@@ -14,7 +14,7 @@ X86_64_ONLY=0
 
 .PHONY: test
 test: cluster_mgr_setup.py env
-	$(ENV_DIR)/bin/python cluster_mgr_setup.py test -v
+	PYTHONPATH=src:common ${ENV_PYTHON} cluster_mgr_setup.py test -v
 
 ${ENV_DIR}/bin/flake8: env
 	${ENV_DIR}/bin/pip install flake8
@@ -40,7 +40,7 @@ coverage: ${ENV_DIR}/bin/coverage cluster_mgr_setup.py
 	${ENV_DIR}/bin/coverage html
 
 .PHONY: env
-env: cluster_mgr_setup.py config_mgr_setup.py shared_setup.py $(ENV_DIR)/bin/python build-eggs install-eggs
+env: cluster_mgr_setup.py config_mgr_setup.py shared_setup.py $(ENV_DIR)/bin/python build-eggs
 
 $(ENV_DIR)/bin/python:
 	# Set up the virtual environment
@@ -76,12 +76,6 @@ cluster-mgr-build-eggs: cluster_mgr_setup.py shared_setup.py common/setup.py src
 	${ENV_DIR}/bin/easy_install -zmaxd cluster_mgr_eggs/ cluster_mgr_eggs/clearwater_cluster_manager-1.0-py2.7.egg
 	${ENV_DIR}/bin/easy_install -zmaxd cluster_mgr_eggs/ cluster_mgr_eggs/clearwater_etcd_shared-1.0-py2.7.egg
 	${ENV_DIR}/bin/easy_install -zmaxd cluster_mgr_eggs/ cluster_mgr_eggs/metaswitchcommon-0.1-py2.7.egg
-
-.PHONY: install-eggs
-install-eggs: cluster_mgr_eggs config_mgr_eggs
-	# Install the downloaded egg files (this should match the Debian postinst)
-	${ENV_DIR}/bin/easy_install --allow-hosts=None -f cluster_mgr_eggs/ cluster_mgr_eggs/clearwater_cluster_manager-1.0-py2.7.egg
-	${ENV_DIR}/bin/easy_install --allow-hosts=None -f config_mgr_eggs/ config_mgr_eggs/clearwater_config_manager-1.0-py2.7.egg
 
 .PHONY: deb
 deb: env build-eggs deb-only
