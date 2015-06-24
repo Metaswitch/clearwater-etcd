@@ -165,11 +165,4 @@ class EtcdSynchronizer(object):
                 pass
             else:
                 raise
-        except ValueError:
-            # The index isn't valid to watch on, probably because
-            # there has been a snapshot between the get and the
-            # watch. Just start the read again.
-            _log.info("etcd index {} is invalid, retrying".format(
-                result.modifiedIndex+1))
-            self.read_from_etcd()
         return result
