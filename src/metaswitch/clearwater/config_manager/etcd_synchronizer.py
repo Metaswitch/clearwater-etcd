@@ -98,8 +98,10 @@ class EtcdSynchronizer(object):
             if result is None or result.modifiedIndex == self._index:
                 while not self._terminate_flag:
                     _log.info("Watching for changes")
-                    waitIndex = None if (self.index is None or result is None) else result.modifiedIndex + 1
-                    result = self.waitHelper(timeout=0, waitIndex=waitIndex)
+                    waitIndex = None if (self._index is None or result is None) else result.modifiedIndex + 1
+                    result = self.waitHelper(full_key, waitIndex=waitIndex)
+                    if result is not None:
+                        break
 
                 # Return if we're terminating.
                 if self._terminate_flag:
@@ -123,21 +125,20 @@ class EtcdSynchronizer(object):
 
         return value
 
-    def waitHelper(self, timeout, waitIndex):
+    def waitHelper(self, full_key, waitIndex):
         result = None
         # Calculate the args for the wait
         args = dict(wait=True,
-                    timeout=timeout,
+                    timeout=0,
                     recursive=False,
                     quorum=True)
         if waitIndex is not None:
-            args['waitIndex'] = result.modifiedIndex + 1
+            args['waitIndex'] = waitIndex
 
         try:
             # Wait for the key to change
             result = self._client.read(full_key,
                                        **args)
-            break
         except urllib3.exceptions.TimeoutError:
             # Timeouts after 5 seconds are expected, so ignore them
             # - unless we're terminating, we'll stay in the while
@@ -145,14 +146,17 @@ class EtcdSynchronizer(object):
             pass
         except etcd.EtcdEventIndexCleared as e:
             # A snapshot has occurred since the last change, invalidating the
-            # index, so wait again without specifying an index.
-            # This introduces a race condition (a change could happen between
-            # the two watches which we wouldn't spot), so set a 10-minute time
-            # limit on the watch as a safeguard.
+            # index, so wait again from the earliest index possible.
+
+            # etcd doesn't pass the earliest index back in a structured way, but
+            # we can parse it out of the error message.
+            m = re.search("the requested history has been cleared [(\d+)/(\d+)]", e.message)
+            new_index = m.group(1) if m is not None else None
             _log.info("An etcd snapshot has invalidated index %d - "
-                      "starting a new watch (timeout 600s) without specifying an index",
-                      args.get('waitIndex', None))
-            result = self.waitHelper(timeout=600, waitIndex=None)
+                      "starting a new watch with index %d",
+                      args.get('waitIndex', None),
+                      new_index)
+            result = self.waitHelper(full_key, waitIndex=new_index)
         except etcd.EtcdException as e:
             # We have seen timeouts getting raised as EtcdExceptions
             # so catch these here too and treat them as timeouts if
