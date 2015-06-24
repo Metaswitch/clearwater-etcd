@@ -97,41 +97,10 @@ class EtcdSynchronizer(object):
 
             if result is None or result.modifiedIndex == self._index:
                 while not self._terminate_flag:
-                    try:
-                        _log.info("Watching for changes")
-
-                        # Calculate the args for the wait
-                        args = dict(wait=True,
-                                    timeout=0,
-                                    recursive=False,
-                                    quorum=True)
-                        if self._index is not None:
-                            args['waitIndex'] = result.modifiedIndex + 1
-
-                        # Wait for the key to change
-                        result = self._client.read(full_key,
-                                                   **args)
-                        break
-                    except urllib3.exceptions.TimeoutError:
-                        # Timeouts after 5 seconds are expected, so ignore them
-                        # - unless we're terminating, we'll stay in the while
-                        # loop and try again
-                        pass
-                    except etcd.EtcdException as e:
-                        # We have seen timeouts getting raised as EtcdExceptions
-                        # so catch these here too and treat them as timeouts if
-                        # they indicate that the read timed out.
-                        if "Read timed out" in e.message:
-                            pass
-                        else:
-                            raise
-                    except ValueError:
-                        # The index isn't valid to watch on, probably because
-                        # there has been a snapshot between the get and the
-                        # watch. Just start the read again.
-                        _log.info("etcd index {} is invalid, retrying".format(
-                            result.modifiedIndex+1))
-                        self.read_from_etcd()
+                    _log.info("Watching for changes")
+                    # Calculate the args for the wait
+                    waitIndex = None if (self.index is None or result is None) else result.modifiedIndex + 1
+                    result = self.waitHelper(timeout=0, waitIndex=waitIndex)
 
                 # Return if we're terminating.
                 if self._terminate_flag:
@@ -154,3 +123,50 @@ class EtcdSynchronizer(object):
             # function again after we return, causing the read to be retried.
 
         return value
+
+    def waitHelper(self, timeout, waitIndex):
+        result = None
+        # Calculate the args for the wait
+        args = dict(wait=True,
+                    timeout=timeout,
+                    recursive=False,
+                    quorum=True)
+        if waitIndex is not None:
+            args['waitIndex'] = result.modifiedIndex + 1
+
+        try:
+            # Wait for the key to change
+            result = self._client.read(full_key,
+                                       **args)
+            break
+        except urllib3.exceptions.TimeoutError:
+            # Timeouts after 5 seconds are expected, so ignore them
+            # - unless we're terminating, we'll stay in the while
+            # loop and try again
+            pass
+        except etcd.EtcdEventIndexCleared as e:
+            # A snapshot has occurred since the last change, invalidating the
+            # index, so wait again without specifying an index.
+            # This introduces a race condition (a change could happen between
+            # the two watches which we wouldn't spot), so set a 10-minute time
+            # limit on the watch as a safeguard.
+            _log.info("An etcd snapshot has invalidated index %d - "
+                      "starting a new watch (timeout 600s) without specifying an index",
+                      args.get('waitIndex', None))
+            result = self.waitHelper(timeout=600, waitIndex=None)
+        except etcd.EtcdException as e:
+            # We have seen timeouts getting raised as EtcdExceptions
+            # so catch these here too and treat them as timeouts if
+            # they indicate that the read timed out.
+            if "Read timed out" in e.message:
+                pass
+            else:
+                raise
+        except ValueError:
+            # The index isn't valid to watch on, probably because
+            # there has been a snapshot between the get and the
+            # watch. Just start the read again.
+            _log.info("etcd index {} is invalid, retrying".format(
+                result.modifiedIndex+1))
+            self.read_from_etcd()
+        return result
