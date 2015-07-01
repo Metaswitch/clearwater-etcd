@@ -11,7 +11,6 @@ Configuration for the `clearwater-etcd` cluster is done through the standard
 
  * `etcd_cluster` - See below
  * `local_ip` - The local IP address
- * `home_domain` - Used as a unique identity
 
 ## Creating a Cluster
 
