@@ -204,28 +204,56 @@ do_start()
 
         ETCD_NAME=${advertisement_ip//./-}
         CLUSTER_ARGS=
-        if [[ -d $DATA_DIR/$advertisement_ip ]]
+        if [ -z "$etcd_proxy" ]
         then
-          # We'll start normally using the data we saved off on our last boot.
-          echo "Rejoining cluster..."
+          # Join or create the etcd cluster as a full member.
+
+          if [[ -d $DATA_DIR/$advertisement_ip ]]
+          then
+            # We'll start normally using the data we saved off on our last boot.
+            echo "Rejoining cluster..."
+          else
+            # Exit if the etcd_cluster value hasn't been set
+            if [ -z "$etcd_cluster" ]
+            then
+              echo "Can't start clearwater-etcd without a etcd_cluster setting in /etc/clearwater/config"
+              return 2
+            fi
+
+            join_or_create_cluster
+          fi
+
+          # Common arguments
+          DAEMON_ARGS="--listen-client-urls http://$listen_ip:4000
+                       --advertise-client-urls http://$advertisement_ip:4000
+                       --listen-peer-urls http://$listen_ip:2380
+                       --initial-advertise-peer-urls http://$advertisement_ip:2380
+                       --data-dir $DATA_DIR/$advertisement_ip
+                       --name $ETCD_NAME"
         else
+          # Run etcd as a proxy talking to the cluster.
+
           # Exit if the etcd_cluster value hasn't been set
           if [ -z "$etcd_cluster" ]
           then
-            echo "Can't start clearwater-etcd without a etcd_cluster setting in /etc/clearwater/config"
+            echo "Can't start clearwater-etcd in proxy mode without a etcd_cluster setting in /etc/clearwater/config"
             return 2
           fi
 
-          join_or_create_cluster
-        fi
+          ETCD_SERVERS=
+          for server in $etcd_cluster
+          do
+            ETCD_SERVERS="${server//./-}=http://$server:2380,$ETCD_SERVERS"
+          done
+          ETCD_SERVERS=${ETCD_SERVERS%?}
 
-        # Common arguments
-        DAEMON_ARGS="--listen-client-urls http://$listen_ip:4000
-                     --advertise-client-urls http://$advertisement_ip:4000
-                     --listen-peer-urls http://$listen_ip:2380
-                     --initial-advertise-peer-urls http://$advertisement_ip:2380
-                     --data-dir $DATA_DIR/$advertisement_ip
-                     --name $ETCD_NAME"
+          CLUSTER_ARGS="--initial-cluster $ETCD_SERVERS"
+          DAEMON_ARGS="--listen-client-urls http://$listen_ip:4000
+                       --advertise-client-urls http://$advertisement_ip:4000
+                       --proxy on
+                       --data-dir $DATA_DIR/$advertisement_ip
+                       --name $ETCD_NAME"
+        fi
 
         start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --startas $DAEMONWRAPPER --chuid $NAME -- $DAEMON_ARGS $CLUSTER_ARGS \
                 || return 2
