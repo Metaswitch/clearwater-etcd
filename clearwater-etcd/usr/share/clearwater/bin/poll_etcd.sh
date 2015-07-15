@@ -37,5 +37,20 @@
 # This script polls the local etcd process and checks whether it is healthy by
 # checking that the 4000 port is open.
 . /etc/clearwater/config
-/usr/share/clearwater/bin/poll-tcp 4000 $local_ip
-exit $?
+/usr/share/clearwater/bin/poll-tcp 4000 ${management_local_ip:-$local_ip}
+sta=$?
+if [ $sta -ne 0 ]; then
+    exit $sta
+fi
+
+if [ -d /var/lib/clearwater-etcd/${management_local_ip:-$local_ip} ]; then
+    # If we can talk to etcd, check to see if we can write a key value and exit
+    # with bad status, if we can't. This is done because there have been
+    # occasions where etcd was listening to its port, but wasn't functioning
+    # properly, so doing this check lets monit restart it.
+    curl -L http://${management_local_ip:-$local_ip}:4000/v2/keys/${management_local_ip:-$local_ip} -XPUT -d value="Hello world" 2>&1|grep -q '"value":"Hello world"'
+    exit $?
+fi
+
+exit 0
+

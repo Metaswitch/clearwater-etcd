@@ -122,11 +122,24 @@ join_cluster()
         done
         IFS=$OLD_IFS
 
+	# Check to make sure the cluster we want to join is healthy.
+	# If it's not, refuse to try joining. We do this because
+	# observation indicate that doing so may cause problems in the
+	# existing cluster, so to be on the safe side we check before
+	# joining. Besides joining an unhealthy cluster is not likely
+	# to work anyway, so why bother trying.
+	/usr/bin/etcdctl cluster-health 2>&1 | grep "cluster is healthy"
+        if [ $? -ne 0 ]
+        then
+          echo "Not joining an unhealthy cluster"
+          exit 2
+        fi
+
         # Tell the cluster we're joining, this prints useful environment
         # variables to stdout but also prints a success message so strip that
         # out before saving the variables to the temp file.
         # If we're already in the member list, remove ourselves first
-        member=$(/usr/bin/etcdctl member list | grep $local_ip | cut -f1 -d:)
+        member=$(/usr/bin/etcdctl member list | grep ${management_local_ip:-$local_ip} | cut -f1 -d:)
         if [[ $member != '' ]]
         then
           /usr/bin/etcdctl member remove $member
@@ -180,11 +193,18 @@ join_or_create_cluster()
 
 wait_for_etcd()
 {
-        # Wait for etcd to come up.
+        # Wait for etcd to come up, but timeout after 60 seconds
+        stm=$(date +%s)
         while true; do
           if nc -z $listen_ip 4000; then
             break;
           else
+	    ctm=$(date +%s)
+	    let "dtm=$ctm - $stm"
+	    if [ $dtm -gt 60 ]; then
+		echo "Etcd fail to come up"
+		exit 2
+	    fi
             sleep 1
           fi
         done
@@ -217,6 +237,15 @@ do_start()
           fi
 
           join_or_create_cluster
+	  # Lose the race by delaying... I don't like delaying, but I couldn't
+	  # determine anything concrete to wait for. There's some kind of
+	  # race between adding ourselves as a member and starting the daemon.
+	  # If the daemon comes up too fast, it will fail with an error
+	  # like this:
+	  #     2015/06/20 07:54:38 etcd: error validating peerURLs 192-168-165-80=http://192.168.165.80:2380,192-168-165-81=http://192.168.165.81:2380,192-168-165-82=http://192.168.165.82:2380,192-168-165-84=http://192.168.165.84:2380,=http://192.168.165.85:2380: member count is unequal
+	  # After that error, monit will restart the daemon and the cycle
+	  # continues forever, never recovering.
+	  sleep 5
         fi
 
         # Common arguments
@@ -231,6 +260,23 @@ do_start()
                 || return 2
 
         wait_for_etcd
+
+        # See that etcd stays up for more than a few seconds. There have been times when
+	# we get into an infinite loop restarting etcd when its configuration
+	# won't allow it to come up. The following looks for a specific error
+	# at the end of etcd's log file and if it's there, we'll take action and
+	# prevent the loop from continuing.
+        for i in {1..5}; do
+          if ! nc -z $listen_ip 4000; then
+	    if tail -1 /var/log/clearwater-etcd/clearwater-etcd.log | grep -q "etcdserver: the data-dir used by this member must be removed[.]"; then
+		echo "etcd didn't stay up due to data-dir error - removing it..."
+		rm -rf $DATA_DIR/$advertisement_ip
+		break;
+	    fi
+          else
+            sleep 1
+          fi
+        done
 }
 
 do_rebuild()
