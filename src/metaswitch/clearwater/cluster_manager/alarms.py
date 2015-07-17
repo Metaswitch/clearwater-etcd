@@ -41,23 +41,12 @@
 import logging
 from threading import Thread, Condition
 from .constants import RAISE_TOO_LONG_CLUSTERING, CLEAR_TOO_LONG_CLUSTERING
-import imp
+from metaswitch.common.alarms import issue_alarm as int_issue_alarm
 
 _log = logging.getLogger("cluster_manager.alarms")
 
-sendrequest = None
-
-try:
-    file, pathname, description = imp.find_module("alarms", ["/usr/share/clearwater/bin"])
-    mod = imp.load_module("alarms", file, pathname, description)
-    sendrequest = mod.sendrequest
-except ImportError:
-    _log.error("Could not import /usr/share/clearwater/bin/alarms.py, alarms will not be sent")
-
-
 def issue_alarm(identifier):
-    if sendrequest:
-        sendrequest(["issue-alarm", "cluster-manager", identifier])
+    int_issue_alarm("cluster-manager", identifier)
 
 
 class TooLongAlarm(object):

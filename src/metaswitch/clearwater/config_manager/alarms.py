@@ -39,9 +39,9 @@
 
 
 import logging
-import imp
 import os
 from threading import Lock
+from metaswitch.common.alarms import issue_alarm as int_issue_alarm
 from . import pdlogs
 
 CLEAR_GLOBAL_CONFIG_NOT_SYNCHED = "6503.1"
@@ -49,18 +49,8 @@ RAISE_GLOBAL_CONFIG_NOT_SYNCHED = "6503.3"
 
 _log = logging.getLogger("config_manager.alarms")
 
-sendrequest = None
-
-try:
-    file, pathname, description = imp.find_module("alarms", ["/usr/share/clearwater/bin"])
-    mod = imp.load_module("alarms", file, pathname, description)
-    sendrequest = mod.sendrequest
-except ImportError:
-    _log.error("Could not import /usr/share/clearwater/bin/alarms.py, alarms will not be sent")
-
 def issue_alarm(identifier):
-    if sendrequest:
-        sendrequest(["issue-alarm", "config-manager", identifier])
+    int_issue_alarm("config-manager", identifier)
 
 class ConfigAlarm(object):
     def __init__(self, files=[]):
