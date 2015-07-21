@@ -204,28 +204,44 @@ do_start()
 
         ETCD_NAME=${advertisement_ip//./-}
         CLUSTER_ARGS=
-        if [[ -d $DATA_DIR/$advertisement_ip ]]
+
+        if [ -n "$etcd_cluster" ] && [ -n "$etcd_proxy" ]
         then
-          # We'll start normally using the data we saved off on our last boot.
-          echo "Rejoining cluster..."
-        else
-          # Exit if the etcd_cluster value hasn't been set
-          if [ -z "$etcd_cluster" ]
+          echo "Cannot specify both etcd_cluster and etcd_proxy"
+          return 2
+        elif [ -n "$etcd_cluster" ]
+        then
+          # Join or create the etcd cluster as a full member.
+
+          if [[ -d $DATA_DIR/$advertisement_ip ]]
           then
-            echo "Can't start clearwater-etcd without a etcd_cluster setting in /etc/clearwater/config"
-            return 2
+            # We'll start normally using the data we saved off on our last boot.
+            echo "Rejoining cluster..."
+          else
+            join_or_create_cluster
           fi
 
-          join_or_create_cluster
-        fi
+          # Common arguments
+          DAEMON_ARGS="--listen-client-urls http://$listen_ip:4000
+                       --advertise-client-urls http://$advertisement_ip:4000
+                       --listen-peer-urls http://$listen_ip:2380
+                       --initial-advertise-peer-urls http://$advertisement_ip:2380
+                       --data-dir $DATA_DIR/$advertisement_ip
+                       --name $ETCD_NAME"
+        elif [ -n "$etcd_proxy" ]
+        then
+          # Run etcd as a proxy talking to the cluster.
 
-        # Common arguments
-        DAEMON_ARGS="--listen-client-urls http://$listen_ip:4000
-                     --advertise-client-urls http://$advertisement_ip:4000
-                     --listen-peer-urls http://$listen_ip:2380
-                     --initial-advertise-peer-urls http://$advertisement_ip:2380
-                     --data-dir $DATA_DIR/$advertisement_ip
-                     --name $ETCD_NAME"
+          CLUSTER_ARGS="--initial-cluster $etcd_proxy"
+          DAEMON_ARGS="--listen-client-urls http://$listen_ip:4000
+                       --advertise-client-urls http://$advertisement_ip:4000
+                       --proxy on
+                       --data-dir $DATA_DIR/$advertisement_ip
+                       --name $ETCD_NAME"
+        else
+          echo "Must specify either etcd_cluster or etcd_proxy"
+          return 2
+        fi
 
         start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --startas $DAEMONWRAPPER --chuid $NAME -- $DAEMON_ARGS $CLUSTER_ARGS \
                 || return 2
