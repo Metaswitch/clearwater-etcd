@@ -174,9 +174,10 @@ def main(args):
     install_sigquit_handler(synchronizers)
     install_sigterm_handler(synchronizers)
 
-    for thread in threads:
-        while thread.isAlive():
-            thread.join(1)
+    while any([thread.isAlive() for thread in threads]):
+        for thread in threads:
+            if thread.isAlive():
+                thread.join(1)
 
     _log.info("No plugin threads running, waiting for a SIGTERM or SIGQUIT")
     while not should_quit:
