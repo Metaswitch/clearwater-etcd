@@ -97,41 +97,11 @@ class EtcdSynchronizer(object):
 
             if result is None or result.modifiedIndex == self._index:
                 while not self._terminate_flag:
-                    try:
-                        _log.info("Watching for changes")
-
-                        # Calculate the args for the wait
-                        args = dict(wait=True,
-                                    timeout=0,
-                                    recursive=False,
-                                    quorum=True)
-                        if self._index is not None:
-                            args['waitIndex'] = result.modifiedIndex + 1
-
-                        # Wait for the key to change
-                        result = self._client.read(full_key,
-                                                   **args)
+                    _log.info("Watching for changes")
+                    waitIndex = None if (self._index is None or result is None) else result.modifiedIndex + 1
+                    result = self.waitHelper(full_key, waitIndex=waitIndex)
+                    if result is not None:
                         break
-                    except urllib3.exceptions.TimeoutError:
-                        # Timeouts after 5 seconds are expected, so ignore them
-                        # - unless we're terminating, we'll stay in the while
-                        # loop and try again
-                        pass
-                    except etcd.EtcdException as e:
-                        # We have seen timeouts getting raised as EtcdExceptions
-                        # so catch these here too and treat them as timeouts if
-                        # they indicate that the read timed out.
-                        if "Read timed out" in e.message:
-                            pass
-                        else:
-                            raise
-                    except ValueError:
-                        # The index isn't valid to watch on, probably because
-                        # there has been a snapshot between the get and the
-                        # watch. Just start the read again.
-                        _log.info("etcd index {} is invalid, retrying".format(
-                            result.modifiedIndex+1))
-                        self.read_from_etcd()
 
                 # Return if we're terminating.
                 if self._terminate_flag:
@@ -154,3 +124,45 @@ class EtcdSynchronizer(object):
             # function again after we return, causing the read to be retried.
 
         return value
+
+    def waitHelper(self, full_key, waitIndex):
+        result = None
+        # Calculate the args for the wait
+        args = dict(wait=True,
+                    timeout=0,
+                    recursive=False,
+                    quorum=True)
+        if waitIndex is not None:
+            args['waitIndex'] = waitIndex
+
+        try:
+            # Wait for the key to change
+            result = self._client.read(full_key,
+                                       **args)
+        except urllib3.exceptions.TimeoutError:
+            # Timeouts after 5 seconds are expected, so ignore them
+            # - unless we're terminating, we'll stay in the while
+            # loop and try again
+            pass
+        except etcd.EtcdEventIndexCleared as e:
+            # A snapshot has occurred since the last change, invalidating the
+            # index, so wait again from the earliest index possible.
+
+            # etcd doesn't pass the earliest index back in a structured way, but
+            # we can parse it out of the error message.
+            m = re.search("the requested history has been cleared [(\d+)/(\d+)]", e.message)
+            new_index = m.group(1) if m is not None else None
+            _log.info("An etcd snapshot has invalidated index %d - "
+                      "starting a new watch with index %d",
+                      args.get('waitIndex', None),
+                      new_index)
+            result = self.waitHelper(full_key, waitIndex=new_index)
+        except etcd.EtcdException as e:
+            # We have seen timeouts getting raised as EtcdExceptions
+            # so catch these here too and treat them as timeouts if
+            # they indicate that the read timed out.
+            if "Read timed out" in e.message:
+                pass
+            else:
+                raise
+        return result
