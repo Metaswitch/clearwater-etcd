@@ -42,13 +42,16 @@ from .dummy_plugin import DummyPlugin
 from time import sleep
 import json
 from etcd import EtcdKeyError
+from mock import patch, MagicMock
 
+alarms_patch = patch("metaswitch.clearwater.cluster_manager.alarms.issue_alarm", new=MagicMock)
 
 class BaseClusterTest(unittest.TestCase):
     def setUp(self):
         SyncFSM.DELAY = 0.1
         EtcdSynchronizer.PAUSE_BEFORE_RETRY = 0
         MockEtcdClient.clear()
+        alarms_patch.start()
 
     def wait_for_all_normal(self, client, required_number=-1, tries=20):
         for i in range(tries):
