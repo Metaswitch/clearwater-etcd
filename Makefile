@@ -22,13 +22,13 @@ ${ENV_DIR}/bin/flake8: env
 ${ENV_DIR}/bin/coverage: env
 	${ENV_DIR}/bin/pip install coverage
 
-verify: ${ENV_DIR}/bin/flake8
+verify: ${ENV_DIR}/bin/flake8 alarms
 	${ENV_DIR}/bin/flake8 --select=E10,E11,E9,F src/
 
-style: ${ENV_DIR}/bin/flake8
+style: ${ENV_DIR}/bin/flake8 alarms
 	${ENV_DIR}/bin/flake8 --select=E,W,C,N --max-line-length=100 src/
 
-explain-style: ${ENV_DIR}/bin/flake8
+explain-style: ${ENV_DIR}/bin/flake8 alarms
 	${ENV_DIR}/bin/flake8 --select=E,W,C,N --show-pep8 --first --max-line-length=100 src/
 
 .PHONY: coverage
@@ -78,7 +78,7 @@ cluster-mgr-build-eggs: cluster_mgr_setup.py shared_setup.py common/setup.py src
 	${ENV_DIR}/bin/easy_install -zmaxd cluster_mgr_eggs/ cluster_mgr_eggs/metaswitchcommon-0.1-py2.7.egg
 
 alarms: 
-	python common/metaswitch/common/alarms_parser.py --json-file="clearwater-config-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_config_manager_alarms.json" --constants-file="src/metaswitch/clearwater/config_manager/alarm_constants.py"
+	python common/metaswitch/common/alarms_writer.py --json-file="clearwater-config-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_config_manager_alarms.json" --constants-file="src/metaswitch/clearwater/config_manager/alarm_constants.py"
 
 
 .PHONY: deb
