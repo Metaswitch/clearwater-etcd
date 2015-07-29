@@ -1,0 +1,43 @@
+{
+    "alarms": [
+        {
+            "index": 6500,
+            "name": "ETCD_PROCESS_FAIL",
+            "cause": "SOFTWARE_ERROR",
+            "levels": [
+                {
+                    "severity": "CLEARED",
+                    "details": "The etcd process has been restored to normal operation.",
+                    "description": "etcd: Process failure cleared"
+                },
+                {
+                    "severity": "CRITICAL",
+                    "details": "Monit has detected that the local etcd process has failed. A restart will automatically be attempted. If this alarm does not clear, the etcd process may have been stopped or an unrecoverable failure may have occurred.",
+                    "description": "etcd: Process failure"
+                }
+            ]
+        },
+        {
+            "index": 6501,
+            "name": "ETCD_CLUSTER_HEALTH",
+            "cause": "UNDERLYING_RESOURCE_UNAVAILABLE",
+            "levels": [
+                {
+                    "severity": "CLEARED",
+                    "details": "All etcd cluster members are reporting normal operation.",
+                    "description": "etcd: Cluster is healthy"
+                },
+                {
+                    "severity": "MAJOR",
+                    "details": "etcd is unable to confirm the health of one of its cluster nodes. It will periodically attempt to reconnect. If this alarm does not clear, ensure that all etcd instances are operational and verify network connectivity to reporting nodes.",
+                    "description": "etcd: Cluster node is unhealthy"
+                },
+                {
+                    "severity": "CRITICAL",
+                    "details": "etcd is unable to contact a quorum of its cluster nodes.It will periodically attempt to reconnect. If this alarm does not clear, ensure that all etcd instances are operational and verify network connectivity to reporting nodes.",
+                    "description": "etcd: Cluster is unhealthy"
+                }
+            ]
+        }
+    ]
+}
