@@ -42,10 +42,8 @@ import logging
 import os
 from threading import Lock
 from metaswitch.common.alarms import issue_alarm as int_issue_alarm
+from alarm_constants import GLOBAL_CONFIG_NOT_SYNCHED_CLEARED, GLOBAL_CONFIG_NOT_SYNCHED_CRITICAL
 from . import pdlogs
-
-CLEAR_GLOBAL_CONFIG_NOT_SYNCHED = "6503.1"
-RAISE_GLOBAL_CONFIG_NOT_SYNCHED = "6503.3"
 
 _log = logging.getLogger("config_manager.alarms")
 
@@ -70,7 +68,7 @@ class ConfigAlarm(object):
 
     def check_alarm(self):
         if all(self._files.values()):
-            issue_alarm(CLEAR_GLOBAL_CONFIG_NOT_SYNCHED)
+            issue_alarm(GLOBAL_CONFIG_NOT_SYNCHED_CLEARED)
         else:
-            issue_alarm(RAISE_GLOBAL_CONFIG_NOT_SYNCHED)
+            issue_alarm(GLOBAL_CONFIG_NOT_SYNCHED_CRITICAL)
             pdlogs.NO_SHARED_CONFIG_ALARM.log()
