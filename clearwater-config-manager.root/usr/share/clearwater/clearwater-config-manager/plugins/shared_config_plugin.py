@@ -46,7 +46,9 @@ services = { "sprout": "quiesce",
              "ralf": "stop",
              "homestead-prov": "stop",
              "memento": "stop",
-             "ellis": "stop" }
+             "ellis": "stop",
+             "clearwater-snmp-alarm-agent": "stop",
+             "astaire": "stop"}
 
 
 class SharedConfigPlugin(ConfigPluginBase):
