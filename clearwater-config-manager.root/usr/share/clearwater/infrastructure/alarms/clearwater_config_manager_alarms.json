@@ -2,7 +2,7 @@
     "alarms": [
         {
             "name": "GLOBAL_CONFIG_NOT_SYNCHED",
-            "index": 6503,
+            "index": 8500,
             "cause": "SOFTWARE_ERROR",
             "levels": [
                 {
