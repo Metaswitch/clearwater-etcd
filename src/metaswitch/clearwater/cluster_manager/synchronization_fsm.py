@@ -32,7 +32,7 @@
 
 
 from time import sleep
-from .constants import *
+import constants
 from .alarms import TooLongAlarm
 from . import pdlogs
 import logging
@@ -88,11 +88,11 @@ class SyncFSM(object):
         return self._running
 
     def _switch_all_to_joining(self, cluster_view):
-        return {k: (JOINING if v == WAITING_TO_JOIN else v)
+        return {k: (constants.JOINING if v == constants.WAITING_TO_JOIN else v)
                 for k, v in cluster_view.iteritems()}
 
     def _switch_all_to_leaving(self, cluster_view):
-        return {k: (LEAVING if v == WAITING_TO_LEAVE else v)
+        return {k: (constants.LEAVING if v == constants.WAITING_TO_LEAVE else v)
                 for k, v in cluster_view.iteritems()}
 
     def _delete_myself(self, cluster_view):
@@ -100,13 +100,13 @@ class SyncFSM(object):
 
     def _log_joining_nodes(self, cluster_view):
         for node, state in cluster_view.iteritems():
-            if state in [JOINING, JOINING_ACKNOWLEDGED_CHANGE]:
+            if state in [constants.JOINING, constants.JOINING_ACKNOWLEDGED_CHANGE]:
                 pdlogs.NODE_JOINING.log(ip=node,
                                         cluster_desc=self._plugin.cluster_description())
 
     def _log_leaving_nodes(self, cluster_view):
         for node, state in cluster_view.iteritems():
-            if state in [LEAVING, LEAVING_ACKNOWLEDGED_CHANGE]:
+            if state in [constants.LEAVING, constants.LEAVING_ACKNOWLEDGED_CHANGE]:
                 pdlogs.NODE_LEAVING.log(ip=node,
                                         cluster_desc=self._plugin.cluster_description())
 
@@ -135,7 +135,7 @@ class SyncFSM(object):
 
         # If we're mid-scale-up, ensure that the "scaling operation taking too
         # long" alarm is running, and cancel it if we're not
-        if local_state == NORMAL:
+        if local_state == constants.NORMAL:
             self._alarm.cancel()
         else:
             self._alarm.trigger(self._id)
@@ -146,22 +146,22 @@ class SyncFSM(object):
 
         if not self._plugin.should_be_in_cluster():
             # This plugin is just monitoring a remote cluster
-            if cluster_state in [JOINING_CONFIG_CHANGING,
-                                 LEAVING_CONFIG_CHANGING]:
+            if cluster_state in [constants.JOINING_CONFIG_CHANGING,
+                                 constants.LEAVING_CONFIG_CHANGING]:
                 safe_plugin(self._plugin.on_cluster_changing,
                             cluster_view)
-            elif cluster_state == STABLE:
+            elif cluster_state == constants.STABLE:
                 safe_plugin(self._plugin.on_stable_cluster,
                             cluster_view)
             return None
 
         if local_state is None:
-            if cluster_state in [EMPTY, STABLE, JOIN_PENDING]:
-                return WAITING_TO_JOIN
+            if cluster_state in [constants.EMPTY, constants.STABLE, constants.JOIN_PENDING]:
+                return constants.WAITING_TO_JOIN
             else:
                 return None
 
-        if local_state == ERROR:
+        if local_state == constants.ERROR:
             return None
 
         # Main body of this function - define the action and next state for each
@@ -171,12 +171,12 @@ class SyncFSM(object):
         # cluster, trigger the plugin to do whatever's necessary to refect that
         # (e.g. removing mid-scale-up config).
 
-        elif (cluster_state == STABLE and
-                local_state == NORMAL):
+        elif (cluster_state == constants.STABLE and
+                local_state == constants.NORMAL):
             return safe_plugin(self._plugin.on_stable_cluster,
                                cluster_view)
-        elif (cluster_state == STABLE_WITH_ERRORS and
-                local_state == NORMAL):
+        elif (cluster_state == constants.STABLE_WITH_ERRORS and
+                local_state == constants.NORMAL):
             return safe_plugin(self._plugin.on_stable_cluster,
                                cluster_view)
 
@@ -189,13 +189,13 @@ class SyncFSM(object):
 
         # Existing nodes (in NORMAL state) should do nothing.
 
-        elif (cluster_state == JOIN_PENDING and
-                local_state == WAITING_TO_JOIN):
+        elif (cluster_state == constants.JOIN_PENDING and
+                local_state == constants.WAITING_TO_JOIN):
             _log.info("Pausing for %d seconds in case more nodes are joining the cluster" % SyncFSM.DELAY)
             sleep(SyncFSM.DELAY)
             return self._switch_all_to_joining(cluster_view)
-        elif (cluster_state == JOIN_PENDING and
-                local_state == NORMAL):
+        elif (cluster_state == constants.JOIN_PENDING and
+                local_state == constants.NORMAL):
             return None
 
         # STARTED_JOINING state involves everyone acknowledging that scale-up is
@@ -204,20 +204,20 @@ class SyncFSM(object):
         # have to do anything else until everyone has switched to that state, at
         # which point the cluster is in JOINING_CONFIG_CHANGING state).
 
-        elif (cluster_state == STARTED_JOINING and
-                local_state == JOINING_ACKNOWLEDGED_CHANGE):
+        elif (cluster_state == constants.STARTED_JOINING and
+                local_state == constants.JOINING_ACKNOWLEDGED_CHANGE):
             return None
-        elif (cluster_state == STARTED_JOINING and
-                local_state == NORMAL_ACKNOWLEDGED_CHANGE):
+        elif (cluster_state == constants.STARTED_JOINING and
+                local_state == constants.NORMAL_ACKNOWLEDGED_CHANGE):
             return None
-        elif (cluster_state == STARTED_JOINING and
-                local_state == NORMAL):
+        elif (cluster_state == constants.STARTED_JOINING and
+                local_state == constants.NORMAL):
             self._log_joining_nodes(cluster_view)
-            return NORMAL_ACKNOWLEDGED_CHANGE
-        elif (cluster_state == STARTED_JOINING and
-                local_state == JOINING):
+            return constants.NORMAL_ACKNOWLEDGED_CHANGE
+        elif (cluster_state == constants.STARTED_JOINING and
+                local_state == constants.JOINING):
             self._log_joining_nodes(cluster_view)
-            return JOINING_ACKNOWLEDGED_CHANGE
+            return constants.JOINING_ACKNOWLEDGED_CHANGE
 
         # JOINING_CONFIG_CHANGING state starts when everyone has acknowledged
         # that scale-up is happening, and ends when everyone has updated their
@@ -228,22 +228,22 @@ class SyncFSM(object):
         # - Nodes in NORMAL_CONFIG_CHANGED/JOINING_CONFIG_CHANGED state don't
         # have any more work to do in this phase
 
-        elif (cluster_state == JOINING_CONFIG_CHANGING and
-                local_state == JOINING_CONFIG_CHANGED):
+        elif (cluster_state == constants.JOINING_CONFIG_CHANGING and
+                local_state == constants.JOINING_CONFIG_CHANGED):
             return None
-        elif (cluster_state == JOINING_CONFIG_CHANGING and
-                local_state == NORMAL_CONFIG_CHANGED):
+        elif (cluster_state == constants.JOINING_CONFIG_CHANGING and
+                local_state == constants.NORMAL_CONFIG_CHANGED):
             return None
-        elif (cluster_state == JOINING_CONFIG_CHANGING and
-                local_state == NORMAL_ACKNOWLEDGED_CHANGE):
+        elif (cluster_state == constants.JOINING_CONFIG_CHANGING and
+                local_state == constants.NORMAL_ACKNOWLEDGED_CHANGE):
             return safe_plugin(self._plugin.on_cluster_changing,
                                cluster_view,
-                               new_state=NORMAL_CONFIG_CHANGED)
-        elif (cluster_state == JOINING_CONFIG_CHANGING and
-                local_state == JOINING_ACKNOWLEDGED_CHANGE):
+                               new_state=constants.NORMAL_CONFIG_CHANGED)
+        elif (cluster_state == constants.JOINING_CONFIG_CHANGING and
+                local_state == constants.JOINING_ACKNOWLEDGED_CHANGE):
             return safe_plugin(self._plugin.on_joining_cluster,
                                cluster_view,
-                               new_state=JOINING_CONFIG_CHANGED)
+                               new_state=constants.JOINING_CONFIG_CHANGED)
 
         # JOINING_RESYNCING state starts when everyone has updated their
         # config, and ends when everyone has resynchronised their data around
@@ -253,19 +253,19 @@ class SyncFSM(object):
         # NORMAL state.
         # - Nodes in NORMAL state don't have any more work to do.
 
-        elif (cluster_state == JOINING_RESYNCING and
-                local_state == NORMAL):
+        elif (cluster_state == constants.JOINING_RESYNCING and
+                local_state == constants.NORMAL):
             return None
-        elif (cluster_state == JOINING_RESYNCING and
-                local_state == NORMAL_CONFIG_CHANGED):
+        elif (cluster_state == constants.JOINING_RESYNCING and
+                local_state == constants.NORMAL_CONFIG_CHANGED):
             return safe_plugin(self._plugin.on_new_cluster_config_ready,
                                cluster_view,
-                               new_state=NORMAL)
-        elif (cluster_state == JOINING_RESYNCING and
-                local_state == JOINING_CONFIG_CHANGED):
+                               new_state=constants.NORMAL)
+        elif (cluster_state == constants.JOINING_RESYNCING and
+                local_state == constants.JOINING_CONFIG_CHANGED):
             return safe_plugin(self._plugin.on_new_cluster_config_ready,
                                cluster_view,
-                               new_state=NORMAL)
+                               new_state=constants.NORMAL)
 
         # States for leaving a cluster
 
@@ -275,13 +275,13 @@ class SyncFSM(object):
         # scale-down.
 
         # Remaining nodes (in NORMAL state) should do nothing.
-        elif (cluster_state == LEAVE_PENDING and
-                local_state == WAITING_TO_LEAVE):
+        elif (cluster_state == constants.LEAVE_PENDING and
+                local_state == constants.WAITING_TO_LEAVE):
             _log.info("Pausing for %d seconds in case more nodes are leaving the cluster" % SyncFSM.DELAY)
             sleep(SyncFSM.DELAY)
             return self._switch_all_to_leaving(cluster_view)
-        elif (cluster_state == LEAVE_PENDING and
-                local_state == NORMAL):
+        elif (cluster_state == constants.LEAVE_PENDING and
+                local_state == constants.NORMAL):
             return None
 
         # STARTED_LEAVING state involves everyone acknowledging that scale-down
@@ -290,20 +290,20 @@ class SyncFSM(object):
         # have to do anything else until everyone has switched to that state, at
         # which point the cluster is in LEAVING_CONFIG_CHANGING state).
 
-        elif (cluster_state == STARTED_LEAVING and
-                local_state == LEAVING_ACKNOWLEDGED_CHANGE):
+        elif (cluster_state == constants.STARTED_LEAVING and
+                local_state == constants.LEAVING_ACKNOWLEDGED_CHANGE):
             return None
-        elif (cluster_state == STARTED_LEAVING and
-                local_state == NORMAL_ACKNOWLEDGED_CHANGE):
+        elif (cluster_state == constants.STARTED_LEAVING and
+                local_state == constants.NORMAL_ACKNOWLEDGED_CHANGE):
             return None
-        elif (cluster_state == STARTED_LEAVING and
-                local_state == NORMAL):
+        elif (cluster_state == constants.STARTED_LEAVING and
+                local_state == constants.NORMAL):
             self._log_leaving_nodes(cluster_view)
-            return NORMAL_ACKNOWLEDGED_CHANGE
-        elif (cluster_state == STARTED_LEAVING and
-                local_state == LEAVING):
+            return constants.NORMAL_ACKNOWLEDGED_CHANGE
+        elif (cluster_state == constants.STARTED_LEAVING and
+                local_state == constants.LEAVING):
             self._log_leaving_nodes(cluster_view)
-            return LEAVING_ACKNOWLEDGED_CHANGE
+            return constants.LEAVING_ACKNOWLEDGED_CHANGE
 
         # LEAVING_CONFIG_CHANGING state starts when everyone has acknowledged
         # that scale-down is happening, and ends when everyone has updated their
@@ -314,22 +314,22 @@ class SyncFSM(object):
         # - Nodes in NORMAL_CONFIG_CHANGED/LEAVING_CONFIG_CHANGED state don't
         # have any more work to do in this phase
 
-        elif (cluster_state == LEAVING_CONFIG_CHANGING and
-                local_state == NORMAL_CONFIG_CHANGED):
+        elif (cluster_state == constants.LEAVING_CONFIG_CHANGING and
+                local_state == constants.NORMAL_CONFIG_CHANGED):
                 return None
-        elif (cluster_state == LEAVING_CONFIG_CHANGING and
-                local_state == LEAVING_CONFIG_CHANGED):
+        elif (cluster_state == constants.LEAVING_CONFIG_CHANGING and
+                local_state == constants.LEAVING_CONFIG_CHANGED):
                 return None
-        elif (cluster_state == LEAVING_CONFIG_CHANGING and
-                local_state == NORMAL_ACKNOWLEDGED_CHANGE):
+        elif (cluster_state == constants.LEAVING_CONFIG_CHANGING and
+                local_state == constants.NORMAL_ACKNOWLEDGED_CHANGE):
             return safe_plugin(self._plugin.on_cluster_changing,
                                cluster_view,
-                               new_state=NORMAL_CONFIG_CHANGED)
-        elif (cluster_state == LEAVING_CONFIG_CHANGING and
-                local_state == LEAVING_ACKNOWLEDGED_CHANGE):
+                               new_state=constants.NORMAL_CONFIG_CHANGED)
+        elif (cluster_state == constants.LEAVING_CONFIG_CHANGING and
+                local_state == constants.LEAVING_ACKNOWLEDGED_CHANGE):
             return safe_plugin(self._plugin.on_cluster_changing,
                                cluster_view,
-                               new_state=LEAVING_CONFIG_CHANGED)
+                               new_state=constants.LEAVING_CONFIG_CHANGED)
 
         # LEAVING_RESYNCING state starts when everyone has updated their
         # config, and ends when everyone has resynchronised their data around
@@ -339,33 +339,33 @@ class SyncFSM(object):
         # NORMAL state.
         # - Nodes in NORMAL or FINISHED state don't have any more work to do.
 
-        elif (cluster_state == LEAVING_RESYNCING and
-                local_state == NORMAL):
+        elif (cluster_state == constants.LEAVING_RESYNCING and
+                local_state == constants.NORMAL):
             return None
-        elif (cluster_state == LEAVING_RESYNCING and
-                local_state == FINISHED):
+        elif (cluster_state == constants.LEAVING_RESYNCING and
+                local_state == constants.FINISHED):
             return None
-        elif (cluster_state == LEAVING_RESYNCING and
-                local_state == LEAVING_CONFIG_CHANGED):
+        elif (cluster_state == constants.LEAVING_RESYNCING and
+                local_state == constants.LEAVING_CONFIG_CHANGED):
             return safe_plugin(self._plugin.on_new_cluster_config_ready,
                                cluster_view,
-                               new_state=FINISHED)
-        elif (cluster_state == LEAVING_RESYNCING and
-                local_state == NORMAL_CONFIG_CHANGED):
+                               new_state=constants.FINISHED)
+        elif (cluster_state == constants.LEAVING_RESYNCING and
+                local_state == constants.NORMAL_CONFIG_CHANGED):
             return safe_plugin(self._plugin.on_new_cluster_config_ready,
                                cluster_view,
-                               new_state=NORMAL)
+                               new_state=constants.NORMAL)
 
         # In FINISHED_LEAVING state, everyone is in NORMAL state (if they're
         # remaining, in which case they should do nothing) or FINISHED state (if
         # they're done, in which case they kick their plugin and then leave the
         # cluster.
 
-        elif (cluster_state == FINISHED_LEAVING and
-                local_state == NORMAL):
+        elif (cluster_state == constants.FINISHED_LEAVING and
+                local_state == constants.NORMAL):
             return None
-        elif (cluster_state == FINISHED_LEAVING and
-                local_state == FINISHED):
+        elif (cluster_state == constants.FINISHED_LEAVING and
+                local_state == constants.FINISHED):
             # This node is finished, so this state machine (and this thread)
             # should stop.
             self._running = False

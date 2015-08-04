@@ -32,7 +32,6 @@
 
 
 import logging
-import socket
 import time
 import yaml
 from textwrap import dedent

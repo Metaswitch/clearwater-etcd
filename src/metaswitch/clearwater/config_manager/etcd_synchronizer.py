@@ -31,6 +31,7 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 import etcd
+import re
 from time import sleep
 from hashlib import md5
 
