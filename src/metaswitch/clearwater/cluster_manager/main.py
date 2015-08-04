@@ -62,9 +62,8 @@ from metaswitch.clearwater.cluster_manager.plugin_base import PluginParams
 from metaswitch.clearwater.cluster_manager import pdlogs
 import logging
 import os
-import sys
 import syslog
-from threading import Thread, activeCount
+from threading import activeCount
 from time import sleep
 import signal
 
