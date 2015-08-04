@@ -122,11 +122,15 @@ join_cluster()
         done
         IFS=$OLD_IFS
 
-        # Tell the cluster we're joining, this prints useful environment
-        # variables to stdout but also prints a success message so strip that
-        # out before saving the variables to the temp file.
-        # If we're already in the member list, remove ourselves first
-        member=$(/usr/bin/etcdctl member list | grep $local_ip | cut -f1 -d:)
+        # If we're already in the member list, remove ourselves first. This
+        # copes with a race condition where member add succeeds but etcd
+        # doesn't then come up.
+        #
+        # The output of member list looks like:
+        # <id>[unstarted]: name=xx-xx-xx-xx peerURLs=http://xx.xx.xx.xx:2380 clientURLs=http://xx.xx.xx.xx:4000
+        # The [unstarted] is only present while the member hasn't fully
+        # joined the etcd cluster
+        member=$(/usr/bin/etcdctl member list | grep $local_ip | sed -e 's/\(\[[^ ]*\]\)\?:.*$//g')
         if [[ $member != '' ]]
         then
           /usr/bin/etcdctl member remove $member
@@ -140,6 +144,9 @@ join_cluster()
           fi 
         fi
         
+        # Tell the cluster we're joining, this prints useful environment
+        # variables to stdout but also prints a success message so strip that
+        # out before saving the variables to the temp file.
         /usr/bin/etcdctl member add $ETCD_NAME http://$advertisement_ip:2380 | grep -v "Added member" >> $TEMP_FILE
         if [[ $? != 0 ]]
         then

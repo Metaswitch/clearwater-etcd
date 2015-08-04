@@ -274,8 +274,7 @@ class EtcdSynchronizer(object):
                                                              wait=True,
                                                              waitIndex=result.modifiedIndex+1,
                                                              timeout=0,
-                                                             recursive=False,
-                                                             quorum=True)
+                                                             recursive=False)
                         futures.wait([result_future, self.terminate_future], return_when=futures.FIRST_COMPLETED)
                         if result_future.done():
                             # This should always be the case unless we're about

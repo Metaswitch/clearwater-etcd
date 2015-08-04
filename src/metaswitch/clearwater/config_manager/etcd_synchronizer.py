@@ -130,8 +130,7 @@ class EtcdSynchronizer(object):
         # Calculate the args for the wait
         args = dict(wait=True,
                     timeout=0,
-                    recursive=False,
-                    quorum=True)
+                    recursive=False)
         if waitIndex is not None:
             args['waitIndex'] = waitIndex
 
