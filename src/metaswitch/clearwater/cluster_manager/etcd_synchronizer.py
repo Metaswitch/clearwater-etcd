@@ -39,7 +39,7 @@ from threading import Thread
 from time import sleep
 from concurrent import futures
 
-from .constants import *
+import constants
 from .synchronization_fsm import SyncFSM
 import urllib3
 import logging
@@ -96,11 +96,11 @@ class EtcdSynchronizer(object):
                 # state. Check the leaving flag and the cluster state. If necessary,
                 # set this node to WAITING_TO_LEAVE. Otherwise, kick the FSM.
                 if self._leaving_flag and \
-                        (cluster_state == STABLE or
-                         cluster_state == LEAVE_PENDING or
-                        (self.force_leave and cluster_state == STABLE_WITH_ERRORS)):
+                        (cluster_state == constants.STABLE or
+                         cluster_state == constants.LEAVE_PENDING or
+                        (self.force_leave and cluster_state == constants.STABLE_WITH_ERRORS)):
                     _log.info("Cluster is in a stable state, so leaving the cluster now")
-                    new_state = WAITING_TO_LEAVE
+                    new_state = constants.WAITING_TO_LEAVE
                 else:
                     local_state = self.calculate_local_state(cluster_view)
                     new_state = self._fsm.next(local_state,
@@ -140,11 +140,11 @@ class EtcdSynchronizer(object):
 
         cluster_state = self.calculate_cluster_state(cluster_view)
 
-        if cluster_state == STABLE or \
-           cluster_state == LEAVE_PENDING or \
-                (self.force_leave and cluster_state == STABLE_WITH_ERRORS):
+        if cluster_state == constants.STABLE or \
+           cluster_state == constants.LEAVE_PENDING or \
+                (self.force_leave and cluster_state == constants.STABLE_WITH_ERRORS):
             _log.info("Cluster is in a stable state, so leaving the cluster immediately")
-            self.write_to_etcd(cluster_view, WAITING_TO_LEAVE)
+            self.write_to_etcd(cluster_view, constants.WAITING_TO_LEAVE)
         else:
             _log.info("Can't leave the cluster immediately - will do so when the cluster next stabilises")
             self._leaving_flag = True
@@ -159,7 +159,7 @@ class EtcdSynchronizer(object):
         cluster_view = self.parse_cluster_view(result.value)
         self._index = result.modifiedIndex
 
-        self.write_to_etcd(cluster_view, ERROR)
+        self.write_to_etcd(cluster_view, constants.ERROR)
 
     # Calculate the state of the cluster based on the state of all the nodes in
     # the cluster.
@@ -177,7 +177,7 @@ class EtcdSynchronizer(object):
 
             # Count the total number of nodes in the cluster. Ignore nodes in
             # ERROR state.
-            if state != ERROR:
+            if state != constants.ERROR:
                 node_count += 1
             else:
                 error_count += 1
@@ -200,46 +200,46 @@ class EtcdSynchronizer(object):
             return has_minimum and (total == node_count)
 
         if node_count == 0 and error_count == 0:
-            return EMPTY
-        elif node_state_counts[NORMAL] == node_count and error_count == 0:
-            return STABLE
-        elif node_state_counts[NORMAL] == node_count:
-            return STABLE_WITH_ERRORS
-        elif state_check(oneOrMore=[NORMAL, WAITING_TO_JOIN]):
-            return JOIN_PENDING
-        elif state_check(oneOrMore=[NORMAL, JOINING],
-                         zeroOrMore=[NORMAL_ACKNOWLEDGED_CHANGE,
-                                     JOINING_ACKNOWLEDGED_CHANGE]):
-            return STARTED_JOINING
-        elif state_check(oneOrMore=[NORMAL_ACKNOWLEDGED_CHANGE,
-                                    JOINING_ACKNOWLEDGED_CHANGE],
-                         zeroOrMore=[NORMAL_CONFIG_CHANGED,
-                                     JOINING_CONFIG_CHANGED]):
-            return JOINING_CONFIG_CHANGING
-        elif state_check(oneOrMore=[NORMAL_CONFIG_CHANGED,
-                                    JOINING_CONFIG_CHANGED],
-                         zeroOrMore=[NORMAL]):
-            return JOINING_RESYNCING
-        elif state_check(oneOrMore=[NORMAL, WAITING_TO_LEAVE]):
-            return LEAVE_PENDING
-        elif state_check(oneOrMore=[NORMAL, LEAVING],
-                         zeroOrMore=[NORMAL_ACKNOWLEDGED_CHANGE,
-                                     LEAVING_ACKNOWLEDGED_CHANGE]):
-            return STARTED_LEAVING
-        elif state_check(oneOrMore=[NORMAL_ACKNOWLEDGED_CHANGE,
-                                    LEAVING_ACKNOWLEDGED_CHANGE],
-                         zeroOrMore=[NORMAL_CONFIG_CHANGED,
-                                     LEAVING_CONFIG_CHANGED]):
-            return LEAVING_CONFIG_CHANGING
-        elif state_check(oneOrMore=[NORMAL_CONFIG_CHANGED,
-                                    LEAVING_CONFIG_CHANGED],
-                         zeroOrMore=[NORMAL, FINISHED]):
-            return LEAVING_RESYNCING
-        elif state_check(oneOrMore=[NORMAL, FINISHED]):
-            return FINISHED_LEAVING
+            return constants.EMPTY
+        elif node_state_counts[constants.NORMAL] == node_count and error_count == 0:
+            return constants.STABLE
+        elif node_state_counts[constants.NORMAL] == node_count:
+            return constants.STABLE_WITH_ERRORS
+        elif state_check(oneOrMore=[constants.NORMAL, constants.WAITING_TO_JOIN]):
+            return constants.JOIN_PENDING
+        elif state_check(oneOrMore=[constants.NORMAL, constants.JOINING],
+                         zeroOrMore=[constants.NORMAL_ACKNOWLEDGED_CHANGE,
+                                     constants.JOINING_ACKNOWLEDGED_CHANGE]):
+            return constants.STARTED_JOINING
+        elif state_check(oneOrMore=[constants.NORMAL_ACKNOWLEDGED_CHANGE,
+                                    constants.JOINING_ACKNOWLEDGED_CHANGE],
+                         zeroOrMore=[constants.NORMAL_CONFIG_CHANGED,
+                                     constants.JOINING_CONFIG_CHANGED]):
+            return constants.JOINING_CONFIG_CHANGING
+        elif state_check(oneOrMore=[constants.NORMAL_CONFIG_CHANGED,
+                                    constants.JOINING_CONFIG_CHANGED],
+                         zeroOrMore=[constants.NORMAL]):
+            return constants.JOINING_RESYNCING
+        elif state_check(oneOrMore=[constants.NORMAL, constants.WAITING_TO_LEAVE]):
+            return constants.LEAVE_PENDING
+        elif state_check(oneOrMore=[constants.NORMAL, constants.LEAVING],
+                         zeroOrMore=[constants.NORMAL_ACKNOWLEDGED_CHANGE,
+                                     constants.LEAVING_ACKNOWLEDGED_CHANGE]):
+            return constants.STARTED_LEAVING
+        elif state_check(oneOrMore=[constants.NORMAL_ACKNOWLEDGED_CHANGE,
+                                    constants.LEAVING_ACKNOWLEDGED_CHANGE],
+                         zeroOrMore=[constants.NORMAL_CONFIG_CHANGED,
+                                     constants.LEAVING_CONFIG_CHANGED]):
+            return constants.LEAVING_CONFIG_CHANGING
+        elif state_check(oneOrMore=[constants.NORMAL_CONFIG_CHANGED,
+                                    constants.LEAVING_CONFIG_CHANGED],
+                         zeroOrMore=[constants.NORMAL, constants.FINISHED]):
+            return constants.LEAVING_RESYNCING
+        elif state_check(oneOrMore=[constants.NORMAL, constants.FINISHED]):
+            return constants.FINISHED_LEAVING
         else:
             # Cluster in unexpected state.
-            return INVALID_CLUSTER_STATE
+            return constants.INVALID_CLUSTER_STATE
 
     # Returns the local node's state in the cluster, and None if the local node
     # is not in the cluster.
@@ -382,7 +382,7 @@ class EtcdSynchronizer(object):
                 # or the overall deployment state has changed (in which case we
                 # may want to change our state to something else, so check for
                 # that.
-                if ((new_state == ERROR) or
+                if ((new_state == constants.ERROR) or
                     (cluster_view.get(self._ip) == old_cluster_view.get(self._ip) and
                     (self.calculate_cluster_state(cluster_view) ==
                      self.calculate_cluster_state(old_cluster_view)))):
