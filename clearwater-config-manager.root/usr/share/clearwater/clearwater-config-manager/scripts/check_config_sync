@@ -39,4 +39,4 @@ fi
 
 local_site_name=site1
 . /etc/clearwater/local_config
-/usr/share/clearwater/clearwater-config-manager/scripts/check_config_sync.py $local_ip $local_site_name
+/usr/share/clearwater/clearwater-config-manager/scripts/check_config_sync.py "${management_local_ip:-$local_ip}" "$local_site_name"

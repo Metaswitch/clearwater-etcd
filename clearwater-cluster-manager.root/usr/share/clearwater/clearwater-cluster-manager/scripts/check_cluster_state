@@ -43,4 +43,4 @@ then
   exit 1
 fi
 
-/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-cluster-manager/scripts/check_cluster_state.py "$local_ip" "$local_site_name" "$remote_site_name"
+/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-cluster-manager/scripts/check_cluster_state.py "${management_local_ip:-$local_ip}" "$local_ip" "$local_site_name" "$remote_site_name"
