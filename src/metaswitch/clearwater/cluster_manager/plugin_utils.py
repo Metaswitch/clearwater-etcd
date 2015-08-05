@@ -146,8 +146,7 @@ def join_cassandra_cluster(cluster_view,
         _log.warning("No Cassandra cluster defined in etcd - unable to join")
 
 def can_contact_cassandra():
-    # Use poll-tcp to allow us to contact the signalling namespace
-    rc = run_command("/usr/share/clearwater/bin/poll-tcp 9160 127.0.0.1")
+    rc = run_command("/usr/share/clearwater/bin/poll-cassandra")
     return (rc == 0)
 
 def leave_cassandra_cluster(namespace=None):

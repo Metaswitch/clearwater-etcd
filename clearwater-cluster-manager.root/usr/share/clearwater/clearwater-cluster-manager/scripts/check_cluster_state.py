@@ -35,9 +35,10 @@ import sys
 import etcd
 import json
 
-local_node = sys.argv[1]
-local_site = sys.argv[2]
-remote_site = sys.argv[3]
+mgmt_node = sys.argv[1]
+local_node = sys.argv[2]
+local_site = sys.argv[3]
+remote_site = sys.argv[4]
 
 datastores = [
     ("sprout", "memcached", local_site),
@@ -55,7 +56,7 @@ datastores = [
     ("memento", "cassandra", "")
 ]
 
-client = etcd.Client(local_node, 4000)
+client = etcd.Client(mgmt_node, 4000)
 
 
 def describe_cluster(node_type, site, store_name):

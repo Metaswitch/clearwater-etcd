@@ -46,7 +46,7 @@
 alarm_state_file="/tmp/.clearwater_etcd_alarm_issued"
 
 . /etc/clearwater/config
-export ETCDCTL_PEERS=http://$local_ip:4000
+export ETCDCTL_PEERS=http://${management_local_ip:-$local_ip}:4000
 
 # Return state of the etcd cluster, 0 if all nodes are up, 1 if some nodes are
 # down, 2 if quorum has failed.

@@ -45,4 +45,4 @@ fi
 key=$1
 json_file=$2
 
-/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-cluster-manager/scripts/force_etcd_state.py $local_ip $json_file
+/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-cluster-manager/scripts/force_etcd_state.py ${management_local_ip:-$local_ip} $json_file

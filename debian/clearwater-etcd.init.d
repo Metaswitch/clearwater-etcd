@@ -130,7 +130,7 @@ join_cluster()
         # <id>[unstarted]: name=xx-xx-xx-xx peerURLs=http://xx.xx.xx.xx:2380 clientURLs=http://xx.xx.xx.xx:4000
         # The [unstarted] is only present while the member hasn't fully
         # joined the etcd cluster
-        member=$(/usr/bin/etcdctl member list | grep $local_ip | sed -e 's/\(\[[^ ]*\]\)\?:.*$//g')
+        member=$(/usr/bin/etcdctl member list | grep $listen_ip | sed -e 's/\(\[[^ ]*\]\)\?:.*$//g')
         if [[ $member != '' ]]
         then
           /usr/bin/etcdctl member remove $member
