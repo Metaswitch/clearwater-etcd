@@ -88,6 +88,12 @@ case "$1" in
         setup_user
         setup_data_dir
         setup_log_dir
+
+        # Restart the alarm agent
+        if [ -x "/etc/init.d/clearwater-snmp-alarm-agent" ]; then
+          service clearwater-snmp-alarm-agent stop || /bin/true
+        fi
+
         install -D --mode=0644 /usr/share/clearwater/conf/clearwater-etcd.monit /etc/monit/conf.d/
         reload clearwater-monit || /bin/true
     ;;
