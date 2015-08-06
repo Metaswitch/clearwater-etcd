@@ -33,10 +33,10 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 FILENAME=/etc/clearwater/shared_config
-
-# Check we can contact `etcd`
 local_site_name=site1
 . /etc/clearwater/config
+
+# Check we can contact `etcd`
 if ! nc -z ${management_local_ip:-$local_ip} 4000
 then
   echo "The Clearwater Configuration store (etcd) is not running"
@@ -44,6 +44,7 @@ then
   exit 2
 fi
 
+# Check that there's shared configuration to upload
 if [[ ! -f $FILENAME ]]
 then
   echo "No shared configuration detected, have you run the migration script?"
@@ -51,7 +52,16 @@ then
 fi
 
 # Upload the file to etcd
-curl -X PUT \
-     http://${management_local_ip:-$local_ip}:4000/v2/keys/clearwater/$local_site_name/configuration/shared_config \
-     --data-urlencode \
-     value@$FILENAME > /dev/null
+keypath=http://${management_local_ip:-$local_ip}:4000/v2/keys/clearwater/$local_site_name/configuration/shared_config
+curl -X PUT $keypath --data-urlencode value@$FILENAME 2> /tmp/upload-shared-config.stderr.$$ | tee /tmp/upload-shared-config.stdout.$$ | egrep -q "\"action\":\"set\""
+rc=$?
+
+# Check the return code and log if appropriate.
+if [ $rc != 0 ] ; then
+  echo Upload shared configuration failed to $keypath  >&2
+  cat /tmp/upload-shared-config.stderr.$$              >&2
+  cat /tmp/upload-shared-config.stdout.$$              >&2
+fi
+rm -f /tmp/upload-shared-config.stderr.$$ /tmp/upload-shared-config.stdout.$$
+
+exit $rc
