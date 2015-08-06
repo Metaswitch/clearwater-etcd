@@ -85,13 +85,7 @@ do_start()
   log_directory=/var/log/clearwater-config-manager
   [ -r /etc/clearwater/user_settings ] && . /etc/clearwater/user_settings
 
-  if [ -z $management_local_ip ]
-  then
-    management_local_ip=$local_ip
-  fi
-
-
-  DAEMON_ARGS="--local-ip=$management_local_ip --local-site=$local_site_name --log-level=$log_level --log-directory=$log_directory --pidfile=$PIDFILE"
+  DAEMON_ARGS="--local-ip=${management_local_ip:-$local_ip} --local-site=$local_site_name --log-level=$log_level --log-directory=$log_directory --pidfile=$PIDFILE"
 
   start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null \
     || return 1
