@@ -59,7 +59,7 @@ class BaseClusterTest(unittest.TestCase):
         for i in range(tries):
             value = None
             try:
-                value = client.read("/test").value
+                value = client.read_noexcept("/test").value
                 end = json.loads(value)
                 if all([v == "normal" for k, v in end.iteritems()]) and \
                    (required_number == -1 or len(end) == required_number):
