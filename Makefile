@@ -37,7 +37,7 @@ coverage: ${ENV_DIR}/bin/coverage cluster_mgr_setup.py
 	${ENV_DIR}/bin/coverage erase
 	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run --source src/metaswitch/clearwater/cluster_manager --omit "**/test/**,**/main.py,**/plugin_utils.py"  cluster_mgr_setup.py test
 	${ENV_DIR}/bin/coverage report -m
-	${ENV_DIR}/bin/coverage html
+	${ENV_DIR}/bin/coverage xml
 
 .PHONY: env
 env: cluster_mgr_setup.py config_mgr_setup.py shared_setup.py $(ENV_DIR)/bin/python build-eggs
