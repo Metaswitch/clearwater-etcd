@@ -51,7 +51,7 @@ def safe_plugin(f, cluster_view, new_state=None):
         # return the state we should move into.
         f(cluster_view)
         return new_state
-    except AssertionError:
+    except AssertionError: # pragma: no cover
         # Allow UT plugins to assert things, halt their FSM, and be noticed more
         # easily.
         raise

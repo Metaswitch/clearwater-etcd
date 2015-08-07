@@ -54,6 +54,7 @@ class BaseClusterTest(unittest.TestCase):
         CommonEtcdSynchronizer.PAUSE_BEFORE_RETRY = 0
         MockEtcdClient.clear()
         alarms_patch.start()
+        self.syncs = []
 
     def wait_for_all_normal(self, client, required_number=-1, tries=20):
         for i in range(tries):

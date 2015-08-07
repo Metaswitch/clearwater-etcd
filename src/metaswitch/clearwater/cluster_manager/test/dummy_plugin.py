@@ -35,7 +35,7 @@ from metaswitch.clearwater.cluster_manager.plugin_base import SynchroniserPlugin
 import logging
 
 _log = logging.getLogger("example_plugin")
-
+from time import sleep
 
 class DummyPlugin(SynchroniserPluginBase):
     def __init__(self, params):
@@ -59,6 +59,11 @@ class DummyPlugin(SynchroniserPluginBase):
 
     def on_leaving_cluster(self, cluster_view):
         _log.info("I'm out of the cluster")
+
+class DummyPausePlugin(DummyPlugin):
+    def on_joining_cluster(self, cluster_view):
+        sleep(1)
+        _log.info("I'm about to join the cluster")
 
 class DummyWatcherPlugin(DummyPlugin):
     def should_be_in_cluster(self):

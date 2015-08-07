@@ -51,7 +51,9 @@ class TestInvalidState(BaseClusterTest):
         """Force an invalid etcd state, and check that the clients don't try to
         change it"""
         client = EtcdFactory()
-        invalid_state= {"10.0.0.1": "joining", "10.0.2.1": "leaving"}
+        invalid_state= {"10.0.0.1": "joining",
+                        "10.0.0.2": "error",
+                        "10.0.2.1": "leaving"}
         client.write("/test", json.dumps(invalid_state))
         self.make_and_start_synchronizers(3)
         client2 = self.syncs[0]._client

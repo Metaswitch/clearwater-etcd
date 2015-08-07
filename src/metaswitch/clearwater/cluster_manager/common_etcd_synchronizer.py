@@ -65,14 +65,11 @@ class CommonEtcdSynchronizer(object):
     def pause(self):
         sleep(self.PAUSE_BEFORE_RETRY)
 
-    def main():
-        pass
+    def main(): pass
 
-    def on_absent_key():
-        pass
+    def on_absent_key(): pass
 
-    def is_running():
-        pass
+    def is_running(): pass
 
     # Read the state of the cluster from etcd. Returns None if nothing could be
     # read.
@@ -113,10 +110,7 @@ class CommonEtcdSynchronizer(object):
 
                     # Return if we're terminating.
                     if self._terminate_flag:
-                        if result is None:
-                            return (None, None)
-                        else:
-                            return (result.value, result.modifiedIndex)
+                        return self.tuple_from_result(result)
 
         except etcd.EtcdKeyError:
             _log.info("Key {} doesn't exist in etcd yet".format(self.key()))
@@ -134,6 +128,9 @@ class CommonEtcdSynchronizer(object):
             # The main loop (which reads from etcd in a loop) should call this
             # function again after we return, causing the read to be retried.
 
+        return self.tuple_from_result(result)
+
+    def tuple_from_result(self, result):
         if result is None:
             return (None, None)
         else:

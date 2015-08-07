@@ -45,7 +45,7 @@ class ClusterInfo(object):
         self.view = {}
         try:
             self.view = json.loads(value)
-        except:
+        except: # pragma : no cover
             pass
 
         self.cluster_state = self.calculate_cluster_state(self.view)

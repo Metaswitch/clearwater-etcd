@@ -39,12 +39,17 @@ from .mock_python_etcd import EtcdFactory, SlowMockEtcdClient
 import json
 import os
 from .test_base import BaseClusterTest
-from .dummy_plugin import DummyWatcherPlugin
+from .dummy_plugin import DummyWatcherPlugin, DummyPausePlugin
 from metaswitch.clearwater.cluster_manager.etcd_synchronizer import \
     EtcdSynchronizer
 
 
 class TestWatcherPlugin(BaseClusterTest):
+
+    def setUp(self):
+        BaseClusterTest.setUp(self)
+        self.watcher_ip = "10.1.1.1"
+        self.plugin = DummyWatcherPlugin(self.watcher_ip);
 
     def tearDown(self):
         self.close_synchronizers()
@@ -53,13 +58,9 @@ class TestWatcherPlugin(BaseClusterTest):
     def test_watcher(self):
         """Create a new 3-node cluster with one plugin not in the cluster and
         check that the main three all end up in NORMAL state"""
-
-        watcher_ip = "10.1.1.1"
-        plugin = DummyWatcherPlugin(watcher_ip);
-        e = EtcdSynchronizer(plugin, watcher_ip)
+        e = EtcdSynchronizer(self.plugin, self.watcher_ip)
         e.start_thread()
-
-        self.make_and_start_synchronizers(3)
+        self.make_and_start_synchronizers(3, klass=DummyPausePlugin)
         mock_client = self.syncs[0]._client
         self.wait_for_all_normal(mock_client, required_number=3)
 
@@ -67,5 +68,31 @@ class TestWatcherPlugin(BaseClusterTest):
         self.assertEqual("normal", end.get("10.0.0.0"))
         self.assertEqual("normal", end.get("10.0.0.1"))
         self.assertEqual("normal", end.get("10.0.0.2"))
+        self.assertEqual(None, end.get("10.1.1.1"))
 
         e.terminate()
+
+    @patch("etcd.Client")
+    def test_leaving(self, client):
+        """Create a plugin not in the cluster and try to leave the cluster.
+        Nothing should be written to etcd."""
+        e = EtcdSynchronizer(self.plugin, self.watcher_ip)
+        e.start_thread()
+
+        e.leave_cluster()
+        e._client.write.assert_not_called()
+
+        e.terminate()
+
+    @patch("etcd.Client")
+    def test_mark_failed(self, client):
+        """Create a plugin not in the cluster and try to mark it as failed.
+        Nothing should be written to etcd."""
+        e = EtcdSynchronizer(self.plugin, self.watcher_ip)
+        e.start_thread()
+
+        e.mark_node_failed()
+        e._client.write.assert_not_called()
+
+        e.terminate()
+
