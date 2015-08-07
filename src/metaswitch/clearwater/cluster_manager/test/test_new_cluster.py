@@ -43,6 +43,9 @@ from .test_base import BaseClusterTest
 
 class TestNewCluster(BaseClusterTest):
 
+    def tearDown(self):
+        self.close_synchronizers()
+
     @patch("etcd.Client", new=EtcdFactory)
     def test_new_cluster(self):
         """Create a new 3-node cluster and check that they all end up
@@ -55,7 +58,6 @@ class TestNewCluster(BaseClusterTest):
         self.assertEqual("normal", end.get("10.0.0.0"))
         self.assertEqual("normal", end.get("10.0.0.1"))
         self.assertEqual("normal", end.get("10.0.0.2"))
-        self.close_synchronizers()
 
     @patch("etcd.Client", new=EtcdFactory)
     def test_large_new_cluster(self):
@@ -69,7 +71,6 @@ class TestNewCluster(BaseClusterTest):
         self.assertEqual("normal", end.get("10.0.0.3"))
         self.assertEqual("normal", end.get("10.0.0.19"))
         self.assertEqual("normal", end.get("10.0.0.29"))
-        self.close_synchronizers()
 
     @unittest.skipIf(os.environ.get("ETCD_IP"),
                      "Relies on in-memory etcd implementation")
@@ -87,4 +88,3 @@ class TestNewCluster(BaseClusterTest):
         self.assertEqual("normal", end.get("10.0.0.3"))
         self.assertEqual("normal", end.get("10.0.0.19"))
         self.assertEqual("normal", end.get("10.0.0.29"))
-        self.close_synchronizers()

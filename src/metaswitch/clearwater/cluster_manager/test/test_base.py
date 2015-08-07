@@ -55,13 +55,17 @@ class BaseClusterTest(unittest.TestCase):
 
     def wait_for_all_normal(self, client, required_number=-1, tries=20):
         for i in range(tries):
+            value = None
             try:
-                end = json.loads(client.read("/test").value)
+                value = client.read("/test").value
+                end = json.loads(value)
                 if all([v == "normal" for k, v in end.iteritems()]) and \
                    (required_number == -1 or len(end) == required_number):
                     return
             except EtcdKeyError:
                 pass
+            except ValueError:
+                print "Got bad JSON '{}'".format(value)
             sleep(0.1)
 
     def make_and_start_synchronizers(self, num, klass=DummyPlugin):

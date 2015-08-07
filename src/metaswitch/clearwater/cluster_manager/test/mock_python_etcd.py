@@ -32,7 +32,7 @@
 
 from threading import Condition
 import etcd
-from etcd import EtcdResult, Client
+from etcd import EtcdResult, Client, EtcdException
 from random import random, choice
 from time import sleep
 import urllib3
@@ -72,6 +72,7 @@ class MockEtcdClient(object):
         r.value = global_data
         r.createdIndex = 1
         r.modifiedIndex = global_index
+        r.etcd_index = global_index
         return r
 
     def write(self, key, value, prevIndex=0, prevExist=None):
@@ -89,17 +90,18 @@ class MockEtcdClient(object):
         global_condvar.release()
         return self.fake_result()
 
-    def read(self, key, index=None, timeout=None, recursive=None, **kwargs):
+    def read(self, key, wait=False, waitIndex=None, timeout=None, recursive=None, **kwargs):
         assert(key == allowed_key)
         global_condvar.acquire()
-        if global_index == 0:
-            global_condvar.release()
-            raise etcd.EtcdKeyError()
-        if index > global_index:
-            global_condvar.wait(0.1)
-        if index > global_index:
-            global_condvar.release()
-            raise urllib3.exceptions.TimeoutError
+        if wait:
+            if global_index == 0:
+                global_condvar.release()
+                raise etcd.EtcdKeyError()
+            if waitIndex > global_index:
+                global_condvar.wait(0.1)
+            if waitIndex > global_index:
+                global_condvar.release()
+                raise EtcdException("Read timed out")
         ret = self.fake_result()
         global_condvar.release()
         return ret
