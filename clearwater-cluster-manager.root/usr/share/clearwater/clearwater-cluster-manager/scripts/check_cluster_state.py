@@ -30,7 +30,7 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-
+import re
 import sys
 import etcd
 import json
@@ -40,60 +40,59 @@ local_node = sys.argv[2]
 local_site = sys.argv[3]
 remote_site = sys.argv[4]
 
-datastores = [
-    ("sprout", "memcached", local_site),
-    ("sprout", "memcached", remote_site),
-    ("sprout", "chronos", local_site),
-    ("sprout", "chronos", remote_site),
-    ("ralf", "memcached", local_site),
-    ("ralf", "memcached", remote_site),
-    ("ralf", "chronos", local_site),
-    ("ralf", "chronos", remote_site),
-    ("homestead", "cassandra", ""),
-    ("homer", "cassandra", ""),
-    ("memento", "memcached", local_site),
-    ("memento", "memcached", remote_site),
-    ("memento", "cassandra", "")
-]
-
 client = etcd.Client(mgmt_node, 4000)
 
-
-def describe_cluster(node_type, site, store_name):
-    key = "/clearwater/{}/{}/clustering/{}".format(site, node_type, store_name)
+def describe_clusters():
+    # Pull out all the clearwater keys.
+    key = "/clearwater?recursive=True"
 
     try:
         result = client.get(key)
     except etcd.EtcdKeyNotFound:
-        # There's none of the particular node type in the deployment
+        # There's no clearwater keys yet
         return
 
-    if result.value == "":
-        # Cluster does not exist
-        return
+    cluster_values = {subkey.key: subkey.value for subkey in result.leaves}
 
-    if site != "":
-        print "Describing the {} {} cluster in site {}:".format(node_type.capitalize(), store_name.capitalize(), site)
-    else:
-        print "Describing the {} {} cluster:".format(node_type.capitalize(), store_name.capitalize())
+    for (key, value) in cluster_values.items():
+        # Check if the key relates to clustering. The clustering key has the format
+        # /cleawater[</optional site name>]/<node type>clustering/<store type>
+        match_with_site = re.search(".*/([^/]+)/([^/]+)/clustering/([^/]+)", key)
+        match_without_site = re.search(".*/([^/]+)/clustering/([^/]+)", key)
 
-    cluster = json.loads(result.value)
-    cluster_ok = all([state == "normal"
-                      for node, state in cluster.iteritems()])
+        if match_with_site is not None:
+            site = match_with_site.group(1)
+            node_type = match_with_site.group(2)
+            store_name = match_with_site.group(3)
+        elif match_without_site is not None:
+            site = ""
+            node_type = match_without_site.group(1)
+            store_name = match_without_site.group(2)
+        else:
+            # The key isn't to do with clustering, skip it
+            continue
 
-    if local_node in cluster:
-        print "  The local node is in this cluster"
-    else:
-        print "  The local node is *not* in this cluster"
+        if site != "":
+            print "Describing the {} {} cluster in site {}:".format(node_type.capitalize(), store_name.capitalize(), site)
+        else:
+            print "Describing the {} {} cluster:".format(node_type.capitalize(), store_name.capitalize())
 
-    if cluster_ok:
-        print "  The cluster is stable"
-    else:
-        print "  The cluster is *not* stable"
+        cluster = json.loads(value)
+        cluster_ok = all([state == "normal"
+                          for node, state in cluster.iteritems()])
 
-    for node, state in cluster.iteritems():
-        print "    {} is in state {}".format(node, state)
-    print ""
+        if local_node in cluster:
+            print "  The local node is in this cluster"
+        else:
+            print "  The local node is *not* in this cluster"
 
-for node_type, store_name, site in datastores:
-    describe_cluster(node_type, site, store_name)
+        if cluster_ok:
+            print "  The cluster is stable"
+        else:
+            print "  The cluster is *not* stable"
+
+        for node, state in cluster.iteritems():
+            print "    {} is in state {}".format(node, state)
+        print ""
+
+describe_clusters()
