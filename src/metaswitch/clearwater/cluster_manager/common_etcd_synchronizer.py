@@ -47,10 +47,8 @@ class CommonEtcdSynchronizer(object):
     def __init__(self, plugin, ip, etcd_ip=None):
         self._plugin = plugin
         self._ip = ip
-        if etcd_ip:
-            self._client = etcd.Client(etcd_ip, 4000)
-        else:
-            self._client = etcd.Client(ip, 4000)
+        cxn_ip = etcd_ip or ip
+        self._client = etcd.Client(cxn_ip, 4000)
         self._index = None
         self._last_value = None
         self._terminate_flag = False
@@ -63,10 +61,6 @@ class CommonEtcdSynchronizer(object):
     def terminate(self):
         self._terminate_flag = True
         self.thread.join()
-
-    def wait_for_terminate(self):
-        while not self._terminate_flag:
-            sleep(1)
 
     def pause(self):
         sleep(self.PAUSE_BEFORE_RETRY)

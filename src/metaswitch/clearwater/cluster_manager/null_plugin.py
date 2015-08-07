@@ -43,13 +43,13 @@ class NullPlugin(SynchroniserPluginBase):
     def on_cluster_changing(self, cluster_view):
         pass
 
-    def on_joining_cluster(self, cluster_view):
+    def on_joining_cluster(self, cluster_view):  # pragma: no cover
         pass
 
-    def on_new_cluster_config_ready(self, cluster_view):
+    def on_new_cluster_config_ready(self, cluster_view): # pragma: no cover
         pass
 
-    def on_stable_cluster(self, cluster_view):
+    def on_stable_cluster(self, cluster_view): # pragma: no cover
         pass
 
     def on_leaving_cluster(self, cluster_view):

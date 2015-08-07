@@ -85,7 +85,7 @@ class ClusterInfo(object):
         def state_check(zeroOrMore=None, oneOrMore=None):
             if not zeroOrMore:
                 zeroOrMore = []
-            if not oneOrMore:
+            if not oneOrMore: # pragma: no cover
                 oneOrMore = []
 
             states_to_sum = zeroOrMore + oneOrMore
@@ -133,7 +133,7 @@ class ClusterInfo(object):
             return constants.LEAVING_RESYNCING
         elif state_check(oneOrMore=[constants.NORMAL, constants.FINISHED]):
             return constants.FINISHED_LEAVING
-        else:
+        else: # pragma: no cover
             # Cluster in unexpected state.
             return constants.INVALID_CLUSTER_STATE
 
