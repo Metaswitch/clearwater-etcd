@@ -38,6 +38,8 @@ from .mock_python_etcd import MockEtcdClient
 from metaswitch.clearwater.cluster_manager.synchronization_fsm import SyncFSM
 from metaswitch.clearwater.cluster_manager.etcd_synchronizer import \
     EtcdSynchronizer
+from metaswitch.clearwater.cluster_manager.common_etcd_synchronizer import \
+    CommonEtcdSynchronizer
 from .dummy_plugin import DummyPlugin
 from time import sleep
 import json
@@ -49,7 +51,7 @@ alarms_patch = patch("metaswitch.clearwater.cluster_manager.alarms.issue_alarm",
 class BaseClusterTest(unittest.TestCase):
     def setUp(self):
         SyncFSM.DELAY = 0.1
-        EtcdSynchronizer.PAUSE_BEFORE_RETRY = 0
+        CommonEtcdSynchronizer.PAUSE_BEFORE_RETRY = 0
         MockEtcdClient.clear()
         alarms_patch.start()
 
