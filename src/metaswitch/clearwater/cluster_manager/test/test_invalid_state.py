@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015 Metaswitch Networks Ltd
 #
@@ -31,35 +33,29 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 
-from metaswitch.clearwater.cluster_manager.plugin_base import SynchroniserPluginBase
-import logging
+import unittest
+from mock import patch
+from .mock_python_etcd import EtcdFactory, SlowMockEtcdClient
+import json
+import os
+from .test_base import BaseClusterTest
+from time import sleep
 
-_log = logging.getLogger("example_plugin")
+class TestInvalidState(BaseClusterTest):
 
+    def tearDown(self):
+        self.close_synchronizers()
 
-class DummyPlugin(SynchroniserPluginBase):
-    def __init__(self, params):
-        _log.debug("Raising not-clustered alarm")
+    @patch("etcd.Client", new=EtcdFactory)
+    def test_invalid_state(self):
+        """Force an invalid etcd state, and check that the clients don't try to
+        change it"""
+        client = EtcdFactory()
+        invalid_state= {"10.0.0.1": "joining", "10.0.2.1": "leaving"}
+        client.write("/test", json.dumps(invalid_state))
+        self.make_and_start_synchronizers(3)
+        client2 = self.syncs[0]._client
+        sleep(0.5)
 
-    def key(self):
-        return "/test"
-
-    def on_cluster_changing(self, cluster_view):
-        _log.debug("New view of the cluster is {}".format(cluster_view))
-
-    def on_joining_cluster(self, cluster_view):
-        _log.info("I'm about to join the cluster")
-
-    def on_new_cluster_config_ready(self, cluster_view):
-        _log.info("All nodes have updated configuration")
-
-    def on_stable_cluster(self, cluster_view):
-        _log.info("Cluster is stable")
-        _log.debug("Clearing not-clustered alarm")
-
-    def on_leaving_cluster(self, cluster_view):
-        _log.info("I'm out of the cluster")
-
-class DummyWatcherPlugin(DummyPlugin):
-    def should_be_in_cluster(self):
-        return False
+        end = json.loads(client2.read("/test").value)
+        self.assertEqual(end, invalid_state)

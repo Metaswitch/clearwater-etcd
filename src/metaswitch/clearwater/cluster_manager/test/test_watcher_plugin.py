@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015 Metaswitch Networks Ltd
 #
@@ -31,35 +33,39 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 
-from metaswitch.clearwater.cluster_manager.plugin_base import SynchroniserPluginBase
-import logging
+import unittest
+from mock import patch
+from .mock_python_etcd import EtcdFactory, SlowMockEtcdClient
+import json
+import os
+from .test_base import BaseClusterTest
+from .dummy_plugin import DummyWatcherPlugin
+from metaswitch.clearwater.cluster_manager.etcd_synchronizer import \
+    EtcdSynchronizer
 
-_log = logging.getLogger("example_plugin")
 
+class TestWatcherPlugin(BaseClusterTest):
 
-class DummyPlugin(SynchroniserPluginBase):
-    def __init__(self, params):
-        _log.debug("Raising not-clustered alarm")
+    def tearDown(self):
+        self.close_synchronizers()
 
-    def key(self):
-        return "/test"
+    @patch("etcd.Client", new=EtcdFactory)
+    def test_watcher(self):
+        """Create a new 3-node cluster with one plugin not in the cluster and
+        check that the main three all end up in NORMAL state"""
 
-    def on_cluster_changing(self, cluster_view):
-        _log.debug("New view of the cluster is {}".format(cluster_view))
+        watcher_ip = "10.1.1.1"
+        plugin = DummyWatcherPlugin(watcher_ip);
+        e = EtcdSynchronizer(plugin, watcher_ip)
+        e.start_thread()
 
-    def on_joining_cluster(self, cluster_view):
-        _log.info("I'm about to join the cluster")
+        self.make_and_start_synchronizers(3)
+        mock_client = self.syncs[0]._client
+        self.wait_for_all_normal(mock_client, required_number=3)
 
-    def on_new_cluster_config_ready(self, cluster_view):
-        _log.info("All nodes have updated configuration")
+        end = json.loads(mock_client.read("/test").value)
+        self.assertEqual("normal", end.get("10.0.0.0"))
+        self.assertEqual("normal", end.get("10.0.0.1"))
+        self.assertEqual("normal", end.get("10.0.0.2"))
 
-    def on_stable_cluster(self, cluster_view):
-        _log.info("Cluster is stable")
-        _log.debug("Clearing not-clustered alarm")
-
-    def on_leaving_cluster(self, cluster_view):
-        _log.info("I'm out of the cluster")
-
-class DummyWatcherPlugin(DummyPlugin):
-    def should_be_in_cluster(self):
-        return False
+        e.terminate()

@@ -133,7 +133,7 @@ class ClusterInfo(object):
             return constants.LEAVING_RESYNCING
         elif state_check(oneOrMore=[constants.NORMAL, constants.FINISHED]):
             return constants.FINISHED_LEAVING
-        else: # pragma: no cover
+        else:
             # Cluster in unexpected state.
             return constants.INVALID_CLUSTER_STATE
 
