@@ -131,4 +131,6 @@ class ExceptionMockEtcdClient(MockEtcdClient):
         return super(ExceptionMockEtcdClient, self).read(*args, **kwargs)
 
     def read_noexcept(self, *args, **kwargs):
+        """Method to allow the UT infrastructure to read the value, without
+        triggering an exception."""
         return super(ExceptionMockEtcdClient, self).read(*args, **kwargs)

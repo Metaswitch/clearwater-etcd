@@ -34,15 +34,15 @@
 
 
 import unittest
-from mock import patch
+from mock import patch, MagicMock
 from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import EtcdFactory, SlowMockEtcdClient
 import json
 import os
 from .test_base import BaseClusterTest
-from .dummy_plugin import DummyWatcherPlugin, DummyPausePlugin
+from .dummy_plugin import DummyWatcherPlugin
 from metaswitch.clearwater.cluster_manager.etcd_synchronizer import \
     EtcdSynchronizer
-
+from time import sleep
 
 class TestWatcherPlugin(BaseClusterTest):
 
@@ -58,11 +58,18 @@ class TestWatcherPlugin(BaseClusterTest):
     def test_watcher(self):
         """Create a new 3-node cluster with one plugin not in the cluster and
         check that the main three all end up in NORMAL state"""
+
         e = EtcdSynchronizer(self.plugin, self.watcher_ip)
         e.start_thread()
-        self.make_and_start_synchronizers(3, klass=DummyPausePlugin)
+
+        self.make_and_start_synchronizers(3)
         mock_client = self.syncs[0]._client
         self.wait_for_all_normal(mock_client, required_number=3)
+
+        # Pause for one second - the watcher plugin might be called just after
+        # all other nodes enter 'normal' state
+        sleep(1)
+        self.assertTrue(self.plugin.on_stable_cluster_called)
 
         end = json.loads(mock_client.read("/test").value)
         self.assertEqual("normal", end.get("10.0.0.0"))

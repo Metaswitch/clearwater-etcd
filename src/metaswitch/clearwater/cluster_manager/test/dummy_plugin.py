@@ -60,11 +60,9 @@ class DummyPlugin(SynchroniserPluginBase):
     def on_leaving_cluster(self, cluster_view):
         _log.info("I'm out of the cluster")
 
-class DummyPausePlugin(DummyPlugin):
-    def on_joining_cluster(self, cluster_view):
-        sleep(1)
-        _log.info("I'm about to join the cluster")
-
 class DummyWatcherPlugin(DummyPlugin):
+    def on_stable_cluster(self, cluster_view):
+        self.on_stable_cluster_called = True
+
     def should_be_in_cluster(self):
         return False

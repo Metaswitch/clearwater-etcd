@@ -47,14 +47,19 @@ alarms_patch = patch("metaswitch.clearwater.config_manager.alarms.issue_alarm", 
 
 class BasicTest(unittest.TestCase):
     @patch("etcd.Client", new=EtcdFactory)
-    def test_creation(self):
+    def test_synchronisation(self):
         p = TestPlugin()
         e = EtcdSynchronizer(p, "10.0.0.1", "local", None)
-        e._client.write("/clearwater/local/configuration//test", "hello world")
         thread = Thread(target=e.main)
         thread.daemon=True
         thread.start()
-        sleep(2)
+
+        # Write a new value into etcd, and check that the plugin is called with
+        # it
+        e._client.write("/clearwater/local/configuration/test", "hello world")
+        sleep(1)
         p._on_config_changed.assert_called_with("hello world", None)
+
+        # Allow the EtcdSynchronizer to exit
         e._terminate_flag = True
         sleep(1)
