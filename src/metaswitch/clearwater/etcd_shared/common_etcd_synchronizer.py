@@ -80,7 +80,6 @@ class CommonEtcdSynchronizer(object):
 
         try:
             result = self._client.read(self.key(), quorum=True)
-            value = result.value
             wait_index = result.etcd_index+1
 
             if wait:

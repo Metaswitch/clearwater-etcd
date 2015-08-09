@@ -33,11 +33,9 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 
-import unittest
-from mock import patch, MagicMock
-from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import EtcdFactory, SlowMockEtcdClient
+from mock import patch
+from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import EtcdFactory
 import json
-import os
 from .test_base import BaseClusterTest
 from .dummy_plugin import DummyWatcherPlugin
 from metaswitch.clearwater.cluster_manager.etcd_synchronizer import \

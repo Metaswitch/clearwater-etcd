@@ -35,7 +35,6 @@ import etcd
 from etcd import EtcdResult, Client, EtcdException, EtcdKeyError
 from random import random, choice
 from time import sleep
-import urllib3
 import os
 
 allowed_key = '/test'

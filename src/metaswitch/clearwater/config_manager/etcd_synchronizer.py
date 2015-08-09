@@ -30,15 +30,11 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-import etcd
-import re
-from time import sleep
 from hashlib import md5
 
 from .pdlogs import FILE_CHANGED
 from metaswitch.clearwater.etcd_shared.common_etcd_synchronizer import CommonEtcdSynchronizer
 
-import urllib3
 import logging
 
 _log = logging.getLogger("config_manager.etcd_synchronizer")

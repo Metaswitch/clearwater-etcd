@@ -34,7 +34,7 @@
 
 
 import unittest
-from mock import patch, MagicMock
+from mock import patch
 from metaswitch.clearwater.config_manager.alarms import ConfigAlarm, GLOBAL_CONFIG_NOT_SYNCHED_CLEARED, GLOBAL_CONFIG_NOT_SYNCHED_CRITICAL
 
 class AlarmTest(unittest.TestCase):
@@ -52,5 +52,5 @@ class AlarmTest(unittest.TestCase):
     def test_existing_file(self, issue_alarm):
         # Create a ConfigAlarm for a file that exists. The alarm should
         # immediately be cleared.
-        a = ConfigAlarm(files=["/etc/passwd"])
+        ConfigAlarm(files=["/etc/passwd"])
         issue_alarm.assert_called_with(GLOBAL_CONFIG_NOT_SYNCHED_CLEARED)

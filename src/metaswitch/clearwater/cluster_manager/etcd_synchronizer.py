@@ -32,17 +32,12 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-import etcd
 import json
-from collections import defaultdict
-from threading import Thread
-from concurrent import futures
 
 import constants
 from .synchronization_fsm import SyncFSM
 from metaswitch.clearwater.etcd_shared.common_etcd_synchronizer import CommonEtcdSynchronizer
 from .cluster_state import ClusterInfo
-import urllib3
 import logging
 
 _log = logging.getLogger(__name__)
@@ -61,7 +56,6 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
     def is_running(self):
         return self._fsm.is_running()
 
-
     def main(self):
         # Continue looping while the FSM is running.
         while self._fsm.is_running():
@@ -74,11 +68,12 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
                 _log.debug("Got new state %s from etcd" % etcd_value)
                 cluster_info = ClusterInfo(etcd_value)
 
-                # This node can only leave the cluster if the cluster is in a stable
-                # state. Check the leaving flag and the cluster state. If necessary,
-                # set this node to WAITING_TO_LEAVE. Otherwise, kick the FSM.
+                # This node can only leave the cluster if the cluster is in a
+                # stable state. Check the leaving flag and the cluster state. If
+                # necessary, set this node to WAITING_TO_LEAVE. Otherwise, kick
+                # the FSM.
                 if (self._leaving_flag and
-                    cluster_info.can_leave(allow_errors=self.force_leave)):
+                        cluster_info.can_leave(allow_errors=self.force_leave)):
                     _log.info("Cluster is in a stable state, so leaving the cluster now")
                     new_state = constants.WAITING_TO_LEAVE
                 else:
@@ -92,7 +87,8 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
                 else:
                     _log.debug("No state change")
             else:
-                _log.warning("read_from_etcd returned None, indicating a failure to get data from etcd")
+                _log.warning("read_from_etcd returned None, " +
+                             "indicating a failure to get data from etcd")
 
         _log.info("Quitting FSM")
         self._fsm.quit()
@@ -101,7 +97,8 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
     # a stable state, in which case we can leave. Otherwise, set a flag and
     # leave at the next available opportunity.
     def leave_cluster(self):
-        _log.info("Trying to leave the cluster - plugin %s" % self._plugin.__class__.__name__)
+        _log.info("Trying to leave the cluster - plugin %s" %
+                  self._plugin.__class__.__name__)
 
         if not self._plugin.should_be_in_cluster():
             _log.info("No need to leave remote cluster - just exit")
@@ -115,11 +112,11 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
             _log.info("Cluster is in a stable state, so leaving the cluster immediately")
             self.write_to_etcd(cluster_info, constants.WAITING_TO_LEAVE)
         else:
-            _log.info("Can't leave the cluster immediately - will do so when the cluster next stabilises")
+            _log.info("Can't leave the cluster immediately - " +
+                      "will do so when the cluster next stabilises")
             self._leaving_flag = True
 
     def mark_node_failed(self):
-
         if not self._plugin.should_be_in_cluster():
             _log.debug("No need to mark failure in remote cluster - doing nothing")
             # We're just monitoring this cluster, not in it, so leaving is a
@@ -156,8 +153,6 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
             else:
                 self._client.write(self.key(), json_data, prevExist=False)
 
-            #self._last_value = json_data
-
             # We may have just successfully set the local node to
             # WAITING_TO_LEAVE, in which case we no longer need the leaving
             # flag.
@@ -189,7 +184,7 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
             # unset our state and start over.
             _log.error("{} caught {!r} when trying to write {} with index {}"
                        " - pause before retrying"
-                .format(self._ip, e, json_data, self._index))
+                       .format(self._ip, e, json_data, self._index))
             # Setting last_cluster_view to None means that the next successful
             # read from etcd will trigger the state machine, which will mean
             # that any necessary work/state changes get retried.

@@ -35,7 +35,6 @@ from metaswitch.clearwater.cluster_manager.plugin_base import SynchroniserPlugin
 import logging
 
 _log = logging.getLogger("example_plugin")
-from time import sleep
 
 class DummyPlugin(SynchroniserPluginBase):
     def __init__(self, params):
