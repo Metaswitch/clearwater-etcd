@@ -35,8 +35,8 @@ explain-style: ${ENV_DIR}/bin/flake8
 coverage: ${ENV_DIR}/bin/coverage cluster_mgr_setup.py
 	rm -rf htmlcov/
 	${ENV_DIR}/bin/coverage erase
-	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run -p --source src/metaswitch/clearwater/cluster_manager --omit "**/test/**,**/main.py,**/plugin_utils.py"  cluster_mgr_setup.py test
-	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run -a -p --source src/metaswitch/clearwater/config_manager --omit "**/test/**,**/main.py,**/plugin_utils.py"  config_mgr_setup.py test
+	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run -p --source src/ --omit "**/test/**,**/main.py,**/plugin_utils.py"  cluster_mgr_setup.py test
+	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run -a -p --source src/ --omit "**/test/**,**/main.py,**/plugin_utils.py"  config_mgr_setup.py test
 	${ENV_DIR}/bin/coverage combine
 	${ENV_DIR}/bin/coverage report -m
 	${ENV_DIR}/bin/coverage xml

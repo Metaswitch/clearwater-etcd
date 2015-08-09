@@ -78,7 +78,6 @@ class MockEtcdClient(object):
     def write(self, key, value, prevIndex=0, prevExist=None):
         global global_index
         global global_data
-        assert(key == allowed_key)
         global_condvar.acquire()
         if (((prevIndex != global_index) and (prevIndex != 0)) or
                 (prevExist and global_index != 0)):
@@ -91,7 +90,6 @@ class MockEtcdClient(object):
         return self.fake_result()
 
     def read(self, key, wait=False, waitIndex=None, timeout=None, recursive=None, **kwargs):
-        assert(key == allowed_key)
         with global_condvar:
             if wait:
                 if global_index == 0:

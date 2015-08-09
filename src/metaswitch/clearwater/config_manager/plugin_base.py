@@ -36,7 +36,7 @@ class FileStatus:
     OUT_OF_SYNC = 1
     MISSING = 2
 
-class ConfigPluginBase(object):
+class ConfigPluginBase(object): # pragma : no cover
     __metaclass__ = ABCMeta
 
     @abstractmethod
