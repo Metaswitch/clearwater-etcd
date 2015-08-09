@@ -34,11 +34,11 @@
 
 
 import unittest
-from .mock_python_etcd import MockEtcdClient
+from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import MockEtcdClient
 from metaswitch.clearwater.cluster_manager.synchronization_fsm import SyncFSM
 from metaswitch.clearwater.cluster_manager.etcd_synchronizer import \
     EtcdSynchronizer
-from metaswitch.clearwater.cluster_manager.common_etcd_synchronizer import \
+from metaswitch.clearwater.etcd_shared.common_etcd_synchronizer import \
     CommonEtcdSynchronizer
 from .dummy_plugin import DummyPlugin
 from time import sleep

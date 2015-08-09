@@ -35,7 +35,7 @@
 
 import unittest
 from mock import patch
-from .mock_python_etcd import EtcdFactory, SlowMockEtcdClient
+from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import EtcdFactory, SlowMockEtcdClient
 import json
 import os
 from .test_base import BaseClusterTest

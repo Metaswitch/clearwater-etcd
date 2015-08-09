@@ -34,7 +34,7 @@
 
 import unittest
 from mock import patch
-from .mock_python_etcd import SlowMockEtcdClient
+from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import SlowMockEtcdClient
 from .contention_detecting_plugin import ContentionDetectingPlugin
 import json
 import os

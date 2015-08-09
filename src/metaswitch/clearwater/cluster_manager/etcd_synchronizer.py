@@ -40,7 +40,7 @@ from concurrent import futures
 
 import constants
 from .synchronization_fsm import SyncFSM
-from .common_etcd_synchronizer import CommonEtcdSynchronizer
+from metaswitch.clearwater.etcd_shared.common_etcd_synchronizer import CommonEtcdSynchronizer
 from .cluster_state import ClusterInfo
 import urllib3
 import logging

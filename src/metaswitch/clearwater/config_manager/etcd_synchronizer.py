@@ -36,7 +36,7 @@ from time import sleep
 from hashlib import md5
 
 from .pdlogs import FILE_CHANGED
-from metaswitch.clearwater.cluster_manager.common_etcd_synchronizer import CommonEtcdSynchronizer
+from metaswitch.clearwater.etcd_shared.common_etcd_synchronizer import CommonEtcdSynchronizer
 
 import urllib3
 import logging

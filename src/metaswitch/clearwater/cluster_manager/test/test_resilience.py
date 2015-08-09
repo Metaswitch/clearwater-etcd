@@ -35,7 +35,7 @@
 
 import unittest
 from mock import patch
-from .mock_python_etcd import ExceptionMockEtcdClient
+from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import ExceptionMockEtcdClient
 import json
 from .test_base import BaseClusterTest
 import os
