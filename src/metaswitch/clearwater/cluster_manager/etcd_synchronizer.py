@@ -61,8 +61,6 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
     def is_running(self):
         return self._fsm.is_running()
 
-    def thread_name(self):
-        return self._plugin.__class__.__name__
 
     def main(self):
         # Continue looping while the FSM is running.

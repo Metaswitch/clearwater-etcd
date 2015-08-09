@@ -65,11 +65,12 @@ class CommonEtcdSynchronizer(object):
     def pause(self):
         sleep(self.PAUSE_BEFORE_RETRY)
 
-    def main(): pass
+    def main(self): pass
 
-    def on_absent_key(): pass
+    def is_running(self): return True
 
-    def is_running(): pass
+    def thread_name(self):
+        return self._plugin.__class__.__name__
 
     # Read the state of the cluster from etcd. Returns None if nothing could be
     # read.
