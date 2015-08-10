@@ -30,7 +30,6 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-
 import sys
 import etcd
 import json
@@ -40,60 +39,60 @@ local_node = sys.argv[2]
 local_site = sys.argv[3]
 remote_site = sys.argv[4]
 
-datastores = [
-    ("sprout", "memcached", local_site),
-    ("sprout", "memcached", remote_site),
-    ("sprout", "chronos", local_site),
-    ("sprout", "chronos", remote_site),
-    ("ralf", "memcached", local_site),
-    ("ralf", "memcached", remote_site),
-    ("ralf", "chronos", local_site),
-    ("ralf", "chronos", remote_site),
-    ("homestead", "cassandra", ""),
-    ("homer", "cassandra", ""),
-    ("memento", "memcached", local_site),
-    ("memento", "memcached", remote_site),
-    ("memento", "cassandra", "")
-]
-
 client = etcd.Client(mgmt_node, 4000)
 
-
-def describe_cluster(node_type, site, store_name):
-    key = "/clearwater/{}/{}/clustering/{}".format(site, node_type, store_name)
+def describe_clusters():
+    # Pull out all the clearwater keys.
+    key = "/clearwater?recursive=True"
 
     try:
         result = client.get(key)
     except etcd.EtcdKeyNotFound:
-        # There's none of the particular node type in the deployment
+        # There's no clearwater keys yet
         return
 
-    if result.value == "":
-        # Cluster does not exist
-        return
+    cluster_values = {subkey.key: subkey.value for subkey in result.leaves}
 
-    if site != "":
-        print "Describing the {} {} cluster in site {}:".format(node_type.capitalize(), store_name.capitalize(), site)
-    else:
-        print "Describing the {} {} cluster:".format(node_type.capitalize(), store_name.capitalize())
+    for (key, value) in cluster_values.items():
+        # Check if the key relates to clustering. The clustering key has the format
+        # /clearwater[</optional site name>]/<node type>/clustering/<store type>
+        key_parts = key.split('/')
 
-    cluster = json.loads(result.value)
-    cluster_ok = all([state == "normal"
-                      for node, state in cluster.iteritems()])
+        if key_parts[1] == 'clearwater':
+            # We're in a clearwater key
+            if len(key_parts) > 5 and key_parts[4] == 'clustering':
+                site = key_parts[2]
+                node_type = key_parts[3]
+                store_name = key_parts[5]
+            elif len(key_parts) > 4 and key_parts[3] == 'clustering':
+                site = ""
+                node_type = key_parts[2]
+                store_name = key_parts[4]
+            else:
+                # The key isn't to do with clustering, skip it
+                continue
 
-    if local_node in cluster:
-        print "  The local node is in this cluster"
-    else:
-        print "  The local node is *not* in this cluster"
+            if site != "":
+                print "Describing the {} {} cluster in site {}:".format(node_type.capitalize(), store_name.capitalize(), site)
+            else:
+                print "Describing the {} {} cluster:".format(node_type.capitalize(), store_name.capitalize())
 
-    if cluster_ok:
-        print "  The cluster is stable"
-    else:
-        print "  The cluster is *not* stable"
+            cluster = json.loads(value)
+            cluster_ok = all([state == "normal"
+                              for node, state in cluster.iteritems()])
 
-    for node, state in cluster.iteritems():
-        print "    {} is in state {}".format(node, state)
-    print ""
+            if local_node in cluster:
+                print "  The local node is in this cluster"
+            else:
+                print "  The local node is *not* in this cluster"
 
-for node_type, store_name, site in datastores:
-    describe_cluster(node_type, site, store_name)
+            if cluster_ok:
+                print "  The cluster is stable"
+            else:
+                print "  The cluster is *not* stable"
+
+            for node, state in cluster.iteritems():
+                print "    {} is in state {}".format(node, state)
+            print ""
+
+describe_clusters()
