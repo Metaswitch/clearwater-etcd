@@ -30,7 +30,6 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-import re
 import sys
 import etcd
 import json
@@ -56,43 +55,44 @@ def describe_clusters():
 
     for (key, value) in cluster_values.items():
         # Check if the key relates to clustering. The clustering key has the format
-        # /cleawater[</optional site name>]/<node type>clustering/<store type>
-        match_with_site = re.search(".*/([^/]+)/([^/]+)/clustering/([^/]+)", key)
-        match_without_site = re.search(".*/([^/]+)/clustering/([^/]+)", key)
+        # /clearwater[</optional site name>]/<node type>/clustering/<store type>
+        key_parts = key.split('/')
 
-        if match_with_site is not None:
-            site = match_with_site.group(1)
-            node_type = match_with_site.group(2)
-            store_name = match_with_site.group(3)
-        elif match_without_site is not None:
-            site = ""
-            node_type = match_without_site.group(1)
-            store_name = match_without_site.group(2)
-        else:
-            # The key isn't to do with clustering, skip it
-            continue
+        if key_parts[1] == 'clearwater':
+            # We're in a clearwater key
+            if len(key_parts) > 5 and key_parts[4] == 'clustering':
+                site = key_parts[2]
+                node_type = key_parts[3]
+                store_name = key_parts[5]
+            elif len(key_parts) > 4 and key_parts[3] == 'clustering':
+                site = ""
+                node_type = key_parts[2]
+                store_name = key_parts[4]
+            else:
+                # The key isn't to do with clustering, skip it
+                continue
 
-        if site != "":
-            print "Describing the {} {} cluster in site {}:".format(node_type.capitalize(), store_name.capitalize(), site)
-        else:
-            print "Describing the {} {} cluster:".format(node_type.capitalize(), store_name.capitalize())
+            if site != "":
+                print "Describing the {} {} cluster in site {}:".format(node_type.capitalize(), store_name.capitalize(), site)
+            else:
+                print "Describing the {} {} cluster:".format(node_type.capitalize(), store_name.capitalize())
 
-        cluster = json.loads(value)
-        cluster_ok = all([state == "normal"
-                          for node, state in cluster.iteritems()])
+            cluster = json.loads(value)
+            cluster_ok = all([state == "normal"
+                              for node, state in cluster.iteritems()])
 
-        if local_node in cluster:
-            print "  The local node is in this cluster"
-        else:
-            print "  The local node is *not* in this cluster"
+            if local_node in cluster:
+                print "  The local node is in this cluster"
+            else:
+                print "  The local node is *not* in this cluster"
 
-        if cluster_ok:
-            print "  The cluster is stable"
-        else:
-            print "  The cluster is *not* stable"
+            if cluster_ok:
+                print "  The cluster is stable"
+            else:
+                print "  The cluster is *not* stable"
 
-        for node, state in cluster.iteritems():
-            print "    {} is in state {}".format(node, state)
-        print ""
+            for node, state in cluster.iteritems():
+                print "    {} is in state {}".format(node, state)
+            print ""
 
 describe_clusters()
