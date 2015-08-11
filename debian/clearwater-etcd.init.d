@@ -124,7 +124,7 @@ join_cluster()
 
         # Check to make sure the cluster we want to join is healthy.
         # If it's not, don't even try joining (it won't work, and may
-        # cause probelms with the cluster)
+        # cause problems with the cluster)
         /usr/bin/etcdctl cluster-health 2>&1 | grep "cluster is healthy"
         if [ $? -ne 0 ]
          then
