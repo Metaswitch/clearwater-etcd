@@ -122,6 +122,16 @@ join_cluster()
         done
         IFS=$OLD_IFS
 
+        # Check to make sure the cluster we want to join is healthy.
+        # If it's not, don't even try joining (it won't work, and may
+        # cause probelms with the cluster)
+        /usr/bin/etcdctl cluster-health 2>&1 | grep "cluster is healthy"
+        if [ $? -ne 0 ]
+         then
+           echo "Not joining an unhealthy cluster"
+           exit 2
+         fi
+
         # If we're already in the member list, remove ourselves first. This
         # copes with a race condition where member add succeeds but etcd
         # doesn't then come up.
@@ -188,10 +198,17 @@ join_or_create_cluster()
 wait_for_etcd()
 {
         # Wait for etcd to come up.
+        start_time=$(date +%s) 
         while true; do
           if nc -z $listen_ip 4000; then
             break;
           else
+            current_time=$(date +%s)
+            let "delta_time=$current_time - $start_time"
+            if [ $delta_time -gt 60 ]; then
+              echo "Etcd failed to come up - exiting"
+              exit 2
+            fi
             sleep 1
           fi
         done
