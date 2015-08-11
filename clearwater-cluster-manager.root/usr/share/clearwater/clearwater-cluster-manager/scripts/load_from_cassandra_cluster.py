@@ -30,6 +30,7 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
+import os
 import subprocess
 import sys
 import etcd
@@ -40,8 +41,8 @@ local_ip = sys.argv[1]
 node_type = sys.argv[2]
 sig_namespace = sys.argv[3]
 
-assert node_type in ["homestead", "homer", "memento"], \
-    "Node type must be 'homestead', 'homer' or 'memento'"
+assert os.path.exists("/etc/init.d/cassandra"), \
+    "This script should be run on a node that's running Cassandra"
 
 etcd_key = "/clearwater/{}/clustering/cassandra".format(node_type)
 

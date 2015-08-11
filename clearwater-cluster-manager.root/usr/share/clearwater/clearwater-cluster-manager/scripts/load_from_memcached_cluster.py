@@ -40,8 +40,8 @@ local_site = sys.argv[2]
 remote_site = sys.argv[3]
 node_type = sys.argv[4]
 
-assert node_type in ["sprout", "ralf", "memento"], \
-    "Node type must be 'sprout', 'ralf' or 'memento'"
+assert os.path.exists("/etc/init.d/clearwater-memcached"), \
+    "This script should be run on a node that's running Memcached"
 
 local_etcd_key = "/clearwater/{}/{}/clustering/memcached".format(local_site,
                                                                  node_type)
