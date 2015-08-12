@@ -51,10 +51,10 @@ class ClusterInfo(object):
         self.cluster_state = self.calculate_cluster_state(self.view)
 
 
-    def can_leave(self, allow_errors=False):
+    def can_leave(self, force_leave=False):
         return self.cluster_state == constants.STABLE or \
                self.cluster_state == constants.LEAVE_PENDING or \
-                (allow_errors and
+                (force_leave and
                  self.cluster_state == constants.STABLE_WITH_ERRORS)
 
     # Calculate the state of the cluster based on the state of all the nodes in

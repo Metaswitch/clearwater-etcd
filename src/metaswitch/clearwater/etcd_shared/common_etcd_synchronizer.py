@@ -75,8 +75,8 @@ class CommonEtcdSynchronizer(object):
     def thread_name(self):
         return self._plugin.__class__.__name__
 
-    # Read the state of the cluster from etcd. Returns None if nothing could be
-    # read.
+    # Read the state of the cluster from etcd (optionally waiting for a changed
+    # state). Returns None if nothing could be read.
     def read_from_etcd(self, wait=True):
         result = None
         wait_index = None
@@ -140,6 +140,16 @@ class CommonEtcdSynchronizer(object):
         else:
             return (result.value, result.modifiedIndex)
 
+    # Calls read_from_etcd, and updates internal state to track the previously
+    # seen value.
+    #
+    # The difference is:
+    # - calling read_from_etcd twice will return the same value
+    # - calling update_from_etcd twice will block on the second call until the
+    # value changes
+    #
+    # Only the main thread should call update_from_etcd to avoid race conditions
+    # or missed reads.
     def update_from_etcd(self):
         self._last_value, self._index = self.read_from_etcd(wait=True)
         return self._last_value

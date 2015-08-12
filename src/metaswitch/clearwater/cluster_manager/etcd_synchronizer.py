@@ -76,7 +76,7 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
                 # necessary, set this node to WAITING_TO_LEAVE. Otherwise, kick
                 # the FSM.
                 if (self._leaving_flag and
-                        cluster_info.can_leave(allow_errors=self.force_leave)):
+                        cluster_info.can_leave(self.force_leave)):
                     _log.info("Cluster is in a stable state, so leaving the cluster now")
                     new_state = constants.WAITING_TO_LEAVE
                 else:
@@ -111,7 +111,7 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
         etcd_result, idx = self.read_from_etcd(wait=False)
         cluster_info = ClusterInfo(etcd_result)
 
-        if cluster_info.can_leave(allow_errors=self.force_leave):
+        if cluster_info.can_leave(self.force_leave):
             _log.info("Cluster is in a stable state, so leaving the cluster immediately")
             self.write_to_etcd(cluster_info, constants.WAITING_TO_LEAVE)
         else:
