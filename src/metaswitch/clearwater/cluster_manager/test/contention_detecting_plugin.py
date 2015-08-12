@@ -41,8 +41,8 @@ class ContentionDetectingPlugin(SynchroniserPluginBase):
 
     This would mean that we were needlessly repeating work - our handling of
     etcd contention ought to avoid this."""
-    def __init__(self, params):
-        self.ip = params.ip
+    def __init__(self, ip):
+        self.ip = ip
         self.on_cluster_changing_nodes = []
         self.on_joining_nodes = []
         self.on_new_cluster_config_ready_nodes = []

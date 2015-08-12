@@ -13,8 +13,8 @@ X86_64_ONLY=0
 .DEFAULT_GOAL = deb
 
 .PHONY: test
-test: cluster_mgr_setup.py env
-	PYTHONPATH=src:common ${ENV_PYTHON} cluster_mgr_setup.py test -v
+test: config_mgr_setup.py cluster_mgr_setup.py env
+	PYTHONPATH=src:common ${ENV_PYTHON} cluster_mgr_setup.py test -v && PYTHONPATH=src:common ${ENV_PYTHON} config_mgr_setup.py test -v
 
 ${ENV_DIR}/bin/flake8: env
 	${ENV_DIR}/bin/pip install flake8
@@ -35,9 +35,11 @@ explain-style: ${ENV_DIR}/bin/flake8
 coverage: ${ENV_DIR}/bin/coverage cluster_mgr_setup.py
 	rm -rf htmlcov/
 	${ENV_DIR}/bin/coverage erase
-	${ENV_DIR}/bin/coverage run --source src --omit "**/test/**"  cluster_mgr_setup.py test
-	${ENV_DIR}/bin/coverage report -m
-	${ENV_DIR}/bin/coverage html
+	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run cluster_mgr_setup.py test
+	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run -a config_mgr_setup.py test
+	${ENV_DIR}/bin/coverage combine
+	${ENV_DIR}/bin/coverage report -m --fail-under 100
+	${ENV_DIR}/bin/coverage xml
 
 .PHONY: env
 env: cluster_mgr_setup.py config_mgr_setup.py shared_setup.py $(ENV_DIR)/bin/python build-eggs

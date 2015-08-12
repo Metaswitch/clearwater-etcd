@@ -35,7 +35,7 @@
 
 import unittest
 from mock import patch
-from .mock_python_etcd import ExceptionMockEtcdClient
+from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import ExceptionMockEtcdClient
 import json
 from .test_base import BaseClusterTest
 import os
@@ -53,7 +53,7 @@ class TestResilience(BaseClusterTest):
         # Check that the cluster stabilizes, even though etcd is throwing
         # exceptions 50% of the time
         self.wait_for_all_normal(mock_client, required_number=15, tries=300)
-        end = json.loads(mock_client.read("/test").value)
+        end = json.loads(mock_client.read_noexcept("/test").value)
         self.assertEqual("normal", end.get("10.0.0.3"))
         self.assertEqual("normal", end.get("10.0.0.14"))
         self.close_synchronizers()

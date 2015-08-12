@@ -59,6 +59,6 @@ def load_plugins_in_dir(dir, params=None):
                     if plugin is not None:
                         _log.info("Loaded {} successfully".format(filename))
                         plugins.append(plugin)
-                    else:
+                    else: # pragma : no cover
                         _log.info("{} did not load (load_as_plugin returned None)".format(filename))
     return plugins

@@ -32,14 +32,13 @@
 
 from threading import Condition
 import etcd
-from etcd import EtcdResult, Client
+from etcd import EtcdResult, Client, EtcdException, EtcdKeyError
 from random import random, choice
 from time import sleep
-import urllib3
 import os
 
 allowed_key = '/test'
-global_data = "INVALID_JSON"
+global_data = ""
 global_index = 0
 global_condvar = Condition()
 
@@ -72,12 +71,12 @@ class MockEtcdClient(object):
         r.value = global_data
         r.createdIndex = 1
         r.modifiedIndex = global_index
+        r.etcd_index = global_index
         return r
 
     def write(self, key, value, prevIndex=0, prevExist=None):
         global global_index
         global global_data
-        assert(key == allowed_key)
         global_condvar.acquire()
         if (((prevIndex != global_index) and (prevIndex != 0)) or
                 (prevExist and global_index != 0)):
@@ -89,23 +88,22 @@ class MockEtcdClient(object):
         global_condvar.release()
         return self.fake_result()
 
-    def read(self, key, index=None, timeout=None, recursive=None, **kwargs):
-        assert(key == allowed_key)
-        global_condvar.acquire()
-        if global_index == 0:
-            global_condvar.release()
-            raise etcd.EtcdKeyError()
-        if index > global_index:
-            global_condvar.wait(0.1)
-        if index > global_index:
-            global_condvar.release()
-            raise urllib3.exceptions.TimeoutError
-        ret = self.fake_result()
-        global_condvar.release()
+    def read(self, key, wait=False, waitIndex=None, timeout=None, recursive=None, **kwargs):
+        with global_condvar:
+            if wait:
+                if global_index == 0:
+                    raise etcd.EtcdKeyError()
+                if waitIndex > global_index:
+                    global_condvar.wait(0.1)
+                if waitIndex > global_index:
+                    raise EtcdException("Read timed out")
+            if global_data == "":
+                raise EtcdKeyError("")
+            ret = self.fake_result()
         return ret
 
-    def eternal_watch(self, key, index=None):
-        return self.watch(key, index, 36000)
+    def read_noexcept(self, *args, **kwargs):
+        return self.read(*args, **kwargs)
 
 
 class SlowMockEtcdClient(MockEtcdClient):
@@ -119,20 +117,19 @@ class SlowMockEtcdClient(MockEtcdClient):
 
 
 class ExceptionMockEtcdClient(MockEtcdClient):
-    def write(self, key, value, prevIndex=0, prevExist=None):
+    def write(self, *args, **kwargs):
         if random() > 0.9:
             e = choice([etcd.EtcdException, etcd.EtcdKeyError])
-            raise e
-        return super(ExceptionMockEtcdClient, self).write(key,
-                                                          value,
-                                                          prevIndex=prevIndex,
-                                                          prevExist=prevExist)
+            raise e("sample message")
+        return super(ExceptionMockEtcdClient, self).write(*args, **kwargs)
 
-    def watch(self, key, index=None, timeout=None, recursive=None):
+    def read(self, *args, **kwargs):
         if random() > 0.9:
             e = choice([etcd.EtcdException, ValueError])
-            raise e
-        return super(ExceptionMockEtcdClient, self).watch(key,
-                                                          index=index,
-                                                          timeout=timeout,
-                                                          recursive=recursive)
+            raise e("sample message")
+        return super(ExceptionMockEtcdClient, self).read(*args, **kwargs)
+
+    def read_noexcept(self, *args, **kwargs):
+        """Method to allow the UT infrastructure to read the value, without
+        triggering an exception."""
+        return super(ExceptionMockEtcdClient, self).read(*args, **kwargs)

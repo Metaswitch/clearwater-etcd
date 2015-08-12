@@ -30,30 +30,21 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-import etcd
-import re
-from time import sleep
 from hashlib import md5
 
 from .pdlogs import FILE_CHANGED
+from metaswitch.clearwater.etcd_shared.common_etcd_synchronizer import CommonEtcdSynchronizer
 
-import urllib3
 import logging
 
 _log = logging.getLogger("config_manager.etcd_synchronizer")
 
 
-class EtcdSynchronizer(object):
-    PAUSE_BEFORE_RETRY = 30
-
+class EtcdSynchronizer(CommonEtcdSynchronizer):
     def __init__(self, plugin, ip, site, alarm):
-        self._ip = ip
+        CommonEtcdSynchronizer.__init__(self, plugin, ip)
         self._site = site
-        self._client = etcd.Client(self._ip, 4000)
-        self._plugin = plugin
         self._alarm = alarm
-        self._index = None
-        self._terminate_flag = False
 
     def main(self):
         # Continue looping while the service is running.
@@ -61,7 +52,7 @@ class EtcdSynchronizer(object):
             # This blocks on changes to the watched key in etcd.
             _log.debug("Waiting for change from etcd for key {}".format(
                          self._plugin.key()))
-            value = self.read_from_etcd()
+            value = self.update_from_etcd()
             if self._terminate_flag:
                 break
 
@@ -74,95 +65,5 @@ class EtcdSynchronizer(object):
                 self._plugin.on_config_changed(value, self._alarm)
                 FILE_CHANGED.log(filename=self._plugin.file())
 
-    # Read the current value of the key from etcd (blocks until there's a
-    # change).
-    def read_from_etcd(self):
-        value = None
-        try:
-            full_key = "/clearwater/" + self._site + "/configuration/" + self._plugin.key()
-
-            result = None
-            try:
-                result = self._client.read(full_key, quorum=True)
-
-                # If the key hasn't changed since we last saw it, then
-                # wait for it to change before doing anything else.
-                _log.info("Read config value for {} from etcd (epoch {})".format(
-                            self._plugin.key(),
-                            result.modifiedIndex))
-            except etcd.EtcdKeyError:
-                # If the key doesn't exist in etcd then there is currently no
-                # config.
-                _log.info("No config value for {} found".format(self._plugin.key()))
-                self._index = None
-
-            if result is None or result.modifiedIndex == self._index:
-                while not self._terminate_flag:
-                    _log.info("Watching for changes")
-                    waitIndex = None if (self._index is None or result is None) else result.modifiedIndex + 1
-                    result = self.waitHelper(full_key, waitIndex=waitIndex)
-                    if result is not None:
-                        break
-
-                # Return if we're terminating.
-                if self._terminate_flag:
-                    return
-
-            # Save off the index of the result we're using for when we write
-            # back to etcd later.
-            self._index = result.modifiedIndex
-            value = result.value
-
-        except Exception as e:
-            # Catch-all error handler (for invalid requests, timeouts, etc -
-            # start over.
-            _log.error("{} caught {!r} when trying to read with index {}"
-                       " - pause before retry".
-                       format(self._ip, e, self._index))
-            # Sleep briefly to avoid hammering a failed server
-            sleep(self.PAUSE_BEFORE_RETRY)
-            # The main loop (which reads from etcd in a loop) should call this
-            # function again after we return, causing the read to be retried.
-
-        return value
-
-    def waitHelper(self, full_key, waitIndex):
-        result = None
-        # Calculate the args for the wait
-        args = dict(wait=True,
-                    timeout=0,
-                    recursive=False)
-        if waitIndex is not None:
-            args['waitIndex'] = waitIndex
-
-        try:
-            # Wait for the key to change
-            result = self._client.read(full_key,
-                                       **args)
-        except urllib3.exceptions.TimeoutError:
-            # Timeouts after 5 seconds are expected, so ignore them
-            # - unless we're terminating, we'll stay in the while
-            # loop and try again
-            pass
-        except etcd.EtcdEventIndexCleared as e:
-            # A snapshot has occurred since the last change, invalidating the
-            # index, so wait again from the earliest index possible.
-
-            # etcd doesn't pass the earliest index back in a structured way, but
-            # we can parse it out of the error message.
-            m = re.search("the requested history has been cleared [(\d+)/(\d+)]", e.message)
-            new_index = m.group(1) if m is not None else None
-            _log.info("An etcd snapshot has invalidated index %d - "
-                      "starting a new watch with index %d",
-                      args.get('waitIndex', None),
-                      new_index)
-            result = self.waitHelper(full_key, waitIndex=new_index)
-        except etcd.EtcdException as e:
-            # We have seen timeouts getting raised as EtcdExceptions
-            # so catch these here too and treat them as timeouts if
-            # they indicate that the read timed out.
-            if "Read timed out" in e.message:
-                pass
-            else:
-                raise
-        return result
+    def key(self):
+        return "/clearwater/" + self._site + "/configuration/" + self._plugin.key()

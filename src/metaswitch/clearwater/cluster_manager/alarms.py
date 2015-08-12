@@ -46,7 +46,7 @@ from metaswitch.common.alarms import issue_alarm as int_issue_alarm
 _log = logging.getLogger("cluster_manager.alarms")
 
 def issue_alarm(identifier):
-    int_issue_alarm("cluster-manager", identifier)
+    int_issue_alarm("cluster-manager", identifier) # pragma: no cover
 
 
 class TooLongAlarm(object):

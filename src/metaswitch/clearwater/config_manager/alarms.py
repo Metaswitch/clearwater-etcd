@@ -47,7 +47,7 @@ from . import pdlogs
 
 _log = logging.getLogger("config_manager.alarms")
 
-def issue_alarm(identifier):
+def issue_alarm(identifier): # pragma : no cover
     int_issue_alarm("config-manager", identifier)
 
 class ConfigAlarm(object):

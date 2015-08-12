@@ -34,7 +34,7 @@
 
 
 from mock import patch
-from .mock_python_etcd import EtcdFactory
+from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import EtcdFactory
 from metaswitch.clearwater.cluster_manager.etcd_synchronizer \
     import EtcdSynchronizer
 from .dummy_plugin import DummyPlugin

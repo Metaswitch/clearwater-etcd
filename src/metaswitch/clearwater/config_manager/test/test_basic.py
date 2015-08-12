@@ -33,36 +33,33 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 
-from mock import patch
+import unittest
 from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import EtcdFactory
-from metaswitch.clearwater.cluster_manager.etcd_synchronizer \
-    import EtcdSynchronizer
-from .dummy_plugin import DummyPlugin
-import json
-from .test_base import BaseClusterTest
+from metaswitch.clearwater.config_manager.etcd_synchronizer import \
+    EtcdSynchronizer
+from .plugin import TestPlugin
+from mock import patch, MagicMock
+from threading import Thread
+from time import sleep
 
+alarms_patch = patch("metaswitch.clearwater.config_manager.alarms.issue_alarm", new=MagicMock)
 
-class TestScaleDown(BaseClusterTest):
-
+class BasicTest(unittest.TestCase):
     @patch("etcd.Client", new=EtcdFactory)
-    def test_scale_down(self):
-        # Start with a stable cluster of two nodes
-        sync1 = EtcdSynchronizer(DummyPlugin(None), '10.0.1.1')
-        sync2 = EtcdSynchronizer(DummyPlugin(None), '10.0.1.2')
-        mock_client = sync1._client
-        mock_client.write("/test", json.dumps({"10.0.1.1": "normal",
-                                               "10.0.1.2": "normal"}))
-        for s in [sync1, sync2]:
-            s.start_thread()
+    def test_synchronisation(self):
+        p = TestPlugin()
+        e = EtcdSynchronizer(p, "10.0.0.1", "local", None)
+        thread = Thread(target=e.main)
+        thread.daemon=True
+        thread.start()
 
-        # Make the second node leave
-        sync2.leave_cluster()
-        sync2.thread.join(20)
-        sync2.terminate()
-        self.wait_for_all_normal(mock_client, required_number=1)
+        sleep(1)
+        # Write a new value into etcd, and check that the plugin is called with
+        # it
+        e._client.write("/clearwater/local/configuration/test", "hello world")
+        sleep(1)
+        p._on_config_changed.assert_called_with("hello world", None)
 
-        # Check that it's left and the cluster is stable
-        end = json.loads(mock_client.read("/test").value)
-        self.assertEqual(None, end.get("10.0.1.2"))
-        self.assertEqual("normal", end.get("10.0.1.1"))
-        sync1.terminate()
+        # Allow the EtcdSynchronizer to exit
+        e._terminate_flag = True
+        sleep(1)

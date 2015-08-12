@@ -35,34 +35,27 @@
 
 from mock import patch
 from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import EtcdFactory
-from metaswitch.clearwater.cluster_manager.etcd_synchronizer \
-    import EtcdSynchronizer
-from .dummy_plugin import DummyPlugin
 import json
 from .test_base import BaseClusterTest
+from time import sleep
 
+class TestInvalidState(BaseClusterTest):
 
-class TestScaleDown(BaseClusterTest):
+    def tearDown(self):
+        self.close_synchronizers()
 
     @patch("etcd.Client", new=EtcdFactory)
-    def test_scale_down(self):
-        # Start with a stable cluster of two nodes
-        sync1 = EtcdSynchronizer(DummyPlugin(None), '10.0.1.1')
-        sync2 = EtcdSynchronizer(DummyPlugin(None), '10.0.1.2')
-        mock_client = sync1._client
-        mock_client.write("/test", json.dumps({"10.0.1.1": "normal",
-                                               "10.0.1.2": "normal"}))
-        for s in [sync1, sync2]:
-            s.start_thread()
+    def test_invalid_state(self):
+        """Force an invalid etcd state, and check that the clients don't try to
+        change it"""
+        client = EtcdFactory()
+        invalid_state= {"10.0.0.1": "joining",
+                        "10.0.0.2": "error",
+                        "10.0.2.1": "leaving"}
+        client.write("/test", json.dumps(invalid_state))
+        self.make_and_start_synchronizers(3)
+        client2 = self.syncs[0]._client
+        sleep(0.5)
 
-        # Make the second node leave
-        sync2.leave_cluster()
-        sync2.thread.join(20)
-        sync2.terminate()
-        self.wait_for_all_normal(mock_client, required_number=1)
-
-        # Check that it's left and the cluster is stable
-        end = json.loads(mock_client.read("/test").value)
-        self.assertEqual(None, end.get("10.0.1.2"))
-        self.assertEqual("normal", end.get("10.0.1.1"))
-        sync1.terminate()
+        end = json.loads(client2.read("/test").value)
+        self.assertEqual(end, invalid_state)

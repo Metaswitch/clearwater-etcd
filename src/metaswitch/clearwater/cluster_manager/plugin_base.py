@@ -39,7 +39,7 @@ PluginParams = collections.namedtuple(
                  ['ip', 'mgmt_ip', 'local_site', 'remote_site', 'signaling_namespace'])
 
 
-class SynchroniserPluginBase(object):
+class SynchroniserPluginBase(object): # pragma: no cover
     __metaclass__ = ABCMeta
 
     @abstractmethod

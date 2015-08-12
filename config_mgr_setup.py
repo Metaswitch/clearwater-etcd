@@ -47,6 +47,7 @@ setup(
     package_data={
         '': ['*.eml'],
         },
+    test_suite='metaswitch.clearwater.config_manager.test',
     install_requires=["docopt", "python-etcd", "pyzmq", "pyyaml", "metaswitchcommon", "clearwater_etcd_shared"],
     tests_require=["Mock"],
     )

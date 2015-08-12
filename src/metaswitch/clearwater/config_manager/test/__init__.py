@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015 Metaswitch Networks Ltd
 #
@@ -32,37 +30,16 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
+import logging
+import sys
+import os
+import random
 
-from mock import patch
-from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import EtcdFactory
-from metaswitch.clearwater.cluster_manager.etcd_synchronizer \
-    import EtcdSynchronizer
-from .dummy_plugin import DummyPlugin
-import json
-from .test_base import BaseClusterTest
+logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
+logging.getLogger().setLevel(logging.ERROR)
+if os.environ.get('NOISY'):
+    logging.getLogger().setLevel(logging.DEBUG)
 
-
-class TestScaleDown(BaseClusterTest):
-
-    @patch("etcd.Client", new=EtcdFactory)
-    def test_scale_down(self):
-        # Start with a stable cluster of two nodes
-        sync1 = EtcdSynchronizer(DummyPlugin(None), '10.0.1.1')
-        sync2 = EtcdSynchronizer(DummyPlugin(None), '10.0.1.2')
-        mock_client = sync1._client
-        mock_client.write("/test", json.dumps({"10.0.1.1": "normal",
-                                               "10.0.1.2": "normal"}))
-        for s in [sync1, sync2]:
-            s.start_thread()
-
-        # Make the second node leave
-        sync2.leave_cluster()
-        sync2.thread.join(20)
-        sync2.terminate()
-        self.wait_for_all_normal(mock_client, required_number=1)
-
-        # Check that it's left and the cluster is stable
-        end = json.loads(mock_client.read("/test").value)
-        self.assertEqual(None, end.get("10.0.1.2"))
-        self.assertEqual("normal", end.get("10.0.1.1"))
-        sync1.terminate()
+seed = random.randrange(2000)
+print "\n\n===\nGenerated random seed {}\n===\n\n".format(seed)
+random.seed(seed)
