@@ -60,3 +60,5 @@ LEAVING_ACKNOWLEDGED_CHANGE = "leaving, acknowledged change"
 LEAVING_CONFIG_CHANGED = "leaving, config changed"
 FINISHED = "finished"
 ERROR = "error"
+
+DELETE_ME = "DELETE_ME"

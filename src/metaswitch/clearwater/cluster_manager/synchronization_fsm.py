@@ -95,9 +95,6 @@ class SyncFSM(object):
         return {k: (constants.LEAVING if v == constants.WAITING_TO_LEAVE else v)
                 for k, v in cluster_view.iteritems()}
 
-    def _delete_myself(self, cluster_view):
-        return {k: v for k, v in cluster_view.iteritems() if k != self._id}
-
     def _log_joining_nodes(self, cluster_view):
         for node, state in cluster_view.iteritems():
             if state in [constants.JOINING, constants.JOINING_ACKNOWLEDGED_CHANGE]:
@@ -145,10 +142,12 @@ class SyncFSM(object):
         # in any cluster state, so don't fit neatly into the main function body.
 
         if not self._plugin.should_be_in_cluster():
-            # This plugin is just monitoring a remote cluster
+            # This plugin is just monitoring a remote cluster.
             if cluster_state in [constants.JOINING_CONFIG_CHANGING,
                                  constants.LEAVING_CONFIG_CHANGING]:
-                safe_plugin(self._plugin.on_cluster_changing,
+                # This branch is not guaranteed to be hit due to
+                # https://github.com/Metaswitch/clearwater-etcd/issues/158.
+                safe_plugin(self._plugin.on_cluster_changing, # pragma: no cover
                             cluster_view)
             elif cluster_state == constants.STABLE:
                 safe_plugin(self._plugin.on_stable_cluster,
@@ -363,7 +362,9 @@ class SyncFSM(object):
 
         elif (cluster_state == constants.FINISHED_LEAVING and
                 local_state == constants.NORMAL):
-            return None
+            # Not guaranteed to hit this state, as the 'finished' nodes could
+            # all leave before the non-leaving nodes spot that state transition
+            return None # pragma: no cover
         elif (cluster_state == constants.FINISHED_LEAVING and
                 local_state == constants.FINISHED):
             # This node is finished, so this state machine (and this thread)
@@ -371,7 +372,7 @@ class SyncFSM(object):
             self._running = False
             return safe_plugin(self._plugin.on_leaving_cluster,
                                cluster_view,
-                               new_state=self._delete_myself(cluster_view))
+                               new_state=constants.DELETE_ME)
 
         # Any valid state should have caused me to return by now
         _log.error("Invalid state in state machine for {} - local state {}, "

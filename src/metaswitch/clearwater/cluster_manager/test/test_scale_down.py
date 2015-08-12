@@ -46,23 +46,34 @@ class TestScaleDown(BaseClusterTest):
 
     @patch("etcd.Client", new=EtcdFactory)
     def test_scale_down(self):
-        # Start with a stable cluster of two nodes
-        sync1 = EtcdSynchronizer(DummyPlugin(None), '10.0.1.1')
-        sync2 = EtcdSynchronizer(DummyPlugin(None), '10.0.1.2')
-        mock_client = sync1._client
+        # Start with a stable cluster of four nodes
+        syncs = [EtcdSynchronizer(DummyPlugin(None), ip) for ip in
+                 ['10.0.1.1',
+                  '10.0.1.2',
+                  '10.0.1.3',
+                  '10.0.1.4',
+                  ]]
+        mock_client = syncs[0]._client
         mock_client.write("/test", json.dumps({"10.0.1.1": "normal",
-                                               "10.0.1.2": "normal"}))
-        for s in [sync1, sync2]:
+                                               "10.0.1.2": "normal",
+                                               "10.0.1.3": "normal",
+                                               "10.0.1.4": "normal",
+                                               }))
+        for s in syncs:
             s.start_thread()
 
-        # Make the second node leave
-        sync2.leave_cluster()
-        sync2.thread.join(20)
-        sync2.terminate()
-        self.wait_for_all_normal(mock_client, required_number=1)
+        # Make the second and fourth nodes leave
+        syncs[1].leave_cluster()
+        syncs[3].leave_cluster()
+
+        self.wait_for_all_normal(mock_client, required_number=2, tries=50)
 
         # Check that it's left and the cluster is stable
         end = json.loads(mock_client.read("/test").value)
-        self.assertEqual(None, end.get("10.0.1.2"))
         self.assertEqual("normal", end.get("10.0.1.1"))
-        sync1.terminate()
+        self.assertEqual("normal", end.get("10.0.1.3"))
+
+        self.assertEqual(None, end.get("10.0.1.2"))
+        self.assertEqual(None, end.get("10.0.1.4"))
+        for s in syncs:
+            s.terminate()
