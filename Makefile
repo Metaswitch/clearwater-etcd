@@ -38,7 +38,7 @@ coverage: ${ENV_DIR}/bin/coverage cluster_mgr_setup.py
 	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run cluster_mgr_setup.py test
 	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run -a config_mgr_setup.py test
 	${ENV_DIR}/bin/coverage combine
-	${ENV_DIR}/bin/coverage report -m
+	${ENV_DIR}/bin/coverage report -m --fail-under 100
 	${ENV_DIR}/bin/coverage xml
 
 .PHONY: env
