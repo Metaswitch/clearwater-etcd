@@ -38,7 +38,7 @@ from time import sleep
 import os
 
 allowed_key = '/test'
-global_data = "INVALID_JSON"
+global_data = ""
 global_index = 0
 global_condvar = Condition()
 

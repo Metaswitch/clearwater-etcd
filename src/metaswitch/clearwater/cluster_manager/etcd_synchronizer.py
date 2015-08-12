@@ -56,6 +56,9 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
     def is_running(self):
         return self._fsm.is_running()
 
+    def default_value(self):
+        return "{}"
+
     def main(self):
         # Continue looping while the FSM is running.
         while self._fsm.is_running():
@@ -65,7 +68,7 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
             if self._terminate_flag:
                 break
             if etcd_value is not None:
-                _log.debug("Got new state %s from etcd" % etcd_value)
+                _log.info("Got new state %s from etcd" % etcd_value)
                 cluster_info = ClusterInfo(etcd_value)
 
                 # This node can only leave the cluster if the cluster is in a
@@ -124,8 +127,8 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
             return
 
         etcd_result, idx = self.read_from_etcd(wait=False)
-        print etcd_result
-        assert(etcd_result is not None)
+        if etcd_result is not None:
+            _log.warning("Got result of None from read_from_etcd")
         cluster_info = ClusterInfo(etcd_result)
 
         self.write_to_etcd(cluster_info, constants.ERROR)

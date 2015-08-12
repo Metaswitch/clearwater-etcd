@@ -53,6 +53,7 @@ class BasicTest(unittest.TestCase):
         thread.daemon=True
         thread.start()
 
+        sleep(1)
         # Write a new value into etcd, and check that the plugin is called with
         # it
         e._client.write("/clearwater/local/configuration/test", "hello world")

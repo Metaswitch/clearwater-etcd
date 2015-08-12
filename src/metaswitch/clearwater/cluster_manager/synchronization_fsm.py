@@ -125,12 +125,12 @@ class SyncFSM(object):
             - A dictionary of node IPs to states, representing the new state of
             the whole cluster, if it wants to change that
         """
-        _log.debug("Entered state machine for {} with local state {}, "
-                   "cluster state {} and cluster view {}".format(
-                       self._id,
-                       local_state,
-                       cluster_state,
-                       cluster_view))
+        _log.info("Entered state machine for {} with local state {}, "
+                  "cluster state {} and cluster view {}".format(
+                      self._id,
+                      local_state,
+                      cluster_state,
+                      cluster_view))
         assert(self._running)
 
         # If we're mid-scale-up, ensure that the "scaling operation taking too

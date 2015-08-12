@@ -67,6 +67,9 @@ class CommonEtcdSynchronizer(object):
 
     def main(self): pass
 
+    def default_value(self):
+        return None
+
     def is_running(self): return True
 
     def thread_name(self):
@@ -86,13 +89,14 @@ class CommonEtcdSynchronizer(object):
                 # If the cluster view hasn't changed since we last saw it, then
                 # wait for it to change before doing anything else.
                 _log.info("Read value {} from etcd, "
-                        "comparing to last value {}".format(
-                            result.value,
-                            self._last_value))
+                          "comparing to last value {}".format(
+                              result.value,
+                              self._last_value))
                 if result.value == self._last_value:
+                    _log.info("Watching for changes")
                     while not self._terminate_flag and self.is_running():
                         try:
-                            _log.info("Watching for changes")
+                            _log.debug("Started a new watch")
                             result = self._client.read(self.key(),
                                                        wait=True,
                                                        waitIndex=wait_index,
@@ -108,15 +112,15 @@ class CommonEtcdSynchronizer(object):
                             else:
                                 raise
 
+                    _log.debug("Finished watching")
+
                     # Return if we're terminating.
                     if self._terminate_flag:
                         return self.tuple_from_result(result)
 
         except etcd.EtcdKeyError:
             _log.info("Key {} doesn't exist in etcd yet".format(self.key()))
-            # If the key doesn't exist in etcd then there is currently no
-            # cluster.
-            return ("{}", None)
+            return (self.default_value(), None)
         except Exception as e:
             # Catch-all error handler (for invalid requests, timeouts, etc -
             # start over.
