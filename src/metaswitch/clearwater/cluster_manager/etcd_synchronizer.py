@@ -142,7 +142,9 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
         # Update the cluster view based on new state information. If new_state
         # is a string then it refers to the new state of the local node.
         # Otherwise, it is an overall picture of the new cluster.
-        if isinstance(new_state, str):
+        if new_state == constants.DELETE_ME:
+            del cluster_view[self._ip]
+        elif isinstance(new_state, str):
             cluster_view[self._ip] = new_state
         elif isinstance(new_state, dict):
             cluster_view = new_state
@@ -161,7 +163,7 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
             # flag.
             self._leaving_flag = False
         except ValueError:
-            _log.debug("Contention on etcd write")
+            _log.debug("Contention on etcd write - new_state is {}".format(new_state))
             # Our etcd write failed because someone got there before us.
 
             if isinstance(new_state, str):
@@ -174,11 +176,12 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
                 # or the overall deployment state has changed (in which case we
                 # may want to change our state to something else, so check for
                 # that.
-                if ((new_state == constants.ERROR) or
-                    (updated_cluster_info.local_state(self._ip) ==
+                if ((new_state in [constants.ERROR, constants.DELETE_ME]) or
+                    ((updated_cluster_info.local_state(self._ip) ==
                      cluster_info.local_state(self._ip)) and
                     (updated_cluster_info.cluster_state ==
-                     cluster_info.cluster_state)):
+                     cluster_info.cluster_state))):
+                    _log.debug("Retrying contended write with updated value")
                     self.write_to_etcd(updated_cluster_info,
                                        new_state,
                                        with_index=idx)
