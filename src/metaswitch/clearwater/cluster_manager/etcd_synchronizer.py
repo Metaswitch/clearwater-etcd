@@ -176,7 +176,7 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
                 # or the overall deployment state has changed (in which case we
                 # may want to change our state to something else, so check for
                 # that.
-                if (new_state in [constants.ERROR, constants.DELETE_ME] or
+                if ((new_state in [constants.ERROR, constants.DELETE_ME]) or
                     ((updated_cluster_info.local_state(self._ip) ==
                      cluster_info.local_state(self._ip)) and
                     (updated_cluster_info.cluster_state ==

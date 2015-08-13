@@ -61,4 +61,6 @@ LEAVING_CONFIG_CHANGED = "leaving, config changed"
 FINISHED = "finished"
 ERROR = "error"
 
+# Pseudo-state - this state never gets written into etcd, we just delete the
+# node's entry from etcd when we hit this state
 DELETE_ME = "DELETE_ME"
