@@ -64,9 +64,11 @@ def run_command(command, namespace=None, log_error=True):
                                                          e.output))
         return e.returncode
 
-def get_key():
-    key = run_command(". /etc/clearwater/config; echo $etcd_key")
-    if key == "":
-        key = "clearwater"
 
-    return key
+def get_key():
+    try:
+        return subprocess.check_output(". /etc/clearwater/config; echo $etcd_key",
+                                       shell=True,
+                                       stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError:
+        return "clearwater"
