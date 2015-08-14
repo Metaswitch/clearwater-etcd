@@ -39,14 +39,17 @@ local_ip = sys.argv[1]
 local_site = sys.argv[2]
 remote_site = sys.argv[3]
 node_type = sys.argv[4]
+etcd_key = sys.argv[5]
 
 assert os.path.exists("/etc/init.d/clearwater-memcached"), \
     "This script should be run on a node that's running Memcached"
 
-local_etcd_key = "/clearwater/{}/{}/clustering/memcached".format(local_site,
-                                                                 node_type)
-remote_etcd_key = "/clearwater/{}/{}/clustering/memcached".format(remote_site,
-                                                                  node_type)
+local_etcd_key = "/{}/{}/{}/clustering/memcached".format(etcd_key,
+                                                         local_site,
+                                                         node_type)
+remote_etcd_key = "/{}/{}/{}/clustering/memcached".format(etcd_key,
+                                                          remote_site,
+                                                          node_type)
 
 def strip_port(server):
     return server.rsplit(":", 1)[0].strip()

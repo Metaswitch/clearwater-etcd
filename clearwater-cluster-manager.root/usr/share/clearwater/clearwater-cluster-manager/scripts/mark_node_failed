@@ -35,6 +35,7 @@
 set -ue
 
 local_site_name=site1
+etcd_key=clearwater
 . /etc/clearwater/config
 
 if [ $# -ne 3 ]
@@ -47,4 +48,4 @@ node_type=$1
 datastore=$2
 dead_node_ip=$3
 
-/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-cluster-manager/scripts/mark_node_failed.py ${management_local_ip:-$local_ip} $local_site_name $node_type $datastore $dead_node_ip
+/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-cluster-manager/scripts/mark_node_failed.py ${management_local_ip:-$local_ip} $local_site_name $node_type $datastore $dead_node_ip $etcd_key

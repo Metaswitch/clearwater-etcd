@@ -55,10 +55,10 @@ def describe_clusters():
 
     for (key, value) in cluster_values.items():
         # Check if the key relates to clustering. The clustering key has the format
-        # /clearwater[</optional site name>]/<node type>/clustering/<store type>
+        # /clearwater*[</optional site name>]/<node type>/clustering/<store type>
         key_parts = key.split('/')
 
-        if key_parts[1] == 'clearwater':
+        if key_parts[1].startswith('clearwater'):
             # We're in a clearwater key
             if len(key_parts) > 5 and key_parts[4] == 'clustering':
                 site = key_parts[2]

@@ -63,3 +63,10 @@ def run_command(command, namespace=None, log_error=True):
                                                          e.returncode,
                                                          e.output))
         return e.returncode
+
+def get_key():
+    key = run_command(". /etc/clearwater/config; echo $etcd_key")
+    if key == "":
+        key = "clearwater"
+
+    return key

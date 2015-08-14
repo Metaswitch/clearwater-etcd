@@ -41,11 +41,12 @@ import os
 local_ip = sys.argv[1]
 site_name = sys.argv[2]
 node_type = sys.argv[3]
+etcd_key = sys.argv[4]
 
 assert os.path.exists("/etc/init.d/chronos"), \
     "This script should be run on a node that's running Chronos"
 
-etcd_key = "/clearwater/{}/{}/clustering/chronos".format(site_name, node_type)
+etcd_key = "/{}/{}/{}/clustering/chronos".format(etcd_key, site_name, node_type)
 
 with open('/etc/chronos/chronos_cluster.conf') as f:
     nodes = []

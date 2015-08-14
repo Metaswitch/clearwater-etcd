@@ -34,6 +34,7 @@ from hashlib import md5
 
 from .pdlogs import FILE_CHANGED
 from metaswitch.clearwater.etcd_shared.common_etcd_synchronizer import CommonEtcdSynchronizer
+from metaswitch.clearwater.etcd_shared.plugin_utils import get_key
 
 import logging
 
@@ -66,4 +67,4 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
                 FILE_CHANGED.log(filename=self._plugin.file())
 
     def key(self):
-        return "/clearwater/" + self._site + "/configuration/" + self._plugin.key()
+        return "/" + get_key() + "/" + self._site + "/configuration/" + self._plugin.key()
