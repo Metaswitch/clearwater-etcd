@@ -40,6 +40,7 @@ import sys
 
 etcd_ip = sys.argv[1]
 site = sys.argv[2]
+etcd_key = sys.argv[3]
 
 client = etcd.Client(etcd_ip, 4000)
 
@@ -48,7 +49,7 @@ plugins = load_plugins_in_dir(plugins_dir)
 
 for plugin in plugins:
     try:
-        result = client.get("/clearwater/" + site + "/configuration/" + plugin.key())
+        result = client.get("/" + etcd_key + "/" + site + "/configuration/" + plugin.key())
         value = result.value
     except etcd.EtcdKeyNotFound:
         value = ""

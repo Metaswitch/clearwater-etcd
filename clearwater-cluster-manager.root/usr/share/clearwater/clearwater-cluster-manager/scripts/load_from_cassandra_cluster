@@ -37,6 +37,7 @@
 set -ue
 
 signaling_namespace=
+etcd_key=clearwater
 . /etc/clearwater/config
 
 if [ $# -ne 1 ]
@@ -47,4 +48,4 @@ fi
 
 node_type=$1
 
-/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-cluster-manager/scripts/load_from_cassandra_cluster.py "${management_local_ip:-$local_ip}" "$node_type" "$signaling_namespace"
+/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-cluster-manager/scripts/load_from_cassandra_cluster.py "${management_local_ip:-$local_ip}" "$node_type" "$signaling_namespace" "$etcd_key"

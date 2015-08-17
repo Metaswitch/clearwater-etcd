@@ -35,13 +35,14 @@
 """Clearwater Config Manager
 
 Usage:
-  main.py --local-ip=IP --local-site=SITE [--foreground] [--log-level=LVL] [--log-directory=DIR]
-          [--pidfile=FILE]
+  main.py --local-ip=IP --local-site=SITE --etcd-key=KEY [--foreground]
+          [--log-level=LVL] [--log-directory=DIR] [--pidfile=FILE]
 
 Options:
   -h --help                   Show this screen.
   --local-ip=IP               IP address
   --local-site=NAME           Local site name
+  --etcd-key=KEY              Etcd key (top level)
   --foreground                Don't daemonise
   --log-level=LVL             Level to log at, 0-4 [default: 3]
   --log-directory=DIR         Directory to log to [default: ./]
@@ -85,6 +86,7 @@ def main(args):
 
     local_ip = arguments['--local-ip']
     local_site = arguments['--local-site']
+    etcd_key = arguments['--etcd-key']
     log_dir = arguments['--log-directory']
     log_level = LOG_LEVELS.get(arguments['--log-level'], logging.DEBUG)
 
@@ -117,7 +119,7 @@ def main(args):
     alarm = ConfigAlarm(files)
 
     for plugin in plugins:
-        syncer = EtcdSynchronizer(plugin, local_ip, local_site, alarm)
+        syncer = EtcdSynchronizer(plugin, local_ip, local_site, alarm, etcd_key)
         thread = Thread(target=syncer.main, name=plugin.__class__.__name__)
         thread.start()
 

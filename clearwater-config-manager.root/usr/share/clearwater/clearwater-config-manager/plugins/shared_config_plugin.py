@@ -39,18 +39,6 @@ import os
 _log = logging.getLogger("shared_config_plugin")
 _file = "/etc/clearwater/shared_config"
 
-services = { "sprout": "quiesce",
-             "bono": "quiesce",
-             "homer": "stop",
-             "homestead": "stop",
-             "ralf": "stop",
-             "homestead-prov": "stop",
-             "memento": "stop",
-             "ellis": "stop",
-             "clearwater-snmp-alarm-agent": "stop",
-             "astaire": "stop"}
-
-
 class SharedConfigPlugin(ConfigPluginBase):
     def __init__(self, _params):
         pass
@@ -84,10 +72,10 @@ class SharedConfigPlugin(ConfigPluginBase):
 
         _log.info("Restarting services")
         run_command("service clearwater-infrastructure restart")
-        for service, command in services.iteritems():          
-            if os.path.exists("/etc/init.d/" + service): 
-                run_command("service {} {}".format(service, command))
 
+        for restart_script in os.listdir("/usr/share/clearwater/infrastructure/scripts/restart"):
+            run_command(restart_script)
+        
         # Config file is now up-to-date
         alarm.update_file(_file)
 

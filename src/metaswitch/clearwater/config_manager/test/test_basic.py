@@ -48,7 +48,7 @@ class BasicTest(unittest.TestCase):
     @patch("etcd.Client", new=EtcdFactory)
     def test_synchronisation(self):
         p = TestPlugin()
-        e = EtcdSynchronizer(p, "10.0.0.1", "local", None)
+        e = EtcdSynchronizer(p, "10.0.0.1", "local", None, "clearwater")
         thread = Thread(target=e.main)
         thread.daemon=True
         thread.start()

@@ -35,7 +35,7 @@
 """Clearwater Cluster Manager
 
 Usage:
-  main.py --mgmt-local-ip=IP --sig-local-ip=IP --local-site=NAME --remote-site=NAME
+  main.py --mgmt-local-ip=IP --sig-local-ip=IP --local-site=NAME --remote-site=NAME --etcd-key=KEY
           [--signaling-namespace=NAME] [--foreground] [--log-level=LVL]
           [--log-directory=DIR] [--pidfile=FILE]
 
@@ -46,6 +46,7 @@ Options:
   --local-site=NAME           Name of local site
   --remote-site=NAME          Name of remote site
   --signaling-namespace=NAME  Name of the signaling namespace
+  --etcd-key=KEY              Etcd key (top level)
   --foreground                Don't daemonise
   --log-level=LVL             Level to log at, 0-4 [default: 3]
   --log-directory=DIR         Directory to log to [default: ./]
@@ -114,6 +115,7 @@ def main(args):
     local_site_name = arguments['--local-site']
     remote_site_name = arguments['--remote-site']
     signaling_namespace = arguments.get('--signaling-namespace')
+    etcd_key = arguments.get('--etcd-key')
     log_dir = arguments['--log-directory']
     log_level = LOG_LEVELS.get(arguments['--log-level'], logging.DEBUG)
 
@@ -143,7 +145,8 @@ def main(args):
                                                mgmt_ip=mgmt_ip,
                                                local_site=local_site_name,
                                                remote_site=remote_site_name,
-                                               signaling_namespace=signaling_namespace))
+                                               signaling_namespace=signaling_namespace,
+                                               etcd_key=etcd_key))
     plugins.sort(key=lambda x: x.key())
     plugins_to_use = []
     files = []

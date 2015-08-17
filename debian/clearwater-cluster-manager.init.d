@@ -88,6 +88,7 @@ do_start()
   local_site_name=site1
   remote_site_name=""
   signaling_namespace=""
+  etcd_key=clearwater
   . /etc/clearwater/config
   log_level=3
   log_directory=/var/log/clearwater-cluster-manager
@@ -98,6 +99,7 @@ do_start()
                --local-site=$local_site_name
                --remote-site=$remote_site_name
                --signaling-namespace=$signaling_namespace
+               --etcd-key=$etcd_key
                --log-level=$log_level
                --log-directory=$log_directory
                --pidfile=$PIDFILE"

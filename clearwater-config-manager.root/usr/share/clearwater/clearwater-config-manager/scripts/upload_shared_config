@@ -34,6 +34,7 @@
 
 FILENAME=/etc/clearwater/shared_config
 local_site_name=site1
+etcd_key=clearwater
 . /etc/clearwater/config
 
 # Check we can contact `etcd`
@@ -52,7 +53,7 @@ then
 fi
 
 # Upload the file to etcd
-keypath=http://${management_local_ip:-$local_ip}:4000/v2/keys/clearwater/$local_site_name/configuration/shared_config
+keypath=http://${management_local_ip:-$local_ip}:4000/v2/keys/$etcd_key/$local_site_name/configuration/shared_config
 curl -X PUT $keypath --data-urlencode value@$FILENAME 2> /tmp/upload-shared-config.stderr.$$ | tee /tmp/upload-shared-config.stdout.$$ | egrep -q "\"action\":\"set\""
 rc=$?
 

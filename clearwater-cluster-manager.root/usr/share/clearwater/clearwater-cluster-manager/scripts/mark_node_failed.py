@@ -38,11 +38,11 @@ from metaswitch.clearwater.cluster_manager.null_plugin import \
 import etcd
 import logging
 
-def make_key(site, node_type, datatore):
+def make_key(site, node_type, datatore, etcd_key):
     if datastore == "cassandra":
-        return "/clearwater/{}/clustering/{}".format(node_type, datastore)
+        return "/{}/{}/clustering/{}".format(etcd_key, node_type, datastore)
     else:
-        return "/clearwater/{}/{}/clustering/{}".format(site, node_type, datastore)
+        return "/{}/{}/{}/clustering/{}".format(etcd_key, site, node_type, datastore)
 
 logfile = "/var/log/clearwater-etcd/mark_node_failed.log"
 print "Detailed output being sent to %s" % logfile
@@ -55,8 +55,9 @@ site = sys.argv[2]
 node_type = sys.argv[3]
 datastore = sys.argv[4]
 dead_node_ip = sys.argv[5]
+etcd_key = sys.argv[6]
 
-key = make_key(site, node_type, datastore)
+key = make_key(site, node_type, datastore, etcd_key)
 logging.info("Using etcd key %s" % (key))
 
 error_syncer = EtcdSynchronizer(NullPlugin(key), dead_node_ip, etcd_ip=local_ip, force_leave=True)

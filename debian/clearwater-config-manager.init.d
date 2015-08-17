@@ -80,12 +80,13 @@ do_start()
   [ -e /etc/clearwater/no_config_manager ] && (echo "/etc/clearwater/no_config_manager exists, not starting config manager" && return 2)
 
   local_site_name=site1
+  etcd_key=clearwater
   . /etc/clearwater/config
   log_level=3
   log_directory=/var/log/clearwater-config-manager
   [ -r /etc/clearwater/user_settings ] && . /etc/clearwater/user_settings
 
-  DAEMON_ARGS="--local-ip=${management_local_ip:-$local_ip} --local-site=$local_site_name --log-level=$log_level --log-directory=$log_directory --pidfile=$PIDFILE"
+  DAEMON_ARGS="--local-ip=${management_local_ip:-$local_ip} --local-site=$local_site_name --log-level=$log_level --log-directory=$log_directory --pidfile=$PIDFILE --etcd-key=$etcd_key"
 
   start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null \
     || return 1
