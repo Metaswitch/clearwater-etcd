@@ -7,10 +7,12 @@ and management of an `etcd` cluster.
 ## Configuration
 
 Configuration for the `clearwater-etcd` cluster is done through the standard
-`/etc/clearwater/config` file, the following values must be provided:
+`/etc/clearwater/local_config` file, the following values must be provided:
 
  * `etcd_cluster` - See below
  * `local_ip` - The local IP address
+
+You can also provide a `etcd_key` value. This controls what key is used to store the clustering and configuration values in etcd. It defaults to `clearwater` if it isn't set.
 
 ## Creating a Cluster
 
