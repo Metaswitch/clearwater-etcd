@@ -73,13 +73,12 @@ class SyncFSM(object):
     # The number of seconds to wait in WAITING_TO_JOIN/WAITING_TO_LEAVE state
     # before switching into JOINING/LEAVING state. Defined as a class constant
     # for easy overriding in UT.
-    DELAY = 30
-
-    def __init__(self, plugin, local_ip):
+    def __init__(self, plugin, local_ip, delay):
         self._plugin = plugin
         self._id = local_ip
         self._running = True
         self._alarm = TooLongAlarm()
+        self._delay = delay
 
     def quit(self):
         self._alarm.quit()
@@ -181,17 +180,17 @@ class SyncFSM(object):
 
         # States for joining a cluster
 
-        # If we're waiting to join, pause for SyncFSM.DELAY seconds (to allow
-        # other new nodes to come online, and avoid repeating scale-up sveral
-        # times), then move all WAITING_TO_JOIN nodes into JOINING state in
-        # order to kick off scale-up.
+        # If we're waiting to join, pause (to allow other new nodes to come
+        # online, and avoid repeating scale-up sveral times), then move all
+        # WAITING_TO_JOIN nodes into JOINING state in order to kick off
+        # scale-up.
 
         # Existing nodes (in NORMAL state) should do nothing.
 
         elif (cluster_state == constants.JOIN_PENDING and
                 local_state == constants.WAITING_TO_JOIN):
-            _log.info("Pausing for %d seconds in case more nodes are joining the cluster" % SyncFSM.DELAY)
-            sleep(SyncFSM.DELAY)
+            _log.info("Pausing for %d seconds in case more nodes are joining the cluster" % self._delay)
+            sleep(self._delay)
             return self._switch_all_to_joining(cluster_view)
         elif (cluster_state == constants.JOIN_PENDING and
                 local_state == constants.NORMAL):
@@ -268,16 +267,15 @@ class SyncFSM(object):
 
         # States for leaving a cluster
 
-        # If we're waiting to leave, pause for SyncFSM.DELAY seconds (to allow
-        # other leaving nodes to enter this state), then move all
-        # WAITING_TO_LEAVE nodes into LEAVING state in order to kick off
-        # scale-down.
+        # If we're waiting to leave, pause (to allow other leaving nodes to
+        # enter this state), then move all WAITING_TO_LEAVE nodes into LEAVING
+        # state in order to kick off scale-down.
 
         # Remaining nodes (in NORMAL state) should do nothing.
         elif (cluster_state == constants.LEAVE_PENDING and
                 local_state == constants.WAITING_TO_LEAVE):
-            _log.info("Pausing for %d seconds in case more nodes are leaving the cluster" % SyncFSM.DELAY)
-            sleep(SyncFSM.DELAY)
+            _log.info("Pausing for %d seconds in case more nodes are leaving the cluster" % self._delay)
+            sleep(self._delay)
             return self._switch_all_to_leaving(cluster_view)
         elif (cluster_state == constants.LEAVE_PENDING and
                 local_state == constants.NORMAL):

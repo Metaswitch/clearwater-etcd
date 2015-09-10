@@ -52,9 +52,9 @@ class TestNodeFailure(BaseClusterTest):
 
         # Create synchronisers, using a FailPlugin for one which will crash and
         # not complete (simulating a failed node)
-        sync1 = EtcdSynchronizer(DummyPlugin(None), '10.0.0.1')
-        sync2 = EtcdSynchronizer(FailPlugin(None), '10.0.0.2')
-        sync3 = EtcdSynchronizer(DummyPlugin(None), '10.0.0.3')
+        sync1 = self.get_etcd_synchronizer(DummyPlugin(None), '10.0.0.1')
+        sync2 = self.get_etcd_synchronizer(FailPlugin(None), '10.0.0.2')
+        sync3 = self.get_etcd_synchronizer(DummyPlugin(None), '10.0.0.3')
         mock_client = sync1._client
         for s in [sync1, sync2, sync3]:
             s.start_thread()
@@ -68,9 +68,9 @@ class TestNodeFailure(BaseClusterTest):
 
         # Start a synchroniser to take 10.0.0.2's place
         sync2.terminate()
-        error_syncer = EtcdSynchronizer(NullPlugin('/test'),
-                                        '10.0.0.2',
-                                        force_leave=True)
+        error_syncer = self.get_etcd_synchronizer(NullPlugin('/test'),
+                                                  '10.0.0.2',
+                                                  force_leave=True)
         error_syncer.mark_node_failed()
         error_syncer.leave_cluster()
         error_syncer.start_thread()

@@ -47,9 +47,9 @@ class TestScaleUp(BaseClusterTest):
     @patch("etcd.Client", new=EtcdFactory)
     def test_scale_up(self):
         # Create an existing cluster of two nodes, and a third new node
-        sync1 = EtcdSynchronizer(DummyPlugin(None), '10.0.0.1')
-        sync2 = EtcdSynchronizer(DummyPlugin(None), '10.0.0.2')
-        sync3 = EtcdSynchronizer(DummyPlugin(None), '10.0.0.3')
+        sync1 = self.get_etcd_synchronizer(DummyPlugin(None), '10.0.0.1')
+        sync2 = self.get_etcd_synchronizer(DummyPlugin(None), '10.0.0.2')
+        sync3 = self.get_etcd_synchronizer(DummyPlugin(None), '10.0.0.3')
         mock_client = sync1._client
         mock_client.write("/test", json.dumps({"10.0.0.1": "normal",
                                                "10.0.0.2": "normal"}))
@@ -67,10 +67,10 @@ class TestScaleUp(BaseClusterTest):
     def test_two_new_nodes(self):
         # Create an existing cluster of two nodes, and a third and fourth new
         # node at the same time
-        sync1 = EtcdSynchronizer(DummyPlugin(None), '10.0.0.1')
-        sync2 = EtcdSynchronizer(DummyPlugin(None), '10.0.0.2')
-        sync3 = EtcdSynchronizer(DummyPlugin(None), '10.0.0.3')
-        sync4 = EtcdSynchronizer(DummyPlugin(None), '10.0.0.4')
+        sync1 = self.get_etcd_synchronizer(DummyPlugin(None), '10.0.0.1')
+        sync2 = self.get_etcd_synchronizer(DummyPlugin(None), '10.0.0.2')
+        sync3 = self.get_etcd_synchronizer(DummyPlugin(None), '10.0.0.3')
+        sync4 = self.get_etcd_synchronizer(DummyPlugin(None), '10.0.0.4')
         mock_client = sync1._client
         mock_client.write("/test", json.dumps({"10.0.0.1": "normal",
                                                "10.0.0.2": "normal"}))

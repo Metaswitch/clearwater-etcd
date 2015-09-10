@@ -49,9 +49,10 @@ from mock import patch, MagicMock
 alarms_patch = patch("metaswitch.clearwater.cluster_manager.alarms.issue_alarm", new=MagicMock)
 
 class BaseClusterTest(unittest.TestCase):
+    def get_etcd_synchronizer(self, *args, **kwargs):
+        return EtcdSynchronizer(*args, pause_before_retry=0.1, fsm_delay=0.1, **kwargs)
+
     def setUp(self):
-        SyncFSM.DELAY = 0.1
-        CommonEtcdSynchronizer.PAUSE_BEFORE_RETRY = 0
         MockEtcdClient.clear()
         alarms_patch.start()
         self.syncs = []
@@ -73,7 +74,7 @@ class BaseClusterTest(unittest.TestCase):
 
     def make_and_start_synchronizers(self, num, klass=DummyPlugin):
         ips = ["10.0.0.%s" % d for d in range(num)]
-        self.syncs = [EtcdSynchronizer(klass(ip), ip) for ip in ips]
+        self.syncs = [self.get_etcd_synchronizer(klass(ip), ip) for ip in ips]
         for s in self.syncs:
             s.start_thread()
 

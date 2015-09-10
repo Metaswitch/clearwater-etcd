@@ -42,11 +42,16 @@ import logging
 
 _log = logging.getLogger(__name__)
 
-
 class EtcdSynchronizer(CommonEtcdSynchronizer):
-    def __init__(self, plugin, ip, etcd_ip=None, force_leave=False):
-        CommonEtcdSynchronizer.__init__(self, plugin, ip, etcd_ip)
-        self._fsm = SyncFSM(self._plugin, self._ip)
+    def __init__(self,
+                 plugin,
+                 ip,
+                 etcd_ip=None,
+                 force_leave=False,
+                 pause_before_retry=30,
+                 fsm_delay=30):
+        CommonEtcdSynchronizer.__init__(self, plugin, ip, etcd_ip=etcd_ip, pause_before_retry=pause_before_retry)
+        self._fsm = SyncFSM(self._plugin, self._ip, delay=fsm_delay)
         self._leaving_flag = False
         self.force_leave = force_leave
 

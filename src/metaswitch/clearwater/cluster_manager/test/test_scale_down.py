@@ -47,7 +47,7 @@ class TestScaleDown(BaseClusterTest):
     @patch("etcd.Client", new=EtcdFactory)
     def test_scale_down(self):
         # Start with a stable cluster of four nodes
-        syncs = [EtcdSynchronizer(DummyPlugin(None), ip) for ip in
+        syncs = [self.get_etcd_synchronizer(DummyPlugin(None), ip) for ip in
                  ['10.0.1.1',
                   '10.0.1.2',
                   '10.0.1.3',

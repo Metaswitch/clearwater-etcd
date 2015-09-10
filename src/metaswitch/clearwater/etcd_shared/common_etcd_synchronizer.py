@@ -42,9 +42,7 @@ _log = logging.getLogger(__name__)
 
 
 class CommonEtcdSynchronizer(object):
-    PAUSE_BEFORE_RETRY = 30
-
-    def __init__(self, plugin, ip, etcd_ip=None):
+    def __init__(self, plugin, ip, pause_before_retry, etcd_ip=None):
         self._plugin = plugin
         self._ip = ip
         cxn_ip = etcd_ip or ip
@@ -53,6 +51,7 @@ class CommonEtcdSynchronizer(object):
         self._last_value = None
         self._terminate_flag = False
         self.thread = Thread(target=self.main, name=self.thread_name())
+        self._pause_before_retry = pause_before_retry
 
     def start_thread(self):
         self.thread.daemon = True
@@ -63,7 +62,7 @@ class CommonEtcdSynchronizer(object):
         self.thread.join()
 
     def pause(self):
-        sleep(self.PAUSE_BEFORE_RETRY)
+        sleep(self._pause_before_retry)
 
     def main(self): pass
 

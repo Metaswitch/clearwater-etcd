@@ -57,7 +57,7 @@ class TestWatcherPlugin(BaseClusterTest):
         """Create a new 3-node cluster with one plugin not in the cluster and
         check that the main three all end up in NORMAL state"""
 
-        e = EtcdSynchronizer(self.plugin, self.watcher_ip)
+        e = self.get_etcd_synchronizer(self.plugin, self.watcher_ip)
         e.start_thread()
 
         self.make_and_start_synchronizers(3)
@@ -81,7 +81,7 @@ class TestWatcherPlugin(BaseClusterTest):
     def test_leaving(self, client):
         """Create a plugin not in the cluster and try to leave the cluster.
         Nothing should be written to etcd."""
-        e = EtcdSynchronizer(self.plugin, self.watcher_ip)
+        e = self.get_etcd_synchronizer(self.plugin, self.watcher_ip)
         e.start_thread()
 
         e.leave_cluster()
@@ -93,7 +93,7 @@ class TestWatcherPlugin(BaseClusterTest):
     def test_mark_failed(self, client):
         """Create a plugin not in the cluster and try to mark it as failed.
         Nothing should be written to etcd."""
-        e = EtcdSynchronizer(self.plugin, self.watcher_ip)
+        e = self.get_etcd_synchronizer(self.plugin, self.watcher_ip)
         e.start_thread()
 
         e.mark_node_failed()
