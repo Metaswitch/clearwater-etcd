@@ -42,7 +42,9 @@ _log = logging.getLogger(__name__)
 
 
 class CommonEtcdSynchronizer(object):
-    PAUSE_BEFORE_RETRY = 30
+    PAUSE_BEFORE_RETRY_ON_EXCEPTION = 30
+    PAUSE_BEFORE_RETRY_ON_MISSING_KEY = 5
+    TIMEOUT_ON_WATCH = 5
 
     def __init__(self, plugin, ip, etcd_ip=None):
         self._plugin = plugin
@@ -63,7 +65,7 @@ class CommonEtcdSynchronizer(object):
         self.thread.join()
 
     def pause(self):
-        sleep(self.PAUSE_BEFORE_RETRY)
+        sleep(self.PAUSE_BEFORE_RETRY_ON_EXCEPTION)
 
     def main(self): pass
 
@@ -100,12 +102,12 @@ class CommonEtcdSynchronizer(object):
                             result = self._client.read(self.key(),
                                                        wait=True,
                                                        waitIndex=wait_index,
-                                                       timeout=5,
+                                                       timeout=self.TIMEOUT_ON_WATCH,
                                                        recursive=False)
                             break
                         except etcd.EtcdException as e:
                             if "Read timed out" in e.message:
-                                # Timeouts after 5 seconds are expected, so
+                                # Timeouts after TIMEOUT_ON_WATCH seconds are expected, so
                                 # ignore them - unless we're terminating, we'll
                                 # stay in the while loop and try again
                                 pass
@@ -120,6 +122,8 @@ class CommonEtcdSynchronizer(object):
 
         except etcd.EtcdKeyError:
             _log.info("Key {} doesn't exist in etcd yet".format(self.key()))
+            # Sleep briefly to avoid hammering a non-existent key.
+            sleep(self.PAUSE_BEFORE_RETRY_ON_MISSING_KEY)
             return (self.default_value(), None)
         except Exception as e:
             # Catch-all error handler (for invalid requests, timeouts, etc -

@@ -51,7 +51,8 @@ alarms_patch = patch("metaswitch.clearwater.cluster_manager.alarms.issue_alarm",
 class BaseClusterTest(unittest.TestCase):
     def setUp(self):
         SyncFSM.DELAY = 0.1
-        CommonEtcdSynchronizer.PAUSE_BEFORE_RETRY = 0
+        CommonEtcdSynchronizer.PAUSE_BEFORE_RETRY_ON_EXCEPTION = 0
+        CommonEtcdSynchronizer.PAUSE_BEFORE_RETRY_ON_MISSING_KEY = 0
         MockEtcdClient.clear()
         alarms_patch.start()
         self.syncs = []
