@@ -49,6 +49,9 @@ class BasicTest(unittest.TestCase):
     def test_synchronisation(self):
         p = TestPlugin()
         e = EtcdSynchronizer(p, "10.0.0.1", "local", None, "clearwater")
+        # Write some initial data into the key
+        e._client.write("/clearwater/local/configuration/test", "initial data")
+
         thread = Thread(target=e.main)
         thread.daemon=True
         thread.start()
