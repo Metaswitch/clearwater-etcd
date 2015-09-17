@@ -7,6 +7,7 @@
 /build/
 /htmlcov/
 /src/*.egg-info/
+coverage.xml
 
 # Alarm constants generated from JSON files
 src/metaswitch/clearwater/config_manager/alarm_constants.py
