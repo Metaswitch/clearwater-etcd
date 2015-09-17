@@ -69,8 +69,7 @@ class CommonEtcdSynchronizer(object):
 
     def main(self): pass
 
-    def default_value(self):
-        return None
+    def default_value(self): return None
 
     def is_running(self): return True
 

@@ -13,7 +13,10 @@ X86_64_ONLY=0
 .DEFAULT_GOAL = deb
 
 .PHONY: test
-test: config_mgr_setup.py cluster_mgr_setup.py env
+test: coverage
+
+.PHONY: run_test
+run_test: config_mgr_setup.py cluster_mgr_setup.py env
 	PYTHONPATH=src:common ${ENV_PYTHON} cluster_mgr_setup.py test -v && PYTHONPATH=src:common ${ENV_PYTHON} config_mgr_setup.py test -v
 
 ${ENV_DIR}/bin/flake8: env
