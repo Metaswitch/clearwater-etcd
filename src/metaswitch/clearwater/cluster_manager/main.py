@@ -176,13 +176,19 @@ def main(args):
 
     synchronizers = []
     threads = []
-    for plugin in plugins_to_use:
-        syncer = EtcdSynchronizer(plugin, sig_ip, etcd_ip=mgmt_ip)
-        syncer.start_thread()
 
-        synchronizers.append(syncer)
-        threads.append(syncer.thread)
-        _log.info("Loaded plugin %s" % plugin)
+    if etcd_cluster_key == "DO_NOT_CLUSTER":
+        # Don't start any threads as we don't want this box to cluster
+        pdlogs.DO_NOT_CLUSTER.log()
+    else:
+        for plugin in plugins_to_use:
+            syncer = EtcdSynchronizer(plugin, sig_ip, etcd_ip=mgmt_ip)
+            syncer.start_thread()
+
+            synchronizers.append(syncer)
+            threads.append(syncer.thread)
+            _log.info("Loaded plugin %s" % plugin)
+
 
     install_sigquit_handler(synchronizers)
     install_sigterm_handler(synchronizers)
