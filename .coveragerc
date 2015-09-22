@@ -4,7 +4,7 @@ omit =
   **/test/**
   **/main.py
   **/plugin_utils.py
-parallel = True
+parallel = False
 
 [report]
 exclude_lines =
