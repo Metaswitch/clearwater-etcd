@@ -4,4 +4,3 @@ max_log_directory_size=$ONE_HUNDRED_MEG
 . /etc/clearwater/config
 
 python2.7 /usr/share/clearwater/bin/log_cleanup.py /var/log/clearwater-cluster-manager --prefix cluster-manager --maxsize $max_log_directory_size
-python2.7 /usr/share/clearwater/bin/log_cleanup.py /var/log/clearwater-etcd --prefix mark_node_failed --maxsize $max_log_directory_size
