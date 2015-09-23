@@ -3,4 +3,4 @@ ONE_HUNDRED_MEG=$((100 * 1024 * 1024))
 max_log_directory_size=$ONE_HUNDRED_MEG
 . /etc/clearwater/config
 
-python2.7 /usr/share/clearwater/bin/log_cleanup.py /var/log/clearwater-config-manager --prefix config_manager --maxsize $max_log_directory_size
+python2.7 /usr/share/clearwater/bin/log_cleanup.py /var/log/clearwater-config-manager --prefix config-manager --maxsize $max_log_directory_size
