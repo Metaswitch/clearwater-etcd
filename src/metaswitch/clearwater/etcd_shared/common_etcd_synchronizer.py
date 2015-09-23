@@ -35,7 +35,7 @@
 import etcd
 from threading import Thread
 from time import sleep
-
+from concurrent import futures
 import logging
 
 _log = logging.getLogger(__name__)
@@ -44,7 +44,6 @@ _log = logging.getLogger(__name__)
 class CommonEtcdSynchronizer(object):
     PAUSE_BEFORE_RETRY_ON_EXCEPTION = 30
     PAUSE_BEFORE_RETRY_ON_MISSING_KEY = 5
-    TIMEOUT_ON_WATCH = 5
 
     def __init__(self, plugin, ip, etcd_ip=None):
         self._plugin = plugin
@@ -54,7 +53,9 @@ class CommonEtcdSynchronizer(object):
         self._index = None
         self._last_value = None
         self._terminate_flag = False
-        self.thread = Thread(target=self.main, name=self.thread_name())
+        self.thread = Thread(target=self.main, name=plugin.__class__.__name__)
+        self.executor = futures.ThreadPoolExecutor(10)
+        self.terminate_future = self.executor.submit(self.wait_for_terminate)
 
     def start_thread(self):
         self.thread.daemon = True
@@ -63,6 +64,10 @@ class CommonEtcdSynchronizer(object):
     def terminate(self):
         self._terminate_flag = True
         self.thread.join()
+
+    def wait_for_terminate(self):
+        while not self._terminate_flag:
+            sleep(1)
 
     def pause(self):
         sleep(self.PAUSE_BEFORE_RETRY_ON_EXCEPTION)
@@ -73,8 +78,7 @@ class CommonEtcdSynchronizer(object):
 
     def is_running(self): return True
 
-    def thread_name(self):
-        return self._plugin.__class__.__name__
+    def thread_name(self): return self._plugin.__class__.__name__
 
     # Read the state of the cluster from etcd (optionally waiting for a changed
     # state). Returns None if nothing could be read.
@@ -95,23 +99,25 @@ class CommonEtcdSynchronizer(object):
                               self._last_value))
                 if result.value == self._last_value:
                     _log.info("Watching for changes")
+
                     while not self._terminate_flag and self.is_running():
-                        try:
-                            _log.debug("Started a new watch")
-                            result = self._client.read(self.key(),
-                                                       wait=True,
-                                                       waitIndex=wait_index,
-                                                       timeout=self.TIMEOUT_ON_WATCH,
-                                                       recursive=False)
-                            break
-                        except etcd.EtcdException as e:
-                            if "Read timed out" in e.message:
-                                # Timeouts after TIMEOUT_ON_WATCH seconds are expected, so
-                                # ignore them - unless we're terminating, we'll
-                                # stay in the while loop and try again
-                                pass
-                            else:
-                                raise
+                        _log.debug("Started a new watch")
+                        result_future = self.executor.submit(self._client.watch,
+                                                             self.key(),
+                                                             index=wait_index,
+                                                             recursive=False)
+                        futures.wait([result_future, self.terminate_future],
+                                     return_when=futures.FIRST_COMPLETED)
+
+                        if result_future.done():
+                            # This should always be the case unless we're about
+                            # to quit
+                            result = result_future.result(timeout=0)
+                        else:
+                            # We've returned from a watch without getting a
+                            # result. This should only happen when shutting down.
+                            assert(self._terminate_flag)
+                        break
 
                     _log.debug("Finished watching")
 
