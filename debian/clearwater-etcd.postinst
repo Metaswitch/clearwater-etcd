@@ -96,6 +96,12 @@ case "$1" in
 
         install -D --mode=0644 /usr/share/clearwater/conf/clearwater-etcd.monit /etc/monit/conf.d/
         reload clearwater-monit || /bin/true
+
+        # Restart clearwater-etcd.  Always do this by terminating clearwater-etcd so monit will
+        # restart it more-or-less immediately.  (monit restart seems to have
+        # significant lag.)
+        # Don't fail if it's already stopped.
+        service clearwater-etcd stop || true
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
