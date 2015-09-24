@@ -101,7 +101,7 @@ case "$1" in
         # restart it more-or-less immediately.  (monit restart seems to have
         # significant lag.)
         # Don't fail if it's already stopped.
-        service clearwater-etcd stop || true
+        service clearwater-etcd stop || /bin/true
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
