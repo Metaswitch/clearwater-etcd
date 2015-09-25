@@ -35,22 +35,23 @@
 """Clearwater Cluster Manager
 
 Usage:
-  main.py --mgmt-local-ip=IP --sig-local-ip=IP --local-site=NAME --remote-site=NAME --etcd-key=KEY
+  main.py --mgmt-local-ip=IP --sig-local-ip=IP --local-site=NAME --remote-site=NAME --etcd-key=KEY --etcd-cluster-key=CLUSTER_KEY
           [--signaling-namespace=NAME] [--foreground] [--log-level=LVL]
           [--log-directory=DIR] [--pidfile=FILE]
 
 Options:
-  -h --help                   Show this screen.
-  --mgmt-local-ip=IP          Management IP address
-  --sig-local-ip=IP           Signaling IP address
-  --local-site=NAME           Name of local site
-  --remote-site=NAME          Name of remote site
-  --signaling-namespace=NAME  Name of the signaling namespace
-  --etcd-key=KEY              Etcd key (top level)
-  --foreground                Don't daemonise
-  --log-level=LVL             Level to log at, 0-4 [default: 3]
-  --log-directory=DIR         Directory to log to [default: ./]
-  --pidfile=FILE              Pidfile to write [default: ./cluster-manager.pid]
+  -h --help                      Show this screen.
+  --mgmt-local-ip=IP             Management IP address
+  --sig-local-ip=IP              Signaling IP address
+  --local-site=NAME              Name of local site
+  --remote-site=NAME             Name of remote site
+  --signaling-namespace=NAME     Name of the signaling namespace
+  --etcd-key=KEY                 Etcd key (top level)
+  --etcd-cluster-key=CLUSTER_KEY Etcd key (used in the data store clusters)
+  --foreground                   Don't daemonise
+  --log-level=LVL                Level to log at, 0-4 [default: 3]
+  --log-directory=DIR            Directory to log to [default: ./]
+  --pidfile=FILE                 Pidfile to write [default: ./cluster-manager.pid]
 
 """
 
@@ -116,10 +117,19 @@ def main(args):
     remote_site_name = arguments['--remote-site']
     signaling_namespace = arguments.get('--signaling-namespace')
     etcd_key = arguments.get('--etcd-key')
+    etcd_cluster_key = arguments.get('--etcd-cluster-key')
     log_dir = arguments['--log-directory']
     log_level = LOG_LEVELS.get(arguments['--log-level'], logging.DEBUG)
 
     stdout_err_log = os.path.join(log_dir, "cluster-manager.output.log")
+
+    # Check that there's an etcd_cluster_key value passed to the cluster
+    # manager
+    if etcd_cluster_key == "":
+        # The etcd_cluster_key isn't valid, and possibly get weird entries in
+        # the etcd database if we allow the cluster_manager to start
+        pdlogs.EXITING_MISSING_ETCD_CLUSTER_KEY.log()
+        exit(1)
 
     if not arguments['--foreground']:
         utils.daemonize(stdout_err_log)
@@ -146,7 +156,8 @@ def main(args):
                                                local_site=local_site_name,
                                                remote_site=remote_site_name,
                                                signaling_namespace=signaling_namespace,
-                                               etcd_key=etcd_key))
+                                               etcd_key=etcd_key,
+                                               etcd_cluster_key=etcd_cluster_key))
     plugins.sort(key=lambda x: x.key())
     plugins_to_use = []
     files = []
@@ -165,13 +176,19 @@ def main(args):
 
     synchronizers = []
     threads = []
-    for plugin in plugins_to_use:
-        syncer = EtcdSynchronizer(plugin, sig_ip, etcd_ip=mgmt_ip)
-        syncer.start_thread()
 
-        synchronizers.append(syncer)
-        threads.append(syncer.thread)
-        _log.info("Loaded plugin %s" % plugin)
+    if etcd_cluster_key == "DO_NOT_CLUSTER":
+        # Don't start any threads as we don't want this box to cluster
+        pdlogs.DO_NOT_CLUSTER.log()
+    else:
+        for plugin in plugins_to_use:
+            syncer = EtcdSynchronizer(plugin, sig_ip, etcd_ip=mgmt_ip)
+            syncer.start_thread()
+
+            synchronizers.append(syncer)
+            threads.append(syncer.thread)
+            _log.info("Loaded plugin %s" % plugin)
+
 
     install_sigquit_handler(synchronizers)
     install_sigterm_handler(synchronizers)

@@ -69,7 +69,6 @@ NODE_LEAVING = PDLog(
     effect="Normal.",
     action="None.",
     priority=PDLog.LOG_NOTICE)
-
 NOT_YET_CLUSTERED_ALARM = PDLog(
     number=PDLog.CL_CLUSTER_MGR_ID+6,
     desc="This node is not yet clustered.",
@@ -79,7 +78,6 @@ NOT_YET_CLUSTERED_ALARM = PDLog(
       "ensure that clearwater-etcd and clearwater-cluster-manager have started "+\
       "up, and fix any other errors relating to them.",
     priority=PDLog.LOG_ERR)
-
 TOO_LONG_ALARM = PDLog(
     number=PDLog.CL_CLUSTER_MGR_ID+7,
     desc="A scaling operation has taken too long.",
@@ -90,3 +88,19 @@ TOO_LONG_ALARM = PDLog(
       "to it. If any nodes are temporarily failed, recover them. If any nodes "+\
       "are permanently failed, follow the documentation to remove them from the cluster.",
     priority=PDLog.LOG_ERR)
+EXITING_MISSING_ETCD_CLUSTER_KEY = PDLog(
+    number=PDLog.CL_CLUSTER_MGR_ID+8,
+    desc="clearwater-cluster-manager is exiting due to missing configuration.",
+    cause="clearwater-cluster-manager was started without the mandatory etcd_cluster_key parameter.",
+    effect="Datastore cluster management services are no longer available.",
+    action="Verify that the configuration file /etc/clearwater/local_config is correct "+\
+      "according to the documentation.",
+    priority=PDLog.LOG_ERR)
+DO_NOT_CLUSTER = PDLog(
+    number=PDLog.CL_CLUSTER_MGR_ID+9,
+    desc="clearwater-cluster-manager isn't starting any plugins due to the configuration.",
+    cause="clearwater-cluster-manager was started with the etcd_cluster_key set to DO_NOT_CLUSTER, "+\
+      "so this node will not join any data store clusters.",
+    effect="This node will not join data store clusters.",
+    action="If this is unexpected, change the etcd_cluster_key in /etc/clearwater/local_config.",
+    priority=PDLog.LOG_NOTICE)

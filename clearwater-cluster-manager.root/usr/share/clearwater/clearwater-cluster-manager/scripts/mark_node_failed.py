@@ -37,6 +37,7 @@ from metaswitch.clearwater.cluster_manager.null_plugin import \
     NullPlugin
 import etcd
 import logging
+import os
 
 def make_key(site, node_type, datatore, etcd_key):
     if datastore == "cassandra":
@@ -73,9 +74,14 @@ error_syncer.leave_cluster()
 
 # Wait for it to leave
 error_syncer.thread.join()
+
 print "Process complete - %s has left the cluster" % dead_node_ip
 
 c = etcd.Client(local_ip, 4000)
 new_state = c.get(key).value
 
 logging.info("New etcd state (after removing %s) is %s" % (dead_node_ip, new_state))
+
+# Use os.exit to skip exit handlers - otherwise the concurrent.futures exit
+# handler waits for an infinite wait to end
+os._exit(0)

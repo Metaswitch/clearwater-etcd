@@ -85,10 +85,13 @@ do_start()
     return 2
   fi
 
+  # Make sure to pull in the node_type files before local_config
   local_site_name=site1
   remote_site_name=""
   signaling_namespace=""
   etcd_key=clearwater
+  etcd_cluster_key=""
+  . /usr/share/clearwater/node_type.d/$(ls /usr/share/clearwater/node_type.d | head -n 1)
   . /etc/clearwater/config
   log_level=3
   log_directory=/var/log/clearwater-cluster-manager
@@ -100,6 +103,7 @@ do_start()
                --remote-site=$remote_site_name
                --signaling-namespace=$signaling_namespace
                --etcd-key=$etcd_key
+               --etcd-cluster-key=$etcd_cluster_key
                --log-level=$log_level
                --log-directory=$log_directory
                --pidfile=$PIDFILE"
