@@ -39,13 +39,14 @@ from .synchronization_fsm import SyncFSM
 from metaswitch.clearwater.etcd_shared.common_etcd_synchronizer import CommonEtcdSynchronizer
 from .cluster_state import ClusterInfo
 import logging
+from etcd import EtcdAlreadyExist
 
 _log = logging.getLogger(__name__)
 
 
 class EtcdSynchronizer(CommonEtcdSynchronizer):
     def __init__(self, plugin, ip, etcd_ip=None, force_leave=False):
-        CommonEtcdSynchronizer.__init__(self, plugin, ip, etcd_ip)
+        super(EtcdSynchronizer, self).__init__(plugin, ip, etcd_ip)
         self._fsm = SyncFSM(self._plugin, self._ip)
         self._leaving_flag = False
         self.force_leave = force_leave
@@ -95,6 +96,7 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
 
         _log.info("Quitting FSM")
         self._fsm.quit()
+        self.executor.shutdown(wait=False)
 
     # This node has been asked to leave the cluster. Check if the cluster is in
     # a stable state, in which case we can leave. Otherwise, set a flag and
@@ -162,7 +164,7 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
             # WAITING_TO_LEAVE, in which case we no longer need the leaving
             # flag.
             self._leaving_flag = False
-        except ValueError:
+        except (EtcdAlreadyExist, ValueError):
             _log.debug("Contention on etcd write - new_state is {}".format(new_state))
             # Our etcd write failed because someone got there before us.
 
