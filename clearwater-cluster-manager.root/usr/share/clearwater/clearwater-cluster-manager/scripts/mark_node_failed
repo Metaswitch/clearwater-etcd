@@ -44,7 +44,6 @@ then
   exit 1
 fi
 
-#TODO support passing in the etcd_key
 if [ $# -ne 3 ]
 then
   echo "Usage: mark_node_failed [node_type] [datastore] [failed_node_ip]"
