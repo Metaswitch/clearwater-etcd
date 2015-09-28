@@ -38,6 +38,13 @@ local_site_name=site1
 etcd_key=clearwater
 . /etc/clearwater/config
 
+if [[ $EUID -ne 0 ]]
+then
+  echo "You must run this script with root permissions"
+  exit 1
+fi
+
+#TODO support passing in the etcd_key
 if [ $# -ne 3 ]
 then
   echo "Usage: mark_node_failed [node_type] [datastore] [failed_node_ip]"

@@ -84,18 +84,30 @@ class MockEtcdClient(object):
             raise ValueError()
         global_data = value
         global_index += 1
+        r = self.fake_result()
         global_condvar.notify_all()
         global_condvar.release()
-        return self.fake_result()
+        return r
 
     def read(self, key, recursive=None, **kwargs):
+        global_condvar.acquire()
         if global_data == "":
+            global_condvar.release()
             raise EtcdKeyError("")
-        return self.fake_result()
+        r = self.fake_result()
+        global_condvar.release()
+        return r
 
-    def watch(self, key, waitIndex=None, timeout=None, recursive=None, **kwargs):
+    def watch(self, key, index=None, timeout=None, recursive=None, **kwargs):
+        global_condvar.acquire()
         value = global_data
-        while value == global_data:
+        gindex = global_index
+        global_condvar.release()
+
+        if index <= gindex:
+            return self.fake_result()
+
+        while (value == global_data and gindex == global_index):
             sleep(0.1)
 
         return self.fake_result()
