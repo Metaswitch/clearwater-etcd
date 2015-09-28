@@ -77,7 +77,7 @@ class TestNodeFailure(BaseClusterTest):
 
         # 10.0.0.2 will be removed from the cluster, and the cluster will
         # stabilise
-        sleep(3)
+        self.wait_for_all_normal(mock_client, required_number=2, tries=50)
         end = json.loads(mock_client.read("/test").value)
         self.assertEqual("normal", end.get("10.0.0.1"))
         self.assertEqual("normal", end.get("10.0.0.3"))
