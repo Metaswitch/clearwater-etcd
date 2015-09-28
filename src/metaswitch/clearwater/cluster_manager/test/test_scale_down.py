@@ -63,7 +63,7 @@ class TestScaleDown(BaseClusterTest):
         for s in syncs:
             s.start_thread()
 
-        # Allow the cluster to stabalise, then make the second and fourth nodes leave
+        # Allow the cluster to stabilise, then make the second and fourth nodes leave
         sleep(1)
         syncs[1].leave_cluster()
         syncs[3].leave_cluster()
