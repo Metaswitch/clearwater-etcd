@@ -94,9 +94,10 @@ class MockEtcdClient(object):
         return self.fake_result()
 
     def watch(self, key, waitIndex=None, timeout=None, recursive=None, **kwargs):
-        # Don't return immediately on the watch
-        with global_condvar:
-            global_condvar.wait(0.1)
+        value = global_data
+        while value == global_data:
+            sleep(0.1)
+
         return self.fake_result()
 
     def read_noexcept(self, *args, **kwargs):

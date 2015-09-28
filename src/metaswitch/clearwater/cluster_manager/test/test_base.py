@@ -63,7 +63,7 @@ class BaseClusterTest(unittest.TestCase):
             try:
                 value = client.read_noexcept("/test").value
                 end = json.loads(value)
-                if all([v == "normal" for k, v in end.iteritems()]) and \
+                if all([v == "normal" for v in end.itervalues()]) and \
                    (required_number == -1 or len(end) == required_number):
                     return
             except EtcdKeyError:

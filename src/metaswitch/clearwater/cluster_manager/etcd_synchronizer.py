@@ -113,13 +113,13 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
         etcd_result, idx = self.read_from_etcd(wait=False)
         cluster_info = ClusterInfo(etcd_result)
 
+        self._leaving_flag = True
         if cluster_info.can_leave(self.force_leave):
             _log.info("Cluster is in a stable state, so leaving the cluster immediately")
             self.write_to_etcd(cluster_info, constants.WAITING_TO_LEAVE)
         else:
             _log.info("Can't leave the cluster immediately - " +
                       "will do so when the cluster next stabilises")
-            self._leaving_flag = True
 
     def mark_node_failed(self):
         if not self._plugin.should_be_in_cluster():
@@ -163,7 +163,8 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
             # We may have just successfully set the local node to
             # WAITING_TO_LEAVE, in which case we no longer need the leaving
             # flag.
-            self._leaving_flag = False
+            if new_state == constants.WAITING_TO_LEAVE:
+                self._leaving_flag = False
         except (EtcdAlreadyExist, ValueError):
             _log.debug("Contention on etcd write - new_state is {}".format(new_state))
             # Our etcd write failed because someone got there before us.

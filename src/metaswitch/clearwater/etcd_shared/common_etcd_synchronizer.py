@@ -55,7 +55,6 @@ class CommonEtcdSynchronizer(object):
         self._terminate_flag = False
         self.thread = Thread(target=self.main, name=plugin.__class__.__name__)
         self.executor = futures.ThreadPoolExecutor(10)
-        self.terminate_future = self.executor.submit(self.wait_for_terminate)
 
     def start_thread(self):
         self.thread.daemon = True
@@ -97,6 +96,7 @@ class CommonEtcdSynchronizer(object):
                           "comparing to last value {}".format(
                               result.value,
                               self._last_value))
+
                 if result.value == self._last_value:
                     _log.info("Watching for changes")
 
@@ -106,7 +106,8 @@ class CommonEtcdSynchronizer(object):
                                                              self.key(),
                                                              index=wait_index,
                                                              recursive=False)
-                        futures.wait([result_future, self.terminate_future],
+                        term_future = self.executor.submit(self.wait_for_terminate)
+                        futures.wait([result_future, term_future],
                                      return_when=futures.FIRST_COMPLETED)
 
                         if result_future.done():
@@ -116,7 +117,7 @@ class CommonEtcdSynchronizer(object):
                         else:
                             # We've returned from a watch without getting a
                             # result. This should only happen when shutting down.
-                            assert(self._terminate_flag)
+                            assert(term_future.done())
                         break
 
                     _log.debug("Finished watching")
