@@ -77,6 +77,7 @@ class BaseClusterTest(unittest.TestCase):
         self.syncs = [EtcdSynchronizer(klass(ip), ip) for ip in ips]
         for s in self.syncs:
             s.start_thread()
+        sleep(1) # Allow cluster to stabilise
 
     def close_synchronizers(self):
         for s in self.syncs:

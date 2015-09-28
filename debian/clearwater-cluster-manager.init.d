@@ -91,7 +91,10 @@ do_start()
   signaling_namespace=""
   etcd_key=clearwater
   etcd_cluster_key=""
-  . /usr/share/clearwater/node_type.d/$(ls /usr/share/clearwater/node_type.d | head -n 1)
+  if [ -d /usr/share/clearwater/node_type.d ]
+  then
+    . /usr/share/clearwater/node_type.d/$(ls /usr/share/clearwater/node_type.d | head -n 1)
+  fi
   . /etc/clearwater/config
   log_level=3
   log_directory=/var/log/clearwater-cluster-manager
