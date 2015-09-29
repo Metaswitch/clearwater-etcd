@@ -89,28 +89,19 @@ class MockEtcdClient(object):
         global_condvar.release()
         return r
 
-    def read(self, key, recursive=None, **kwargs):
-        global_condvar.acquire()
-        if global_data == "":
-            global_condvar.release()
-            raise EtcdKeyError("")
-        r = self.fake_result()
-        global_condvar.release()
-        return r
-
-    def watch(self, key, index=None, timeout=None, recursive=None, **kwargs):
-        global_condvar.acquire()
-        value = global_data
-        gindex = global_index
-        global_condvar.release()
-
-        if index <= gindex:
-            return self.fake_result()
-
-        while (value == global_data and gindex == global_index):
-            sleep(0.1)
-
-        return self.fake_result()
+    def read(self, key, wait=False, waitIndex=None, timeout=None, recursive=None, **kwargs):
+        with global_condvar:
+            if wait:
+                if global_index == 0:
+                    raise etcd.EtcdKeyError()
+                if waitIndex > global_index:
+                    global_condvar.wait(0.1)
+                if waitIndex > global_index:
+                    raise EtcdException("Read timed out")
+            if global_data == "":
+                raise EtcdKeyError("")
+            ret = self.fake_result()
+        return ret
 
     def read_noexcept(self, *args, **kwargs):
         return self.read(*args, **kwargs)

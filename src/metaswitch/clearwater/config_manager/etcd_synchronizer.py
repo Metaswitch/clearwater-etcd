@@ -65,7 +65,5 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
                 self._plugin.on_config_changed(value, self._alarm)
                 FILE_CHANGED.log(filename=self._plugin.file())
 
-        self.executor.shutdown(wait=False)
-
     def key(self):
         return "/" + self._key + "/" + self._site + "/configuration/" + self._plugin.key()

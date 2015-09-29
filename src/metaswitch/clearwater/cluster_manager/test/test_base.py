@@ -53,6 +53,7 @@ class BaseClusterTest(unittest.TestCase):
         SyncFSM.DELAY = 0.1
         CommonEtcdSynchronizer.PAUSE_BEFORE_RETRY_ON_EXCEPTION = 0
         CommonEtcdSynchronizer.PAUSE_BEFORE_RETRY_ON_MISSING_KEY = 0
+        CommonEtcdSynchronizer.TIMEOUT_ON_WATCH = 0
         MockEtcdClient.clear()
         alarms_patch.start()
         self.syncs = []
