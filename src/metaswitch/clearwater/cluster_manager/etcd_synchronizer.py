@@ -96,7 +96,6 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
 
         _log.info("Quitting FSM")
         self._fsm.quit()
-        self.executor.shutdown(wait=False)
 
     # This node has been asked to leave the cluster. Check if the cluster is in
     # a stable state, in which case we can leave. Otherwise, set a flag and

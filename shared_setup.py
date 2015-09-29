@@ -46,6 +46,6 @@ setup(
     package_data={
         '': ['*.eml'],
         },
-    install_requires=["docopt", "python-etcd", "pyzmq", "pyyaml", "futures"],
+    install_requires=["docopt", "python-etcd", "pyzmq", "pyyaml"],
     tests_require=["Mock"],
     )
