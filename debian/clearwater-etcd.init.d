@@ -149,11 +149,11 @@ join_cluster()
             echo "Failed to remove local node from cluster"
             exit 2
           elif [[ -d $DATA_DIR/$advertisement_ip ]]
-          then 
+          then
             rm -r $DATA_DIR/$advertisement_ip
-          fi 
+          fi
         fi
-        
+
         # Tell the cluster we're joining, this prints useful environment
         # variables to stdout but also prints a success message so strip that
         # out before saving the variables to the temp file.
@@ -176,7 +176,7 @@ join_cluster()
         ulimit -c unlimited
 
         # Tidy up
-        rm $TEMP_FILE 
+        rm $TEMP_FILE
 }
 
 #
@@ -198,7 +198,7 @@ join_or_create_cluster()
 wait_for_etcd()
 {
         # Wait for etcd to come up.
-        start_time=$(date +%s) 
+        start_time=$(date +%s)
         while true; do
           if nc -z $listen_ip 4000; then
             break;
@@ -245,27 +245,27 @@ do_start()
             join_or_create_cluster
           fi
 
-          # Common arguments
-          DAEMON_ARGS="--listen-client-urls http://$listen_ip:4000
-                       --advertise-client-urls http://$advertisement_ip:4000
-                       --listen-peer-urls http://$listen_ip:2380
-                       --initial-advertise-peer-urls http://$advertisement_ip:2380
-                       --data-dir $DATA_DIR/$advertisement_ip
-                       --name $ETCD_NAME"
+          # Add common clustering parameters
+          CLUSTER_ARGS="$CLUSTER_ARGS
+                        --initial-advertise-peer-urls http://$advertisement_ip:2380
+                        --listen-peer-urls http://$listen_ip:2380"
+
         elif [ -n "$etcd_proxy" ]
         then
           # Run etcd as a proxy talking to the cluster.
 
-          CLUSTER_ARGS="--initial-cluster $etcd_proxy"
-          DAEMON_ARGS="--listen-client-urls http://$listen_ip:4000
-                       --advertise-client-urls http://$advertisement_ip:4000
-                       --proxy on
-                       --data-dir $DATA_DIR/$advertisement_ip
-                       --name $ETCD_NAME"
+          CLUSTER_ARGS="--initial-cluster $etcd_proxy --proxy on"
         else
           echo "Must specify either etcd_cluster or etcd_proxy"
           return 2
         fi
+
+        # Common arguments
+        DAEMON_ARGS="--listen-client-urls http://$listen_ip:4000
+                     --advertise-client-urls http://$advertisement_ip:4000
+                     --data-dir $DATA_DIR/$advertisement_ip
+                     --name $ETCD_NAME
+                     --debug"
 
         start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --startas $DAEMONWRAPPER --chuid $NAME -- $DAEMON_ARGS $CLUSTER_ARGS \
                 || return 2
@@ -498,7 +498,7 @@ case "$1" in
         echo "* confirmed that the etcd_cluster setting in "
         echo "/etc/clearwater/config ($etcd_cluster) is correct"
         echo "* created a working one-node cluster to begin the recovery process"
-        echo 
+        echo
         echo "Do you want to proceed with this decommission? [y/N]"
         read -r REPLY
         if [[ $REPLY = "y" ]]
@@ -516,7 +516,7 @@ case "$1" in
         echo
         echo "* confirmed that the etcd_cluster setting in "
         echo "/etc/clearwater/local_config ($etcd_cluster) is correct"
-        echo 
+        echo
         echo "Do you want to proceed with this rebuild? [y/N]"
         read -r REPLY
         if [[ $REPLY = "y" ]]
