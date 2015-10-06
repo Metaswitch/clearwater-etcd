@@ -2,10 +2,10 @@
 {
         rotate 4
         weekly
+        size 100M
         missingok
         notifempty
         compress
         delaycompress
         copytruncate
 }
-
