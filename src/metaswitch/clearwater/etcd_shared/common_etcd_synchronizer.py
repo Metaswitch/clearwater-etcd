@@ -65,6 +65,9 @@ _log = logging.getLogger(__name__)
 # etcd will leak socket handles when we time out watches.
 import urllib3
 from contextlib import contextmanager
+from socket import timeout as SocketTimeout
+from urllib3.exceptions import ReadTimeoutError, ProtocolError
+from urllib3.connection import HTTPException, BaseSSLError
 @contextmanager
 def _error_catcher(self): # pragma: no cover
     """
