@@ -1,11 +1,10 @@
 /var/log/clearwater-etcd/mark_node_failed.log
 {
-        rotate 4
-        weekly
+        rotate 10
+        size 100M
         missingok
         notifempty
         compress
         delaycompress
         copytruncate
 }
-
