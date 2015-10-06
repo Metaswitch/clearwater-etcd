@@ -32,6 +32,7 @@
 
 from metaswitch.clearwater.config_manager.plugin_base import ConfigPluginBase, FileStatus
 from metaswitch.clearwater.etcd_shared.plugin_utils import run_command
+from time import sleep
 import logging
 import shutil
 import os
@@ -75,7 +76,10 @@ class SharedConfigPlugin(ConfigPluginBase):
 
         for restart_script in os.listdir("/usr/share/clearwater/infrastructure/scripts/restart"):
             run_command("/usr/share/clearwater/infrastructure/scripts/restart/" + restart_script)
-        
+
+        # Wait to let restarts finish
+        sleep(20)
+
         # Config file is now up-to-date
         alarm.update_file(_file)
 
