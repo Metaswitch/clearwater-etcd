@@ -41,6 +41,7 @@ service clearwater-config-manager restart
 # If we're running with sync, wait until the shared config has been successfully
 # applied before exiting
 if [ -n "$1" ]; then
+  echo "Shared config applied, waiting for services to restart"
   while [ -e $FILENAME ]; do
     sleep 1
   done
