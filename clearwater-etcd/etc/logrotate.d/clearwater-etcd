@@ -1,6 +1,7 @@
 /var/log/clearwater-etcd/clearwater-etcd.log
 {
         rotate 4
+        weekly
         size 100M
         missingok
         notifempty
