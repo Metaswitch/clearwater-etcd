@@ -32,7 +32,16 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-FILENAME=/etc/clearwater/shared_config.apply
+[ $# -le 1 ] || { echo "Usage: apply_shared_config [--sync]" >&2 ; exit 2 ; }
 
+FILENAME=/etc/clearwater/shared_config.apply
 touch $FILENAME
 service clearwater-config-manager restart
+
+# If we're running with sync, wait until the shared config has been successfully
+# applied before exiting
+if [ -n "$1" ]; then
+  while [ -e $FILENAME ]; do
+    sleep 1
+  done
+fi
