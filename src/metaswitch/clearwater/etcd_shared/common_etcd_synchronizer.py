@@ -32,12 +32,87 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
+# This file contains code from the urllib3 project
+# (https://github.com/shazow/urllib3) licensed under the MIT License:
+#
+# Copyright 2008-2014 Andrey Petrov and contributors
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this
+# software and associated documentation files (the "Software"), to deal in the Software
+# without restriction, including without limitation the rights to use, copy, modify, merge,
+# publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons
+# to whom the Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all copies or
+# substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+# PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+# FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+# OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+
 import etcd
 from threading import Thread
 from time import sleep
 import logging
 
 _log = logging.getLogger(__name__)
+
+
+# Monkey patch urllib3 to close connections that time out.  Otherwise
+# etcd will leak socket handles when we time out watches.
+import urllib3
+from contextlib import contextmanager
+@contextmanager
+def _error_catcher(self): # pragma: no cover
+    """
+    Catch low-level python exceptions, instead re-raising urllib3
+    variants, so that low-level exceptions are not leaked in the
+    high-level api.
+    On exit, release the connection back to the pool.
+    """
+    try:
+        try:
+            yield
+
+        except SocketTimeout:
+            # FIXME: Ideally we'd like to include the url in the ReadTimeoutError but
+            # there is yet no clean way to get at it from this context.
+            raise ReadTimeoutError(self._pool, None, 'Read timed out.')
+
+        except BaseSSLError as e:
+            # FIXME: Is there a better way to differentiate between SSLErrors?
+            if 'read operation timed out' not in str(e):  # Defensive:
+                # This shouldn't happen but just in case we're missing an edge
+                # case, let's avoid swallowing SSL errors.
+                raise
+
+            raise ReadTimeoutError(self._pool, None, 'Read timed out.')
+
+        except HTTPException as e:
+            # This includes IncompleteRead.
+            raise ProtocolError('Connection broken: %r' % e, e)
+    except Exception:
+        # The response may not be closed but we're not going to use it anymore
+        # so close it now to ensure that the connection is released back to the pool.
+        if self._original_response and not self._original_response.isclosed():
+            self._original_response.close()
+
+        # Before returning the socket, close it.  From the server's point of view, this
+        # socket is in the middle of handling an SSL handshake/HTTP request so it we
+        # were to try and re-use the connection later, we'd see undefined behaviour.
+        #
+        # Still return the connection to the pool (it will be re-established next time
+        # it is used).
+        self._connection.close()
+
+        raise
+    finally:
+        if self._original_response and self._original_response.isclosed():
+            self.release_conn()
+urllib3.HTTPResponse._error_catcher = _error_catcher
 
 
 class CommonEtcdSynchronizer(object):
