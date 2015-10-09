@@ -62,12 +62,12 @@ ${ENV_DIR}/.config-mgr-build-eggs: config_mgr_setup.py shared_setup.py common/se
 	# Generate .egg files
 	${ENV_DIR}/bin/python config_mgr_setup.py bdist_egg -d config_mgr_eggs
 	${ENV_DIR}/bin/python shared_setup.py bdist_egg -d config_mgr_eggs
-	cd common && ${ENV_DIR}/bin/python setup.py bdist_egg -d ../config_mgr_eggs
+	cd common && EGG_DIR=../config_mgr_eggs make build_common_egg
 
 	# Download the egg files they depend upon
 	${ENV_DIR}/bin/easy_install -zmaxd config_mgr_eggs/ config_mgr_eggs/clearwater_config_manager-1.0-py2.7.egg
 	${ENV_DIR}/bin/easy_install -zmaxd config_mgr_eggs/ config_mgr_eggs/clearwater_etcd_shared-1.0-py2.7.egg
-	${ENV_DIR}/bin/easy_install -zmaxd config_mgr_eggs/ config_mgr_eggs/metaswitchcommon-0.1-py2.7.egg
+	${ENV_DIR}/bin/easy_install -zmaxd config_mgr_eggs/ config_mgr_eggs/metaswitchcommon-0.1-py2.7-linux-x86_64.egg
 
 	touch $@
 
@@ -75,12 +75,12 @@ ${ENV_DIR}/.cluster-mgr-build-eggs: cluster_mgr_setup.py shared_setup.py common/
 	# Generate .egg files
 	${ENV_DIR}/bin/python cluster_mgr_setup.py bdist_egg -d cluster_mgr_eggs
 	${ENV_DIR}/bin/python shared_setup.py bdist_egg -d cluster_mgr_eggs
-	cd common && ${ENV_DIR}/bin/python setup.py bdist_egg -d ../cluster_mgr_eggs
+	cd common && EGG_DIR=../cluster_mgr_eggs make build_common_egg 
 
 	# Download the egg files they depend upon
 	${ENV_DIR}/bin/easy_install -zmaxd cluster_mgr_eggs/ cluster_mgr_eggs/clearwater_cluster_manager-1.0-py2.7.egg
 	${ENV_DIR}/bin/easy_install -zmaxd cluster_mgr_eggs/ cluster_mgr_eggs/clearwater_etcd_shared-1.0-py2.7.egg
-	${ENV_DIR}/bin/easy_install -zmaxd cluster_mgr_eggs/ cluster_mgr_eggs/metaswitchcommon-0.1-py2.7.egg
+	${ENV_DIR}/bin/easy_install -zmaxd cluster_mgr_eggs/ cluster_mgr_eggs/metaswitchcommon-0.1-py2.7-linux-x86_64.egg
 
 	touch $@
 
