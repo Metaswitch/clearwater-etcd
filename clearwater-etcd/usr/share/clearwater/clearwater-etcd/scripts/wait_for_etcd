@@ -37,7 +37,7 @@ count=0
 
 while [ $? -ne 0 ]; do
   ((count++))
-  if [ $count -gt 120 ]; then
+  if [ $count -gt 300 ]; then
     echo "Etcd isn't responsive"
     exit 1
   fi
