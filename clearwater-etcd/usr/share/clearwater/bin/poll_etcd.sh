@@ -35,22 +35,20 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 # This script polls the local etcd process. It checks whether etcd is healthy by
-# trying to write a key/value pair to etcd. We need to do this rather than
+# trying to read local etcd stats. We need to do this rather than
 # just use poll-tcp on port 4000 as etcd can listen to its port but still
 # not be functioning correctly
 . /etc/clearwater/config
 
-key_path="http://${management_local_ip:-$local_ip}:4000/v2/keys"
-key="/clearwater/${management_local_ip:-$local_ip}/liveness-check"
-value="True"
-output="\"key\":\"$key\",\"value\":\"$value\""
+stat_path="http://${management_local_ip:-$local_ip}:4000/v2/stats/self"
+output="\"name\":\"${management_local_ip:-$local_ip}\""
 
-curl -L $key_path$key -XPUT -d value=$value 2> /tmp/poll-etcd.sh.stderr.$$ | tee /tmp/poll-etcd.sh.stdout.$$ | grep -q $output
+curl -L $stat_path 2> /tmp/poll-etcd.sh.stderr.$$ | tee /tmp/poll-etcd.sh.stdout.$$ | grep -q $output
 rc=$?
 
 # Check the return code and log if appropriate.
 if [ $rc != 0 ] ; then
-  echo etcd poll failed to $key_path$key >&2
+  echo etcd poll failed to $stat_path    >&2
   cat /tmp/poll-etcd.sh.stderr.$$        >&2
   cat /tmp/poll-etcd.sh.stdout.$$        >&2
 fi
