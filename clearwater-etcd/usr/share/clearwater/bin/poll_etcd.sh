@@ -48,7 +48,7 @@ rc=$?
 
 # Check the return code and log if appropriate.
 if [ $rc != 0 ] ; then
-  echo etcd poll failed to $key_path$key >&2
+  echo etcd poll failed to $stat_path    >&2
   cat /tmp/poll-etcd.sh.stderr.$$        >&2
   cat /tmp/poll-etcd.sh.stdout.$$        >&2
 fi
