@@ -33,7 +33,7 @@
 
 # Wait for the etcd process to come online
 count=0
-/usr/share/clearwater/bin/poll_etcd.sh
+/usr/share/clearwater/bin/poll_etcd.sh --quorum
 
 while [ $? -ne 0 ]; do
   ((count++))
@@ -43,5 +43,5 @@ while [ $? -ne 0 ]; do
   fi
 
   sleep 1
-  /usr/share/clearwater/bin/poll_etcd.sh
+  /usr/share/clearwater/bin/poll_etcd.sh --quorum
 done
