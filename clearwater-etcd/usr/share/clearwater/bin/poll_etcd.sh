@@ -40,17 +40,26 @@
 # not be functioning correctly
 . /etc/clearwater/config
 
-stat_path="http://${management_local_ip:-$local_ip}:4000/v2/stats/self"
-output="\"name\":\"${management_local_ip:-$local_ip}\""
+[ $# -le 1 ] || { echo "Usage: poll_etcd [--quorum] (defaults to a local read)" >&2 ; exit 2 ; }
 
-curl -L $stat_path 2> /tmp/poll-etcd.sh.stderr.$$ | tee /tmp/poll-etcd.sh.stdout.$$ | grep -q $output
+if [ -n "$1" ] && [ $1 == "--quorum" ]; then
+  key_path="http://${management_local_ip:-$local_ip}:4000/v2/keys"
+  key="/clearwater/${management_local_ip:-$local_ip}/liveness-check"
+  path="$key_path$key -XPUT -d value=True"
+  output="\"key\":\"$key\",\"value\":\"True\""
+else
+  path="http://${management_local_ip:-$local_ip}:4000/v2/stats/self"
+  output="\"name\":\"${management_local_ip:-$local_ip}\""
+fi
+
+curl -L $path 2> /tmp/poll-etcd.sh.stderr.$$ | tee /tmp/poll-etcd.sh.stdout.$$ | grep -q $output
 rc=$?
 
 # Check the return code and log if appropriate.
 if [ $rc != 0 ] ; then
-  echo etcd poll failed to $stat_path    >&2
-  cat /tmp/poll-etcd.sh.stderr.$$        >&2
-  cat /tmp/poll-etcd.sh.stdout.$$        >&2
+  echo etcd poll failed to $path    >&2
+  cat /tmp/poll-etcd.sh.stderr.$$   >&2
+  cat /tmp/poll-etcd.sh.stdout.$$   >&2
 fi
 rm -f /tmp/poll-etcd.sh.stderr.$$ /tmp/poll-etcd.sh.stdout.$$
 
