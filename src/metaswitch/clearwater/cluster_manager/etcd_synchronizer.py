@@ -48,7 +48,7 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
     def __init__(self, plugin, ip, etcd_ip=None, force_leave=False):
         super(EtcdSynchronizer, self).__init__(plugin, ip, etcd_ip)
         self._fsm = SyncFSM(self._plugin, self._ip)
-        self._leaving_flag = False
+        self._leaving_requested = False
         self.force_leave = force_leave
 
     def key(self):
@@ -73,10 +73,13 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
                 cluster_info = ClusterInfo(etcd_value)
 
                 # This node can only leave the cluster if the cluster is in a
-                # stable state. Check the leaving flag and the cluster state. If
-                # necessary, set this node to WAITING_TO_LEAVE. Otherwise, kick
+                # stable state. Also check that we've both requested to leave
+                # and we're not already leaving (there's a race condition where
+                # the requested flag can only be cleared after updating etcd, but
+                # updating etcd triggers this function to be called).
+                # If necessary, set this node to WAITING_TO_LEAVE. Otherwise, kick
                 # the FSM.
-                if (self._leaving_flag and
+                if (self._leaving_requested and
                     cluster_info.local_state(self._ip) != constants.WAITING_TO_LEAVE and
                     cluster_info.can_leave(self.force_leave)):
                     _log.info("Cluster is in a stable state, so leaving the cluster now")
@@ -113,7 +116,7 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
         etcd_result, idx = self.read_from_etcd(wait=False)
         cluster_info = ClusterInfo(etcd_result)
 
-        self._leaving_flag = True
+        self._leaving_requested = True
         if cluster_info.can_leave(self.force_leave):
             _log.info("Cluster is in a stable state, so leaving the cluster immediately")
             self.write_to_etcd(cluster_info, constants.WAITING_TO_LEAVE)
@@ -163,8 +166,8 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
             # We may have just successfully set the local node to
             # WAITING_TO_LEAVE, in which case we no longer need the leaving
             # flag.
-            if isinstance(new_state, str) and new_state == constants.WAITING_TO_LEAVE:
-                self._leaving_flag = False
+            if new_state == constants.WAITING_TO_LEAVE:
+                self._leaving_requested = False
         except (EtcdAlreadyExist, ValueError):
             _log.debug("Contention on etcd write - new_state is {}".format(new_state))
             # Our etcd write failed because someone got there before us.
