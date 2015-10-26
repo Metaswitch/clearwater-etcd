@@ -47,7 +47,7 @@ def run_command(command, namespace=None, log_error=True):
     passing to this function.
     """
     if namespace:
-        command += "ip netns exec {} ".format(namespace) + command
+        command = "ip netns exec {} ".format(namespace) + command
 
     try:
         output = subprocess.check_output(command,
