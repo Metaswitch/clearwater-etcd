@@ -64,7 +64,7 @@ logging.info("Using etcd key %s" % (key))
 
 if datastore == "cassandra":
   try:
-    sys.path.append("/usr/share/clearwater/clearwater-cluster-manager/plugins")
+    sys.path.append("/usr/share/clearwater/clearwater-cluster-manager/failed_plugins")
     from cassandra_failed_plugin import CassandraFailedPlugin
     error_syncer = EtcdSynchronizer(CassandraFailedPlugin(key, dead_node_ip), dead_node_ip, etcd_ip=local_ip, force_leave=True)
   except ImportError:
