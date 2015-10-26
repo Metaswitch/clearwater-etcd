@@ -30,14 +30,15 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-import sys
+import os
+from os import sys
+import etcd
+import logging
 from metaswitch.clearwater.cluster_manager.etcd_synchronizer import \
     EtcdSynchronizer
 from metaswitch.clearwater.cluster_manager.null_plugin import \
     NullPlugin
-import etcd
-import logging
-import os
+from metaswitch.clearwater.etcd_shared.plugin_utils import run_command
 
 def make_key(site, node_type, datatore, etcd_key):
     if datastore == "cassandra":
@@ -61,7 +62,16 @@ etcd_key = sys.argv[6]
 key = make_key(site, node_type, datastore, etcd_key)
 logging.info("Using etcd key %s" % (key))
 
-error_syncer = EtcdSynchronizer(NullPlugin(key), dead_node_ip, etcd_ip=local_ip, force_leave=True)
+if datastore == "cassandra":
+  try:
+    sys.path.append("/usr/share/clearwater/clearwater-cluster-manager/plugins")
+    from cassandra_failed_plugin import CassandraFailedPlugin
+    error_syncer = EtcdSynchronizer(CassandraFailedPlugin(key, dead_node_ip), dead_node_ip, etcd_ip=local_ip, force_leave=True)
+  except ImportError:
+    print "You must run mark_node_failed on a node that has Cassandra installed to remove a node from a Cassandra cluster"
+    sys.exit(1)
+else:
+  error_syncer = EtcdSynchronizer(NullPlugin(key), dead_node_ip, etcd_ip=local_ip, force_leave=True)
 
 print "Marking node as failed and removing it from the cluster - will take at least 30 seconds"
 # Move the dead node into ERROR state to allow in-progress operations to
@@ -81,7 +91,3 @@ c = etcd.Client(local_ip, 4000)
 new_state = c.get(key).value
 
 logging.info("New etcd state (after removing %s) is %s" % (dead_node_ip, new_state))
-
-# Use os.exit to skip exit handlers - otherwise the concurrent.futures exit
-# handler waits for an infinite wait to end
-os._exit(0)
