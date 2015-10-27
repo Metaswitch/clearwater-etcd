@@ -145,9 +145,10 @@ def main(args):
     utils.install_sigusr1_handler("cluster-manager")
 
     # Drop a pidfile.
-    pid = os.getpid()
-    with open(arguments['--pidfile'], "w") as pidfile:
-        pidfile.write(str(pid) + "\n")
+    pidfile = utils.write_pid_file(arguments['--pidfile'])
+    if pidfile is None:
+        # We failed to take the lock - another process is already running
+        exit(1)
 
     plugins_dir = "/usr/share/clearwater/clearwater-cluster-manager/plugins/"
     plugins = load_plugins_in_dir(plugins_dir,
