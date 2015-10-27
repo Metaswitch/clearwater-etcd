@@ -111,10 +111,10 @@ do_start()
                --log-directory=$log_directory
                --pidfile=$PIDFILE"
 
-  start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null \
+  start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $ACTUAL_EXEC --test > /dev/null \
     || return 1
 
-  start-stop-daemon --start --quiet --chdir $DAEMON_DIR --pidfile $PIDFILE --exec $DAEMON -- \
+  start-stop-daemon --start --quiet --chdir $DAEMON_DIR --pidfile $PIDFILE --exec $ACTUAL_EXEC -- \
     $DAEMON_ARGS \
     || return 2
   # Add code here, if necessary, that waits for the process to be ready
