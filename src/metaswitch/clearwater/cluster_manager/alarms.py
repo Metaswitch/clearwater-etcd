@@ -60,18 +60,21 @@ class TooLongAlarm(object):
         self._condvar.acquire()
         self._condvar.wait(self._delay)
         if self._should_alarm:
+            _log.info("Raising TOO_LONG_CLUSTERING alarm")
             issue_alarm(TOO_LONG_CLUSTERING_MINOR)
         self._condvar.release()
 
     def trigger(self, thread_name="Alarm thread"):
         self._should_alarm = True
         if self._timer_thread is None:
+            _log.info("TOO_LONG_CLUSTERING alarm triggered, will fire in {} seconds".format(self._delay))
             self._timer_thread = Thread(target=self.alarm, name=thread_name)
             self._timer_thread.start()
 
     def quit(self):
         if self._timer_thread is not None:
             self._should_alarm = False
+            _log.info("TOO_LONG_CLUSTERING alarm cancelled when quitting")
             self._condvar.acquire()
             self._condvar.notify()
             self._condvar.release()
@@ -80,6 +83,7 @@ class TooLongAlarm(object):
     def cancel(self):
         self._condvar.acquire()
         self._should_alarm = False
+        _log.info("TOO_LONG_CLUSTERING alarm cancelled")
 
         # cancel the thread
         self._condvar.notify()
