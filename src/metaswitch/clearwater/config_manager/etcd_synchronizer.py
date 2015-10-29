@@ -60,7 +60,7 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
                 _log.info("Got new config value from etcd - filename {}, file size {}, MD5 hash {}".format(
                     self._plugin.file(),
                     len(value),
-                    md5(value).hexdigest()))
+                    md5(value.encode("utf-8", errors="replace")).hexdigest()))
                 _log.debug("Got new config value from etcd:\n{}".format(value))
                 self._plugin.on_config_changed(value, self._alarm)
                 FILE_CHANGED.log(filename=self._plugin.file())
