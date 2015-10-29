@@ -54,7 +54,7 @@ PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
 # We have separate entries for DAEMON and ACTUAL_EXEC:
-# - DAEMON is the command to run to start clearwater-config-manager. We use this when we want to
+# - DAEMON is the command to run to start clearwater-cluster-manager. We use this when we want to
 # start it.
 # - ACTUAL_EXEC is the name which will appear in the process tree after it's been started. We use
 # this when we want to locate currently running instances (to kill them, send a signal to them, or

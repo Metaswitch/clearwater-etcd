@@ -105,9 +105,13 @@ def main(args):
 
     utils.install_sigusr1_handler("config-manager")
 
-    # Drop a pidfile.
-    pidfile = utils.write_pid_file(arguments['--pidfile'])
-    if pidfile is None:
+    # Drop a pidfile. We must keep a reference to pidfile here, as this keeps
+    # the file locked and provides extra protection against two files running at
+    # once.
+    pidfile = None
+    try:
+        pidfile = utils.write_pid_file(arguments['--pidfile'])
+    except IOError:
         # We failed to take the lock - another process is already running
         exit(1)
 
