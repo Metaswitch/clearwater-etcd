@@ -144,12 +144,12 @@ def main(args):
 
     utils.install_sigusr1_handler("cluster-manager")
 
-    # Drop a pidfile. We must keep a reference to pidfile here, as this keeps
-    # the file locked and provides extra protection against two files running at
+    # Drop a pidfile. We must keep a reference to the file object here, as this keeps
+    # the file locked and provides extra protection against two processes running at
     # once.
-    pidfile = None
+    pidfile_lock = None
     try:
-        pidfile = utils.write_pid_file(arguments['--pidfile'])
+        pidfile_lock = utils.lock_and_write_pid_file(arguments['--pidfile']) # noqa
     except IOError:
         # We failed to take the lock - another process is already running
         exit(1)
