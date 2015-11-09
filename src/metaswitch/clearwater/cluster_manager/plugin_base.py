@@ -59,11 +59,6 @@ class SynchroniserPluginBase(object): # pragma: no cover
         to avoid conflicts"""
         return []
 
-    def should_be_in_cluster(self):
-
-        """Allows a plugin to monitor, but not join, a remote cluster"""
-        return True
-
     def on_startup(self, cluster_view):
         # Most of our plugins don't want to do anything on startup, so this
         # isn't marked as an @abstractmethod which they must implement.

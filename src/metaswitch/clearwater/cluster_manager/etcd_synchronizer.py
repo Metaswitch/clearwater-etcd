@@ -108,11 +108,6 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
         _log.info("Trying to leave the cluster - plugin %s" %
                   self._plugin.__class__.__name__)
 
-        if not self._plugin.should_be_in_cluster():
-            _log.info("No need to leave remote cluster - just exit")
-            self._terminate_flag = True
-            return
-
         etcd_result, idx = self.read_from_etcd(wait=False)
         cluster_info = ClusterInfo(etcd_result)
 
@@ -125,12 +120,6 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
                       "will do so when the cluster next stabilises")
 
     def mark_node_failed(self):
-        if not self._plugin.should_be_in_cluster():
-            _log.debug("No need to mark failure in remote cluster - doing nothing")
-            # We're just monitoring this cluster, not in it, so leaving is a
-            # no-op
-            return
-
         etcd_result, idx = self.read_from_etcd(wait=False)
         if etcd_result is not None:
             _log.warning("Got result of None from read_from_etcd")
