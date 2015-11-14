@@ -12,6 +12,10 @@ X86_64_ONLY=0
 
 .DEFAULT_GOAL = deb
 
+.PHONY: fvtest
+fvtest: fvtest_setup.py env
+	PYTHONPATH=src:common ${ENV_PYTHON} fvtest_setup.py test -v
+
 .PHONY: test
 test: coverage
 
