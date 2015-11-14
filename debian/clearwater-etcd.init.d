@@ -130,22 +130,19 @@ join_cluster()
          then
            echo "Not joining an unhealthy cluster"
            exit 2
-         fi
-        # Tell the cluster we're joining, this prints useful environment
-        # variables to stdout but also prints a success message so strip that
-        # out before saving the variables to the temp file.
-        /usr/bin/etcdctl member add $ETCD_NAME http://$advertisement_ip:2380 | grep -v "Added member" >> $TEMP_FILE
+        fi
+
+        # Tell the cluster we're joining
+        /usr/bin/etcdctl member add $ETCD_NAME http://$advertisement_ip:2380
         if [[ $? != 0 ]]
         then
           echo "Failed to add local node to cluster"
           exit 2
         fi
+        ETCD_INITIAL_CLUSTER=$(/usr/share/clearwater/bin/get_etcd_initial_cluster.py $local_ip $etcd_cluster)
 
-        # Load the environment variables back into the local shell and export
-        # them so ./etcd can see them when it starts up.
-        . $TEMP_FILE
         CLUSTER_ARGS="--initial-cluster $ETCD_INITIAL_CLUSTER
-                      --initial-cluster-state $ETCD_INITIAL_CLUSTER_STATE"
+                      --initial-cluster-state existing"
 
         # daemon is not running, so attempt to start it.
         ulimit -Hn 10000
