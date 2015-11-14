@@ -37,58 +37,47 @@ import etcd
 from threading import Thread
 import unittest
 import json
+from shutil import rmtree
 from .etcdserver import EtcdServer
-from .etcdcluster import EtcdCluster
 
 logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
 logging.getLogger().setLevel(logging.INFO)
 
-class EtcdTestBase(unittest.TestCase):
-    def test_basic_clustering(self):
-        c = EtcdCluster(2)
-        s1, s2 = c.servers.values()
+class EtcdCluster(object):
+    def __init__(self, n=1):
+        self.datadir = "./etcd_test_data"
+        self.servers = {}
+        self.pool = ["127.0.0.{}".format(last_byte)  for last_byte in range (100, 150)]
+        self.initialise_servers(n)
 
-        hasOneLeader = s1.isLeader() != s2.isLeader()
+    def get_live_server(self):
+        for ip, server in self.servers.iteritems():
+            if server.isAlive():
+                return server
 
-        self.assertTrue(s1.memberList() == s2.memberList())
-        self.assertEquals(2, len(s1.memberList()))
-        c.delete_datadir()
+    def add_server(self, **kwargs):
+        ip = self.pool.pop()
+        existing_ip = None
+        live_server = self.get_live_server()
+        if live_server is not None:
+            existing_ip = live_server._ip
+        server = EtcdServer(ip, datadir=self.datadir, existing=existing_ip, **kwargs)
+        self.servers[ip] = server
+        return server
 
-    def test_iss203(self):
-        c = EtcdCluster(2)
-        s1, s2 = c.servers.values()
-        s3 = c.add_server(actually_start=False)
-        s4 = c.add_server()
-        s5 = c.add_server()
-        s6 = c.add_server()
+    def initialise_servers(self, n):
+        ret = []
+        srv1 = self.add_server()
+        ret.append(srv1)
+        srv1.waitUntilAlive()
+        for _ in range(n-1):
+            ret.append(self.add_server())
+        [x.waitUntilAlive() for x in ret]
+        return ret
 
-        # Try to start any failed nodes again (in the same way that Monit would
-        # when live)
-        sleep(2)
+    def __del__(self):
+        self.delete_datadir()
 
-        s4.recover()
-        s5.recover()
-        s6.recover()
+    def delete_datadir(self):
+        rmtree(self.datadir, True)
 
-        sleep(2)
-
-        s4.recover()
-        s5.recover()
-        s6.recover()
-
-        sleep(2)
-
-        s4.recover()
-        s5.recover()
-        s6.recover()
-
-        sleep(2)
-
-        nameless = [m for m in s1.memberList() if not m['name']]
-
-        # s3 should have no name, but s4, s5 and s6 all should
-        self.assertEquals(1, len(nameless))
-        self.assertEquals(s1.memberList(), s4.memberList())
-        self.assertEquals(s1.memberList(), s5.memberList())
-        self.assertEquals(s1.memberList(), s6.memberList())
-        c.delete_datadir()
