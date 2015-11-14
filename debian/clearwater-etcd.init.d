@@ -131,29 +131,6 @@ join_cluster()
            echo "Not joining an unhealthy cluster"
            exit 2
          fi
-
-        # If we're already in the member list, remove ourselves first. This
-        # copes with a race condition where member add succeeds but etcd
-        # doesn't then come up.
-        #
-        # The output of member list looks like:
-        # <id>[unstarted]: name=xx-xx-xx-xx peerURLs=http://xx.xx.xx.xx:2380 clientURLs=http://xx.xx.xx.xx:4000
-        # The [unstarted] is only present while the member hasn't fully
-        # joined the etcd cluster
-        member=$(/usr/bin/etcdctl member list | grep $listen_ip | sed -e 's/\(\[[^ ]*\]\)\?:.*$//g')
-        if [[ $member != '' ]]
-        then
-          /usr/bin/etcdctl member remove $member
-          if [[ $? != 0 ]]
-          then
-            echo "Failed to remove local node from cluster"
-            exit 2
-          elif [[ -d $DATA_DIR/$advertisement_ip ]]
-          then
-            rm -r $DATA_DIR/$advertisement_ip
-          fi
-        fi
-
         # Tell the cluster we're joining, this prints useful environment
         # variables to stdout but also prints a success message so strip that
         # out before saving the variables to the temp file.
@@ -228,6 +205,19 @@ do_start()
 
         ETCD_NAME=${advertisement_ip//./-}
         CLUSTER_ARGS=
+
+        # If we're already in the member list but are 'unstarted', remove our data dir, which
+        # contains stale data from a previous unsuccessful startup attempt. This copes with a race
+        # condition where member add succeeds but etcd doesn't then come up.
+        #
+        # The output of member list looks like:
+        # <id>[unstarted]: name=xx-xx-xx-xx peerURLs=http://xx.xx.xx.xx:2380 clientURLs=http://xx.xx.xx.xx:4000
+        # The [unstarted] is only present while the member hasn't fully joined the etcd cluster
+        member=$(/usr/bin/etcdctl member list | grep "unstarted" | grep $listen_ip )
+        if [[ $member != '' ]]
+        then
+          rm -rf $DATA_DIR/$advertisement_ip
+        fi
 
         if [ -n "$etcd_cluster" ] && [ -n "$etcd_proxy" ]
         then
