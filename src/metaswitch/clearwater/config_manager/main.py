@@ -63,6 +63,7 @@ from metaswitch.clearwater.config_manager import pdlogs
 import syslog
 import logging
 import os
+import prctl
 from threading import Thread
 
 _log = logging.getLogger("config_manager.main")
@@ -94,6 +95,9 @@ def main(args):
 
     if not arguments['--foreground']:
         utils.daemonize(stdout_err_log)
+
+    # Process names are limited to 15 characters, so abbreviate
+    prctl.prctl(prctl.NAME, "cw-config-mgr")
 
     logging_config.configure_logging(log_level, log_dir, "config-manager", show_thread=True)
 

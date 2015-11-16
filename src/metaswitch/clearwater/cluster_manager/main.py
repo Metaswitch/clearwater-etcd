@@ -64,6 +64,7 @@ from metaswitch.clearwater.cluster_manager.plugin_base import PluginParams
 from metaswitch.clearwater.cluster_manager import pdlogs
 import logging
 import os
+import prctl
 import syslog
 from threading import activeCount
 from time import sleep
@@ -133,6 +134,9 @@ def main(args):
 
     if not arguments['--foreground']:
         utils.daemonize(stdout_err_log)
+
+    # Process names are limited to 15 characters, so abbreviate
+    prctl.prctl(prctl.NAME, "cw-cluster-mgr")
 
     logging_config.configure_logging(log_level, log_dir, "cluster-manager", show_thread=True)
 
