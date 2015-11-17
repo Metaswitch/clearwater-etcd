@@ -31,6 +31,9 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 
+import tempfile
+import os
+from os.path import dirname
 import subprocess
 import logging
 
