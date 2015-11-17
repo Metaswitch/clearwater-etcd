@@ -32,6 +32,12 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
+if [[ $EUID -ne 0 ]]
+then
+  echo "You must run this script with root permissions"
+  exit 1
+fi
+
 [ $# -le 1 ] || { echo "Usage: apply_shared_config [--sync]" >&2 ; exit 2 ; }
 
 FILENAME=/etc/clearwater/shared_config.apply

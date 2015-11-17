@@ -49,11 +49,21 @@ PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC=clearwater-config-manager       # Introduce a short description here
 NAME=clearwater-config-manager       # Introduce the short server's name here (not suitable for --name)
 USER=clearwater-config-manager       # Username to run as
-DAEMON=/usr/share/clearwater/bin/clearwater-config-manager # Introduce the server's location here
-ACTUAL_EXEC=/usr/share/clearwater/clearwater-config-manager/env/bin/python
 DAEMON_DIR=/usr/share/clearwater/clearwater-config-manager/
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
+
+# We have separate entries for DAEMON and ACTUAL_EXEC:
+# - DAEMON is the command to run to start clearwater-config-manager. We use this when we want to
+# start it.
+# - ACTUAL_EXEC is the name which will appear in the process tree after it's been started. We use
+# this when we want to locate currently running instances (to kill them, send a signal to them, or
+# to check if they exist before starting a new process).
+#
+# See also start-stop-daemon's manpage, specifically the comment on --exec: "this might not work as
+# intended with interpreted scripts, as the executable will point to the interpreter". 
+DAEMON=/usr/share/clearwater/bin/clearwater-config-manager
+ACTUAL_EXEC=/usr/share/clearwater/clearwater-config-manager/env/bin/python
 
 # Exit if the package is not installed
 [ -x $DAEMON ] || exit 0
@@ -88,10 +98,12 @@ do_start()
 
   DAEMON_ARGS="--local-ip=${management_local_ip:-$local_ip} --local-site=$local_site_name --log-level=$log_level --log-directory=$log_directory --pidfile=$PIDFILE --etcd-key=$etcd_key"
 
-  start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null \
+  # Check if the process is already running - we use ACTUAL_EXEC here, as that's what will be in the
+  # process tree (not DAEMON).
+  start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $ACTUAL_EXEC --test > /dev/null \
     || return 1
 
-  start-stop-daemon --start --quiet --chdir $DAEMON_DIR --pidfile $PIDFILE --exec $DAEMON -- $DAEMON_ARGS \
+  start-stop-daemon --start --quiet --chdir $DAEMON_DIR --pidfile $PIDFILE --exec $ACTUAL_EXEC --startas $DAEMON -- $DAEMON_ARGS \
     || return 2
   # Add code here, if necessary, that waits for the process to be ready
   # to handle requests from services started subsequently which depend
