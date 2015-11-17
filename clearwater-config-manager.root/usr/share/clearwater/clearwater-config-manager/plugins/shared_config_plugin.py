@@ -31,7 +31,7 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 from metaswitch.clearwater.config_manager.plugin_base import ConfigPluginBase, FileStatus
-from metaswitch.clearwater.etcd_shared.plugin_utils import run_command
+from metaswitch.clearwater.etcd_shared.plugin_utils import run_command, safely_write
 from time import sleep
 import logging
 import shutil
@@ -67,9 +67,7 @@ class SharedConfigPlugin(ConfigPluginBase):
             return
 
         _log.info("Updating shared configuration")
-        with open(_file + ".tmp", "w") as ofile:
-            ofile.write(value)
-        shutil.move(_file + ".tmp", _file)
+        safely_write(_file, value)
 
         _log.info("Restarting services")
         run_command("service clearwater-infrastructure restart")

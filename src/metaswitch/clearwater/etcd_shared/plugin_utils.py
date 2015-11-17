@@ -31,6 +31,9 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 
+import tempfile
+import os
+from os.path import dirname
 import subprocess
 import logging
 
@@ -63,3 +66,15 @@ def run_command(command, namespace=None, log_error=True):
                                                          e.returncode,
                                                          e.output))
         return e.returncode
+
+def safely_write(filename, contents):
+    """Writes a file without race conditions, by writing to a temporary file and then atomically renaming it"""
+
+    # Create the temporary file in the same directory (to ensure it's on the
+    # same filesystem and can be moved atomically), and don't automatically
+    # delete it on close (os.rename deletes it).
+    tmp = tempfile.NamedTemporaryFile(dir=dirname(filename), delete=False)
+
+    tmp.write(contents)
+
+    os.rename(tmp.name, filename)
