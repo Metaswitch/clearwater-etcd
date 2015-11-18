@@ -67,7 +67,7 @@ def run_command(command, namespace=None, log_error=True):
                                                          e.output))
         return e.returncode
 
-def safely_write(filename, contents):
+def safely_write(filename, contents, permissions=0644):
     """Writes a file without race conditions, by writing to a temporary file and then atomically renaming it"""
 
     # Create the temporary file in the same directory (to ensure it's on the
@@ -76,5 +76,7 @@ def safely_write(filename, contents):
     tmp = tempfile.NamedTemporaryFile(dir=dirname(filename), delete=False)
 
     tmp.write(contents)
+
+    os.chmod(tmp.name, permissions)
 
     os.rename(tmp.name, filename)
