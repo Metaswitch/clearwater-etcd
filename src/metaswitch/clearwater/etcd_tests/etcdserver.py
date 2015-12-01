@@ -113,7 +113,7 @@ class EtcdServer(object):
         cxn = httplib.HTTPConnection(self._ip, 4000)
         cxn.request("GET", "/v2/stats/self");
         rsp = cxn.getresponse().read()
-        return json.loads(rsp)['state'] == "stateLeader"
+        return json.loads(rsp)['state'] == "StateLeader"
 
     def __del__(self):
         # Kill the etcd subprocess on destruction
