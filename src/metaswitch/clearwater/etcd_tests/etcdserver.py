@@ -1,4 +1,4 @@
-from subprocess import Popen, PIPE, STDOUT
+from subprocess import Popen, STDOUT
 import httplib
 import json
 from time import sleep
@@ -82,7 +82,8 @@ class EtcdServer(object):
 
     def cluster_id(self):
         if self._id is None:
-            members = self.memberList()
+            # TODO: learn my ID (c.f. the code in start_process)
+            members = self.memberList() # noqa
             pass
         return self._id
 
@@ -112,7 +113,7 @@ class EtcdServer(object):
         cxn = httplib.HTTPConnection(self._ip, 4000)
         cxn.request("GET", "/v2/stats/self");
         rsp = cxn.getresponse().read()
-        return json.loads(rsp)['state'] == "stateLeader"
+        return json.loads(rsp)['state'] == "StateLeader"
 
     def __del__(self):
         # Kill the etcd subprocess on destruction

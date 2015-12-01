@@ -30,13 +30,8 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-from time import sleep
 import logging
 import sys
-import etcd
-from threading import Thread
-import unittest
-import json
 from shutil import rmtree
 from .etcdserver import EtcdServer
 
