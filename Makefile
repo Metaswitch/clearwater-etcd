@@ -42,8 +42,8 @@ explain-style: ${ENV_DIR}/bin/flake8
 coverage: ${ENV_DIR}/bin/coverage cluster_mgr_setup.py
 	rm -rf htmlcov/
 	${ENV_DIR}/bin/coverage erase
-	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run cluster_mgr_setup.py test
-	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run -a config_mgr_setup.py test
+	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run --omit **/etcd_tests/** cluster_mgr_setup.py test
+	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run -a --omit **/etcd_tests/** config_mgr_setup.py test
 	${ENV_DIR}/bin/coverage combine
 	${ENV_DIR}/bin/coverage report -m --fail-under 100
 	${ENV_DIR}/bin/coverage xml
