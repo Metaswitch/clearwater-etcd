@@ -33,11 +33,7 @@
 from time import sleep
 import logging
 import sys
-import etcd
-from threading import Thread
 import unittest
-import json
-from .etcdserver import EtcdServer
 from .etcdcluster import EtcdCluster
 
 logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
@@ -50,6 +46,7 @@ class EtcdTestBase(unittest.TestCase):
 
         hasOneLeader = s1.isLeader() != s2.isLeader()
 
+        self.assertTrue(hasOneLeader)
         self.assertTrue(s1.memberList() == s2.memberList())
         self.assertEquals(2, len(s1.memberList()))
         c.delete_datadir()
@@ -57,7 +54,7 @@ class EtcdTestBase(unittest.TestCase):
     def test_iss203(self):
         c = EtcdCluster(2)
         s1, s2 = c.servers.values()
-        s3 = c.add_server(actually_start=False)
+        s3 = c.add_server(actually_start=False) # noqa
         s4 = c.add_server()
         s5 = c.add_server()
         s6 = c.add_server()
