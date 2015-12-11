@@ -118,6 +118,8 @@ def main(args):
     sig_ip = arguments['--sig-local-ip']
     local_site_name = arguments['--local-site']
     remote_site_name = arguments['--remote-site']
+    remote_cassandra_seeds = arguments['--remote-cassandra-seeds']
+    remote_cassandra_seeds = remote_cassandra_seeds.split(',')
     signaling_namespace = arguments.get('--signaling-namespace')
     local_uuid = UUID(arguments['--uuid'])
     etcd_key = arguments.get('--etcd-key')
@@ -167,6 +169,7 @@ def main(args):
                                                mgmt_ip=mgmt_ip,
                                                local_site=local_site_name,
                                                remote_site=remote_site_name,
+                                               remote_cassandra_seeds=remote_cassandra_seeds,
                                                signaling_namespace=signaling_namespace,
                                                uuid=local_uuid,
                                                etcd_key=etcd_key,
