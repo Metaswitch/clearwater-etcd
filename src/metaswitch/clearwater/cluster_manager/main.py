@@ -121,7 +121,10 @@ def main(args):
     local_site_name = arguments['--local-site']
     remote_site_name = arguments['--remote-site']
     remote_cassandra_seeds = arguments['--remote-cassandra-seeds']
-    remote_cassandra_seeds = remote_cassandra_seeds.split(',')
+    if remote_cassandra_seeds:
+        remote_cassandra_seeds = remote_cassandra_seeds.split(',')
+    else:
+        remote_cassandra_seeds = []
     signaling_namespace = arguments.get('--signaling-namespace')
     local_uuid = UUID(arguments['--uuid'])
     etcd_key = arguments.get('--etcd-key')
