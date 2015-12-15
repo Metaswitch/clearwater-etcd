@@ -119,7 +119,6 @@ def main(args):
     mgmt_ip = arguments['--mgmt-local-ip']
     sig_ip = arguments['--sig-local-ip']
     local_site_name = arguments['--local-site']
-    remote_site_name = arguments['--remote-site']
     remote_cassandra_seeds = arguments['--remote-cassandra-seeds']
     if remote_cassandra_seeds:
         remote_cassandra_seeds = remote_cassandra_seeds.split(',')
@@ -173,7 +172,6 @@ def main(args):
                                   PluginParams(ip=sig_ip,
                                                mgmt_ip=mgmt_ip,
                                                local_site=local_site_name,
-                                               remote_site=remote_site_name,
                                                remote_cassandra_seeds=remote_cassandra_seeds,
                                                signaling_namespace=signaling_namespace,
                                                uuid=local_uuid,

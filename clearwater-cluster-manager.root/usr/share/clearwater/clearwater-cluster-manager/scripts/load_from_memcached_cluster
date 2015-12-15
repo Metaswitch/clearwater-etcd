@@ -35,7 +35,6 @@
 set -ue
 
 local_site_name="site1"
-remote_site_name=""
 etcd_key=clearwater
 . /etc/clearwater/config
 
@@ -47,4 +46,4 @@ fi
 
 node_type=$1
 
-/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-cluster-manager/scripts/load_from_memcached_cluster.py "${management_local_ip:-$local_ip}" "$local_site_name" "$remote_site_name" "$node_type" "$etcd_key"
+/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-cluster-manager/scripts/load_from_memcached_cluster.py "${management_local_ip:-$local_ip}" "$local_site_name" "$node_type" "$etcd_key"
