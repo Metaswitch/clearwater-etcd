@@ -1,5 +1,3 @@
-# @file setup.py
-#
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015 Metaswitch Networks Ltd
 #
@@ -34,20 +32,47 @@
 
 import logging
 import sys
-import multiprocessing
+from shutil import rmtree
+from .etcdserver import EtcdServer
 
-from setuptools import setup, find_packages
+logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
+logging.getLogger().setLevel(logging.INFO)
 
-setup(
-    name='clearwater-cluster-manager',
-    version='1.0',
-    namespace_packages = ['metaswitch'],
-    packages=['metaswitch', 'metaswitch.clearwater', 'metaswitch.clearwater.cluster_manager'],
-    package_dir={'':'src'},
-    package_data={
-        '': ['*.eml'],
-        },
-    test_suite='metaswitch.clearwater.cluster_manager.test',
-    install_requires=["docopt", "python-etcd", "pyzmq", "pyyaml", "futures", "prctl", "metaswitchcommon", "clearwater_etcd_shared"],
-    tests_require=["pbr==1.6", "Mock"],
-    )
+class EtcdCluster(object):
+    def __init__(self, n=1):
+        self.datadir = "./etcd_test_data"
+        self.servers = {}
+        self.pool = ["127.0.0.{}".format(last_byte)  for last_byte in range (100, 150)]
+        self.initialise_servers(n)
+
+    def get_live_server(self):
+        for ip, server in self.servers.iteritems():
+            if server.isAlive():
+                return server
+
+    def add_server(self, **kwargs):
+        ip = self.pool.pop()
+        existing_ip = None
+        live_server = self.get_live_server()
+        if live_server is not None:
+            existing_ip = live_server._ip
+        server = EtcdServer(ip, datadir=self.datadir, existing=existing_ip, **kwargs)
+        self.servers[ip] = server
+        return server
+
+    def initialise_servers(self, n):
+        ret = []
+        srv1 = self.add_server()
+        ret.append(srv1)
+        srv1.waitUntilAlive()
+        for _ in range(n-1):
+            ret.append(self.add_server())
+        [x.waitUntilAlive() for x in ret]
+        return ret
+
+    def __del__(self):
+        self.delete_datadir()
+
+    def delete_datadir(self):
+        rmtree(self.datadir, True)
+

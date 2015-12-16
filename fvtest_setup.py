@@ -39,15 +39,8 @@ import multiprocessing
 from setuptools import setup, find_packages
 
 setup(
-    name='clearwater-cluster-manager',
+    name='clearwater-etcd-tests',
     version='1.0',
-    namespace_packages = ['metaswitch'],
-    packages=['metaswitch', 'metaswitch.clearwater', 'metaswitch.clearwater.cluster_manager'],
-    package_dir={'':'src'},
-    package_data={
-        '': ['*.eml'],
-        },
-    test_suite='metaswitch.clearwater.cluster_manager.test',
-    install_requires=["docopt", "python-etcd", "pyzmq", "pyyaml", "futures", "prctl", "metaswitchcommon", "clearwater_etcd_shared"],
-    tests_require=["pbr==1.6", "Mock"],
+    test_suite='metaswitch.clearwater.etcd_tests',
+    tests_require=['python-etcd'],
     )

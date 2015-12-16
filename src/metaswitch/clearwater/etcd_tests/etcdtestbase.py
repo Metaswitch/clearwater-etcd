@@ -1,5 +1,3 @@
-# @file setup.py
-#
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015 Metaswitch Networks Ltd
 #
@@ -32,22 +30,62 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
+from time import sleep
 import logging
 import sys
-import multiprocessing
+import unittest
+from .etcdcluster import EtcdCluster
 
-from setuptools import setup, find_packages
+logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
+logging.getLogger().setLevel(logging.INFO)
 
-setup(
-    name='clearwater-cluster-manager',
-    version='1.0',
-    namespace_packages = ['metaswitch'],
-    packages=['metaswitch', 'metaswitch.clearwater', 'metaswitch.clearwater.cluster_manager'],
-    package_dir={'':'src'},
-    package_data={
-        '': ['*.eml'],
-        },
-    test_suite='metaswitch.clearwater.cluster_manager.test',
-    install_requires=["docopt", "python-etcd", "pyzmq", "pyyaml", "futures", "prctl", "metaswitchcommon", "clearwater_etcd_shared"],
-    tests_require=["pbr==1.6", "Mock"],
-    )
+class EtcdTestBase(unittest.TestCase):
+    def test_basic_clustering(self):
+        c = EtcdCluster(2)
+        s1, s2 = c.servers.values()
+
+        hasOneLeader = s1.isLeader() != s2.isLeader()
+
+        self.assertTrue(hasOneLeader)
+        self.assertTrue(s1.memberList() == s2.memberList())
+        self.assertEquals(2, len(s1.memberList()))
+        c.delete_datadir()
+
+    def test_iss203(self):
+        c = EtcdCluster(2)
+        s1, s2 = c.servers.values()
+        s3 = c.add_server(actually_start=False) # noqa
+        s4 = c.add_server()
+        s5 = c.add_server()
+        s6 = c.add_server()
+
+        # Try to start any failed nodes again (in the same way that Monit would
+        # when live)
+        sleep(2)
+
+        s4.recover()
+        s5.recover()
+        s6.recover()
+
+        sleep(2)
+
+        s4.recover()
+        s5.recover()
+        s6.recover()
+
+        sleep(2)
+
+        s4.recover()
+        s5.recover()
+        s6.recover()
+
+        sleep(2)
+
+        nameless = [m for m in s1.memberList() if not m['name']]
+
+        # s3 should have no name, but s4, s5 and s6 all should
+        self.assertEquals(1, len(nameless))
+        self.assertEquals(s1.memberList(), s4.memberList())
+        self.assertEquals(s1.memberList(), s5.memberList())
+        self.assertEquals(s1.memberList(), s6.memberList())
+        c.delete_datadir()
