@@ -1,6 +1,8 @@
 /.eggs/
 /cluster_mgr_eggs/
+/queue_mgr_eggs/
 /config_mgr_eggs/
+/clearwater_etcd_tests.egg-info/
 /_env/
 *.pyc
 /.coverage
@@ -10,5 +12,6 @@
 coverage.xml
 
 # Alarm constants generated from JSON files
+src/metaswitch/clearwater/queue_manager/alarm_constants.py
 src/metaswitch/clearwater/config_manager/alarm_constants.py
 src/metaswitch/clearwater/cluster_manager/alarm_constants.py

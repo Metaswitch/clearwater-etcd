@@ -1,5 +1,5 @@
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015  Metaswitch Networks Ltd
+# Copyright (C) 2015 Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -29,42 +29,35 @@
 # "OpenSSL Licenses" means the OpenSSL License and Original SSLeay License
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
+from abc import ABCMeta, abstractmethod
+import alarm_constants
 
-from metaswitch.clearwater.config_manager.plugin_base import ConfigPluginBase, FileStatus
-from metaswitch.clearwater.etcd_shared.plugin_utils import run_command, safely_write
-from time import sleep
-import logging
-import shutil
-import os
+class QueuePluginBase(object): # pragma : no cover
+    __metaclass__ = ABCMeta
 
-_log = logging.getLogger("shared_config_plugin")
-_file = "/etc/clearwater/shared_config"
+    wait_for_this_node = 300
+    wait_for_other_node = 330
 
-class SharedConfigPlugin(ConfigPluginBase):
-    def __init__(self, _params):
+    def local_alarm(self):
+        return (alarm_constants.LOCAL_CONFIG_RESYNCHING_CLEARED,
+                alarm_constants.LOCAL_CONFIG_RESYNCHING_MINOR,
+                alarm_constants.LOCAL_CONFIG_RESYNCHING_CRITICAL,
+                "local")
+
+    def global_alarm(self):
+        return (alarm_constants.GLOBAL_CONFIG_RESYNCHING_CLEARED,
+                alarm_constants.GLOBAL_CONFIG_RESYNCHING_MINOR,
+                alarm_constants.GLOBAL_CONFIG_RESYNCHING_CRITICAL,
+                "local")
+
+    @abstractmethod
+    def key(self):
+        """This should return the etcd key that holds the value managed by
+        this plugin"""
         pass
 
-    def key(self):
-        return "shared_config"
-
-    def file(self):
-        return _file
-
-    def status(self, value):
-        try:
-            with open(_file, "r") as ifile:
-                current = ifile.read()
-                if current == value:
-                    return FileStatus.UP_TO_DATE
-                else:
-                    return FileStatus.OUT_OF_SYNC
-        except IOError:
-            return FileStatus.MISSING
-
-    def on_config_changed(self, value, alarm):
-        _log.info("Updating shared configuration file")
-        safely_write(_file, value)
-        run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config")
-
-def load_as_plugin(params):
-    return SharedConfigPlugin(params)
+    @abstractmethod
+    def at_front_of_queue(self):
+        """This hook is called when the node is at the front of the
+        queue."""
+        pass

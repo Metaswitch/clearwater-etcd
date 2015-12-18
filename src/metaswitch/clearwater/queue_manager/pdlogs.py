@@ -1,5 +1,5 @@
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015  Metaswitch Networks Ltd
+# Copyright (C) 2015 Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -30,41 +30,28 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-from metaswitch.clearwater.config_manager.plugin_base import ConfigPluginBase, FileStatus
-from metaswitch.clearwater.etcd_shared.plugin_utils import run_command, safely_write
-from time import sleep
-import logging
-import shutil
-import os
+from metaswitch.common.pdlogs import PDLog
 
-_log = logging.getLogger("shared_config_plugin")
-_file = "/etc/clearwater/shared_config"
-
-class SharedConfigPlugin(ConfigPluginBase):
-    def __init__(self, _params):
-        pass
-
-    def key(self):
-        return "shared_config"
-
-    def file(self):
-        return _file
-
-    def status(self, value):
-        try:
-            with open(_file, "r") as ifile:
-                current = ifile.read()
-                if current == value:
-                    return FileStatus.UP_TO_DATE
-                else:
-                    return FileStatus.OUT_OF_SYNC
-        except IOError:
-            return FileStatus.MISSING
-
-    def on_config_changed(self, value, alarm):
-        _log.info("Updating shared configuration file")
-        safely_write(_file, value)
-        run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config")
-
-def load_as_plugin(params):
-    return SharedConfigPlugin(params)
+STARTUP = PDLog(
+    number=PDLog.CL_QUEUE_MGR_ID+1,
+    desc="clearwater-queue-manager has started.",
+    cause="The application is starting.",
+    effect="Normal.",
+    action="None.",
+    priority=PDLog.LOG_NOTICE)
+EXITING = PDLog(
+    number=PDLog.CL_QUEUE_MGR_ID+2,
+    desc="clearwater-queue-manager is exiting.",
+    cause="The application is exiting.",
+    effect="Configuration synchronization services are no longer available.",
+    action="This occurs normally when the application is stopped. Wait for monit "+\
+      "to restart the application.",
+    priority=PDLog.LOG_ERR)
+EXITING_BAD_CONFIG = PDLog(
+    number=PDLog.CL_QUEUE_MGR_ID+3,
+    desc="clearwater-queue-manager is exiting due to bad configuration.",
+    cause="clearwater-queue-manager was started with incorrect configuration.",
+    effect="Configuration synchronization services are no longer available.",
+    action="Verify that the configuration files in /etc/clearwater/ are correct "+\
+      "according to the documentation.",
+    priority=PDLog.LOG_ERR)

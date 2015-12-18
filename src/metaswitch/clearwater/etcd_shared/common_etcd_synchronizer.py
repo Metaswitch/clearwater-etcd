@@ -131,6 +131,7 @@ class CommonEtcdSynchronizer(object):
         self._index = None
         self._last_value = None
         self._terminate_flag = False
+        self._abort_read = False
         self.thread = Thread(target=self.main, name=self.thread_name())
 
     def start_thread(self):
@@ -173,7 +174,7 @@ class CommonEtcdSynchronizer(object):
                 if result.value == self._last_value:
                     _log.info("Watching for changes with {}".format(wait_index))
 
-                    while not self._terminate_flag and self.is_running():
+                    while not self._terminate_flag and not self._abort_read and self.is_running():
                         _log.debug("Started a new watch")
                         try:
                             result = self._client.read(self.key(),

@@ -1,5 +1,7 @@
+#!/usr/bin/env python
+
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015  Metaswitch Networks Ltd
+# Copyright (C) 2015 Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -30,41 +32,37 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-from metaswitch.clearwater.config_manager.plugin_base import ConfigPluginBase, FileStatus
-from metaswitch.clearwater.etcd_shared.plugin_utils import run_command, safely_write
+import unittest
+from .test_base import BaseQueueTest
+from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import EtcdFactory
+from metaswitch.clearwater.queue_manager.etcd_synchronizer import EtcdSynchronizer
+from .plugin import TestPlugin
+from mock import patch, MagicMock
+from threading import Thread
 from time import sleep
-import logging
-import shutil
-import os
+import json
 
-_log = logging.getLogger("shared_config_plugin")
-_file = "/etc/clearwater/shared_config"
+alarms_patch = patch("metaswitch.clearwater.queue_manager.alarms.issue_alarm", new=MagicMock)
 
-class SharedConfigPlugin(ConfigPluginBase):
-    def __init__(self, _params):
-        pass
+class SetForceQueueTest(BaseQueueTest):
+    @patch("etcd.Client", new=EtcdFactory)
+    def setUp(self):
+        alarms_patch.start()
+        self._p = TestPlugin()
+        self._e = EtcdSynchronizer(self._p, "10.0.0.1", "local", "clearwater", "node")
+        self._e.WAIT_FOR_TIMER_POP = 0
 
-    def key(self):
-        return "shared_config"
+    def test_set_force(self):
+        self.set_initial_val("{\"FORCE\": false, \"ERRORED\": [], \"COMPLETED\": [], \"QUEUED\": []}")
 
-    def file(self):
-        return _file
+        self._e.set_force(False)
+        val = json.loads(self._e._client.read("/clearwater/local/configuration/queue_test").value)
+        self.assertFalse(val.get("FORCE"))
 
-    def status(self, value):
-        try:
-            with open(_file, "r") as ifile:
-                current = ifile.read()
-                if current == value:
-                    return FileStatus.UP_TO_DATE
-                else:
-                    return FileStatus.OUT_OF_SYNC
-        except IOError:
-            return FileStatus.MISSING
+        self._e.set_force(True)
+        val = json.loads(self._e._client.read("/clearwater/local/configuration/queue_test").value)
+        self.assertTrue(val.get("FORCE"))
 
-    def on_config_changed(self, value, alarm):
-        _log.info("Updating shared configuration file")
-        safely_write(_file, value)
-        run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config")
-
-def load_as_plugin(params):
-    return SharedConfigPlugin(params)
+        self._e.set_force(False)
+        val = json.loads(self._e._client.read("/clearwater/local/configuration/queue_test").value)
+        self.assertFalse(val.get("FORCE"))

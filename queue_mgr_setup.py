@@ -1,5 +1,7 @@
+# @file queue_mgr_setup.py
+#
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015  Metaswitch Networks Ltd
+# Copyright (C) 2015 Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -30,41 +32,22 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-from metaswitch.clearwater.config_manager.plugin_base import ConfigPluginBase, FileStatus
-from metaswitch.clearwater.etcd_shared.plugin_utils import run_command, safely_write
-from time import sleep
 import logging
-import shutil
-import os
+import sys
+import multiprocessing
 
-_log = logging.getLogger("shared_config_plugin")
-_file = "/etc/clearwater/shared_config"
+from setuptools import setup, find_packages
 
-class SharedConfigPlugin(ConfigPluginBase):
-    def __init__(self, _params):
-        pass
-
-    def key(self):
-        return "shared_config"
-
-    def file(self):
-        return _file
-
-    def status(self, value):
-        try:
-            with open(_file, "r") as ifile:
-                current = ifile.read()
-                if current == value:
-                    return FileStatus.UP_TO_DATE
-                else:
-                    return FileStatus.OUT_OF_SYNC
-        except IOError:
-            return FileStatus.MISSING
-
-    def on_config_changed(self, value, alarm):
-        _log.info("Updating shared configuration file")
-        safely_write(_file, value)
-        run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config")
-
-def load_as_plugin(params):
-    return SharedConfigPlugin(params)
+setup(
+    name='clearwater-queue-manager',
+    version='1.0',
+    namespace_packages = ['metaswitch'],
+    packages=['metaswitch', 'metaswitch.clearwater', 'metaswitch.clearwater.queue_manager'],
+    package_dir={'':'src'},
+    package_data={
+        '': ['*.eml'],
+        },
+    test_suite='metaswitch.clearwater.queue_manager.test',
+    install_requires=["docopt", "python-etcd", "pyzmq", "pyyaml", "futures", "prctl", "metaswitchcommon", "clearwater_etcd_shared"],
+    tests_require=["pbr==1.6", "Mock"],
+    )

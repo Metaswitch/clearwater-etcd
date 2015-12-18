@@ -1,5 +1,5 @@
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015  Metaswitch Networks Ltd
+# Copyright (C) 2015 Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -30,41 +30,16 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-from metaswitch.clearwater.config_manager.plugin_base import ConfigPluginBase, FileStatus
-from metaswitch.clearwater.etcd_shared.plugin_utils import run_command, safely_write
-from time import sleep
 import logging
-import shutil
+import sys
 import os
+import random
 
-_log = logging.getLogger("shared_config_plugin")
-_file = "/etc/clearwater/shared_config"
+logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
+logging.getLogger().setLevel(logging.ERROR)
+if os.environ.get('NOISY'):
+    logging.getLogger().setLevel(logging.DEBUG)
 
-class SharedConfigPlugin(ConfigPluginBase):
-    def __init__(self, _params):
-        pass
-
-    def key(self):
-        return "shared_config"
-
-    def file(self):
-        return _file
-
-    def status(self, value):
-        try:
-            with open(_file, "r") as ifile:
-                current = ifile.read()
-                if current == value:
-                    return FileStatus.UP_TO_DATE
-                else:
-                    return FileStatus.OUT_OF_SYNC
-        except IOError:
-            return FileStatus.MISSING
-
-    def on_config_changed(self, value, alarm):
-        _log.info("Updating shared configuration file")
-        safely_write(_file, value)
-        run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config")
-
-def load_as_plugin(params):
-    return SharedConfigPlugin(params)
+seed = random.randrange(2000)
+print "\n\n===\nGenerated random seed {}\n===\n\n".format(seed)
+random.seed(seed)

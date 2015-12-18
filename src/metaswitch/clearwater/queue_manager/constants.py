@@ -1,5 +1,5 @@
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015  Metaswitch Networks Ltd
+# Copyright (C) 2015 Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -30,41 +30,31 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-from metaswitch.clearwater.config_manager.plugin_base import ConfigPluginBase, FileStatus
-from metaswitch.clearwater.etcd_shared.plugin_utils import run_command, safely_write
-from time import sleep
-import logging
-import shutil
-import os
+# JSON values
+JSON_QUEUED = "QUEUED"
+JSON_ERRORED = "ERRORED"
+JSON_COMPLETED = "COMPLETED"
+JSON_FORCE = "FORCE"
+JSON_ID = "ID"
+JSON_STATUS = "STATUS"
 
-_log = logging.getLogger("shared_config_plugin")
-_file = "/etc/clearwater/shared_config"
+# STATUS values
+S_QUEUED = "QUEUED"
+S_PROCESSING = "PROCESSING"
+S_FAILURE = "FAILURE"
+S_UNRESPONSIVE = "UNRESPONSIVE"
+S_DONE = "DONE"
 
-class SharedConfigPlugin(ConfigPluginBase):
-    def __init__(self, _params):
-        pass
+# GLOBAL states
+GS_NO_SYNC = "NO_SYNC"
+GS_NO_SYNC_ERROR = "NO_SYNC_ERROR"
+GS_SYNC = "SYNC"
+GS_SYNC_ERROR = "SYNC_ERROR"
 
-    def key(self):
-        return "shared_config"
-
-    def file(self):
-        return _file
-
-    def status(self, value):
-        try:
-            with open(_file, "r") as ifile:
-                current = ifile.read()
-                if current == value:
-                    return FileStatus.UP_TO_DATE
-                else:
-                    return FileStatus.OUT_OF_SYNC
-        except IOError:
-            return FileStatus.MISSING
-
-    def on_config_changed(self, value, alarm):
-        _log.info("Updating shared configuration file")
-        safely_write(_file, value)
-        run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config")
-
-def load_as_plugin(params):
-    return SharedConfigPlugin(params)
+# LOCAL states
+LS_NO_QUEUE = "NO_QUEUE"
+LS_NO_QUEUE_ERROR = "NO_QUEUE_ERROR"
+LS_FIRST_IN_QUEUE = "FIRST_IN_QUEUE"
+LS_PROCESSING = "PROCESSING"
+LS_WAITING_ON_OTHER_NODE = "WAITING_ON_OTHER_NODE"
+LS_WAITING_ON_OTHER_NODE_ERROR = "WAITING_ON_OTHER_NODE_ERROR"

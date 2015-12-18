@@ -1,5 +1,5 @@
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015  Metaswitch Networks Ltd
+# Copyright (C) 2015 Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -30,41 +30,36 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-from metaswitch.clearwater.config_manager.plugin_base import ConfigPluginBase, FileStatus
-from metaswitch.clearwater.etcd_shared.plugin_utils import run_command, safely_write
-from time import sleep
+from metaswitch.common.alarms import issue_alarm as int_issue_alarm
 import logging
-import shutil
-import os
 
-_log = logging.getLogger("shared_config_plugin")
-_file = "/etc/clearwater/shared_config"
+_log = logging.getLogger("queue_manager.alarms")
 
-class SharedConfigPlugin(ConfigPluginBase):
-    def __init__(self, _params):
-        pass
+def issue_alarm(identifier): # pragma : no cover
+    int_issue_alarm("queue-manager", identifier)
 
-    def key(self):
-        return "shared_config"
+class QueueAlarm(object):
+    def __init__(self, clear, minor, critical, name):
+        self._clear_alarm = clear
+        self._minor_alarm = minor
+        self._critical_alarm = critical
+        self._name = name
+        self._current_alarm = clear
 
-    def file(self):
-        return _file
+    def clear(self):
+        if self._current_alarm != self._clear_alarm:
+            _log.debug("Clearing %s alarm" % self._name)
+            issue_alarm(self.clear)
+            self._current_alarm == self._clear_alarm
 
-    def status(self, value):
-        try:
-            with open(_file, "r") as ifile:
-                current = ifile.read()
-                if current == value:
-                    return FileStatus.UP_TO_DATE
-                else:
-                    return FileStatus.OUT_OF_SYNC
-        except IOError:
-            return FileStatus.MISSING
+    def minor(self):
+        if self._current_alarm != self._minor_alarm:
+            _log.debug("Raising minor %s alarm" % self._name)
+            issue_alarm(self.minor)
+            self._current_alarm == self._minor_alarm
 
-    def on_config_changed(self, value, alarm):
-        _log.info("Updating shared configuration file")
-        safely_write(_file, value)
-        run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config")
-
-def load_as_plugin(params):
-    return SharedConfigPlugin(params)
+    def critical(self):
+        if self._current_alarm != self._critical_alarm:
+            _log.debug("Raising critical %s alarm" % self._name)
+            issue_alarm(self.critical)
+            self._current_alarm == self._critical_alarm

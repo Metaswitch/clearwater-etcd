@@ -19,12 +19,17 @@ Architecture: all
 Depends: python-dev, python-pip, libffi-dev, libssl-dev, libzmq3-dev, python-virtualenv, clearwater-etcd
 Description: Cluster manager for Clearwater
 
-Package: clearwater-config-manager
+Package: clearwater-queue-manager
 Architecture: all
 Depends: python-dev, python-pip, libffi-dev, libssl-dev, libzmq3-dev, python-virtualenv, clearwater-etcd
+Description: Queue manager for Clearwater
+
+Package: clearwater-config-manager
+Architecture: all
+Depends: python-dev, python-pip, libffi-dev, libssl-dev, libzmq3-dev, python-virtualenv, clearwater-etcd, clearwater-queue-manager
 Description: Configuration manager for Clearwater
 
 Package: clearwater-management
 Architecture: all
-Depends: clearwater-cluster-manager (= ${source:Version}), clearwater-config-manager (= ${source:Version})
+Depends: clearwater-cluster-manager (= ${source:Version}), clearwater-queue-manager (= ${source:Version}), clearwater-config-manager (= ${source:Version})
 Description: Meta-package for installing all Clearwater management services

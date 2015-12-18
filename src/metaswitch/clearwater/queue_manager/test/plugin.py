@@ -1,5 +1,5 @@
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015  Metaswitch Networks Ltd
+# Copyright (C) 2015 Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -29,42 +29,33 @@
 # "OpenSSL Licenses" means the OpenSSL License and Original SSLeay License
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
+from metaswitch.clearwater.queue_manager.plugin_base import QueuePluginBase
+from mock import MagicMock
 
-from metaswitch.clearwater.config_manager.plugin_base import ConfigPluginBase, FileStatus
-from metaswitch.clearwater.etcd_shared.plugin_utils import run_command, safely_write
-from time import sleep
-import logging
-import shutil
-import os
+class TestPlugin(QueuePluginBase):
+    def key(self):
+        return "queue_test"
 
-_log = logging.getLogger("shared_config_plugin")
-_file = "/etc/clearwater/shared_config"
-
-class SharedConfigPlugin(ConfigPluginBase):
-    def __init__(self, _params):
+    def at_front_of_queue(self):
         pass
 
+class TestFrontOfQueueCallbackPlugin(QueuePluginBase):
+    def __init__(self):
+        self._at_front_of_queue = MagicMock()
+
     def key(self):
-        return "shared_config"
+        return "queue_test"
 
-    def file(self):
-        return _file
+    def at_front_of_queue(self):
+        return self._at_front_of_queue()
 
-    def status(self, value):
-        try:
-            with open(_file, "r") as ifile:
-                current = ifile.read()
-                if current == value:
-                    return FileStatus.UP_TO_DATE
-                else:
-                    return FileStatus.OUT_OF_SYNC
-        except IOError:
-            return FileStatus.MISSING
+class TestNoTimerDelayPlugin(QueuePluginBase):
+    def __init__(self):
+        self.wait_for_other_node = 0
+        self.wait_for_this_node = 0
 
-    def on_config_changed(self, value, alarm):
-        _log.info("Updating shared configuration file")
-        safely_write(_file, value)
-        run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config")
+    def key(self):
+        return "queue_test"
 
-def load_as_plugin(params):
-    return SharedConfigPlugin(params)
+    def at_front_of_queue(self):
+        pass

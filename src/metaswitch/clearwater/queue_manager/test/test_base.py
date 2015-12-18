@@ -1,5 +1,7 @@
+#!/usr/bin/env python
+
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015  Metaswitch Networks Ltd
+# Copyright (C) 2015 Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -30,41 +32,25 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-from metaswitch.clearwater.config_manager.plugin_base import ConfigPluginBase, FileStatus
-from metaswitch.clearwater.etcd_shared.plugin_utils import run_command, safely_write
+import unittest
+from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import EtcdFactory
+from metaswitch.clearwater.queue_manager.etcd_synchronizer import EtcdSynchronizer
 from time import sleep
-import logging
-import shutil
-import os
+from threading import Thread
+from mock import patch, MagicMock
 
-_log = logging.getLogger("shared_config_plugin")
-_file = "/etc/clearwater/shared_config"
+class BaseQueueTest(unittest.TestCase):
+    @patch("etcd.Client", new=EtcdFactory)
+    def set_initial_val(self, queue_config):
+        # Write some initial data into the key and start the synchronizer
+        self._e._client.write("/clearwater/local/configuration/queue_test", queue_config)
+        thread = Thread(target=self._e.main)
+        thread.daemon=True
+        thread.start()
+        sleep(1)
 
-class SharedConfigPlugin(ConfigPluginBase):
-    def __init__(self, _params):
-        pass
-
-    def key(self):
-        return "shared_config"
-
-    def file(self):
-        return _file
-
-    def status(self, value):
-        try:
-            with open(_file, "r") as ifile:
-                current = ifile.read()
-                if current == value:
-                    return FileStatus.UP_TO_DATE
-                else:
-                    return FileStatus.OUT_OF_SYNC
-        except IOError:
-            return FileStatus.MISSING
-
-    def on_config_changed(self, value, alarm):
-        _log.info("Updating shared configuration file")
-        safely_write(_file, value)
-        run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config")
-
-def load_as_plugin(params):
-    return SharedConfigPlugin(params)
+    @patch("etcd.Client", new=EtcdFactory)
+    def tearDown(self):
+        # Allow the EtcdSynchronizer to exit
+        self._e._terminate_flag = True
+        sleep(1)

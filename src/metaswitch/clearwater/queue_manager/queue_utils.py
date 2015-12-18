@@ -1,5 +1,5 @@
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015  Metaswitch Networks Ltd
+# Copyright (C) 2015 Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -30,41 +30,42 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-from metaswitch.clearwater.config_manager.plugin_base import ConfigPluginBase, FileStatus
-from metaswitch.clearwater.etcd_shared.plugin_utils import run_command, safely_write
-from time import sleep
-import logging
-import shutil
-import os
+import constants
 
-_log = logging.getLogger("shared_config_plugin")
-_file = "/etc/clearwater/shared_config"
+def id_in_queue(node_id, queue):
+    for val in queue:
+        if val[constants.JSON_ID] == node_id:
+            return True
+    return False
 
-class SharedConfigPlugin(ConfigPluginBase):
-    def __init__(self, _params):
-        pass
+def status_in_queue(queue, node_id):
+    status = []
+    for val in queue:
+        if val[constants.JSON_ID] == node_id:
+            status.append(val[constants.JSON_STATUS])
+    return status
 
-    def key(self):
-        return "shared_config"
+def add_id_to_json(queue, node_id, status):
+    add = {}
+    add[constants.JSON_ID] = node_id
+    add[constants.JSON_STATUS] = status
+    queue.append(add)
 
-    def file(self):
-        return _file
+def remove_id_from_json(node_id, queue):
+    remaining = []
+    for val in queue:
+        if val[constants.JSON_ID] != node_id:
+            remaining.append(val)
+    return remaining
 
-    def status(self, value):
-        try:
-            with open(_file, "r") as ifile:
-                current = ifile.read()
-                if current == value:
-                    return FileStatus.UP_TO_DATE
-                else:
-                    return FileStatus.OUT_OF_SYNC
-        except IOError:
-            return FileStatus.MISSING
+def move_to_processing(queue_func, node_id):
+    queue = queue_func()
+    queue[constants.JSON_QUEUED][0][constants.JSON_STATUS] = constants.S_PROCESSING
+    remove_id_from_json(node_id, queue[constants.JSON_ERRORED])
 
-    def on_config_changed(self, value, alarm):
-        _log.info("Updating shared configuration file")
-        safely_write(_file, value)
-        run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config")
+def mark_node_as_errored(queue, node_id):
+    del queue[constants.JSON_QUEUED][0]
 
-def load_as_plugin(params):
-    return SharedConfigPlugin(params)
+    if not (len(queue[constants.JSON_QUEUED]) > 0 and \
+            queue[constants.JSON_QUEUED][0][constants.JSON_ID] == node_id):
+        add_id_to_json(queue[constants.JSON_ERRORED], node_id, constants.S_UNRESPONSIVE)

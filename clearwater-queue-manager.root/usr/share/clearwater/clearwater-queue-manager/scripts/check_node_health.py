@@ -1,5 +1,7 @@
+#! /usr/bin/python
+
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015  Metaswitch Networks Ltd
+# Copyright (C) 2015 Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -30,41 +32,70 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-from metaswitch.clearwater.config_manager.plugin_base import ConfigPluginBase, FileStatus
-from metaswitch.clearwater.etcd_shared.plugin_utils import run_command, safely_write
-from time import sleep
-import logging
-import shutil
 import os
+import sys
+import subprocess
+from time import sleep
 
-_log = logging.getLogger("shared_config_plugin")
-_file = "/etc/clearwater/shared_config"
+class Status:
+    ok = 0
+    warn = 1
+    critical = 2
 
-class SharedConfigPlugin(ConfigPluginBase):
-    def __init__(self, _params):
-        pass
+def check_status():
 
-    def key(self):
-        return "shared_config"
+    output = subprocess.check_output(['monit', 'summary'])
 
-    def file(self):
-        return _file
+    result = Status.ok
+    critical_errors = [
+        'Does not exist',
+        'Initializing',
+        'Data access error',
+    ]
+    warning_errors = [
+        'Uptime failed',
+    ]
+    successes = [
+        'Running',
+        'Status ok',
+        'Waiting',
+    ]
 
-    def status(self, value):
-        try:
-            with open(_file, "r") as ifile:
-                current = ifile.read()
-                if current == value:
-                    return FileStatus.UP_TO_DATE
-                else:
-                    return FileStatus.OUT_OF_SYNC
-        except IOError:
-            return FileStatus.MISSING
+    for line in output.split('\n'):
+        if line.startswith('Process') or line.startswith('Program'):
+            if any(err in line for err in critical_errors):
+                result = Status.critical
+            elif any(err in line for err in warning_errors) or \
+                    not any(status in line for status in successes):
+                result = max(result, Status.warn)
+    print 'check status returns ', result
+    return result
 
-    def on_config_changed(self, value, alarm):
-        _log.info("Updating shared configuration file")
-        safely_write(_file, value)
-        run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config")
+def run_loop():
+    # seconds after which return error
+    time_remaining = 300
 
-def load_as_plugin(params):
-    return SharedConfigPlugin(params)
+    success_count = 0
+    while time_remaining:
+        status = check_status()
+        if status in (Status.ok, Status.warn):
+            success_count += 1
+
+        if status == Status.critical:
+            success_count = 0
+
+        if success_count >= 30:
+            return True
+
+        sleep(1)
+        time_remaining -= 1
+
+    return False
+
+if not os.getuid() == 0:
+    print 'Must be run as root'
+    sys.exit(1)
+
+result_map = {True: 0, False: 1}
+result = result_map[run_loop()]
+sys.exit(result)
