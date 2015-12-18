@@ -99,6 +99,24 @@ create_cluster()
                       --initial-cluster-state new"
 }
 
+setup_etcdctl_peers()
+{
+        # Build the client list based on $etcd_cluster, each entry is simply
+        # <IP>:<port> using the client port.
+        export ETCDCTL_PEERS=
+        OLD_IFS=$IFS
+        IFS=,
+        for server in $etcd_cluster
+        do
+            if [[ $server != $advertisement_ip ]]
+            then
+                ETCDCTL_PEERS="$server:4000,$ETCDCTL_PEERS"
+            fi
+        done
+        IFS=$OLD_IFS
+}
+
+
 join_cluster()
 {
         # Joining existing cluster
@@ -210,9 +228,12 @@ do_start()
         # The output of member list looks like:
         # <id>[unstarted]: name=xx-xx-xx-xx peerURLs=http://xx.xx.xx.xx:2380 clientURLs=http://xx.xx.xx.xx:4000
         # The [unstarted] is only present while the member hasn't fully joined the etcd cluster
+        setup_etcdctl_peers
         member=$(/usr/bin/etcdctl member list | grep "unstarted" | grep $listen_ip )
         if [[ $member != '' ]]
         then
+          member_id=$(echo $member | grep -o "^[^[]\+")
+          /usr/bin/etcdctl member remove $member_id
           rm -rf $DATA_DIR/$advertisement_ip
         fi
 
