@@ -64,8 +64,8 @@ build-eggs: ${ENV_DIR}/.cluster-mgr-build-eggs ${ENV_DIR}/.config-mgr-build-eggs
 
 ${ENV_DIR}/.config-mgr-build-eggs: config_mgr_setup.py shared_setup.py common/setup.py $(shell find src/metaswitch -type f -not -name "*.pyc") $(shell find common/metaswitch -type f -not -name "*.pyc") src/metaswitch/clearwater/config_manager/alarm_constants.py
 	# Generate .egg files
-	${ENV_DIR}/bin/python config_mgr_setup.py bdist_egg -d config_mgr_eggs
-	${ENV_DIR}/bin/python shared_setup.py bdist_egg -d config_mgr_eggs
+	${ENV_DIR}/bin/python config_mgr_setup.py build -b build_configmgr bdist_egg -d config_mgr_eggs
+	${ENV_DIR}/bin/python shared_setup.py build -b build_shared bdist_egg -d config_mgr_eggs
 	cd common && EGG_DIR=../config_mgr_eggs make build_common_egg
 
 	# Download the egg files they depend upon
@@ -77,8 +77,8 @@ ${ENV_DIR}/.config-mgr-build-eggs: config_mgr_setup.py shared_setup.py common/se
 
 ${ENV_DIR}/.cluster-mgr-build-eggs: cluster_mgr_setup.py shared_setup.py common/setup.py $(shell find src/metaswitch -type f -not -name "*.pyc") $(shell find common/metaswitch -type f -not -name "*.pyc") src/metaswitch/clearwater/cluster_manager/alarm_constants.py
 	# Generate .egg files
-	${ENV_DIR}/bin/python cluster_mgr_setup.py bdist_egg -d cluster_mgr_eggs
-	${ENV_DIR}/bin/python shared_setup.py bdist_egg -d cluster_mgr_eggs
+	${ENV_DIR}/bin/python cluster_mgr_setup.py build -b build_clustermgr bdist_egg -d cluster_mgr_eggs
+	${ENV_DIR}/bin/python shared_setup.py build -b build_shared bdist_egg -d cluster_mgr_eggs
 	cd common && EGG_DIR=../cluster_mgr_eggs make build_common_egg 
 
 	# Download the egg files they depend upon
@@ -103,6 +103,7 @@ clean: envclean pyclean
 pyclean:
 	find src -name \*.pyc -exec rm -f {} \;
 	rm -rf src/*.egg-info dist
+	rm -rf build build_configmgr build_clustermgr build_shared
 	rm -f .coverage
 	rm -rf htmlcov/
 
