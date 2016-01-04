@@ -99,6 +99,24 @@ create_cluster()
                       --initial-cluster-state new"
 }
 
+setup_etcdctl_peers()
+{
+        # Build the client list based on $etcd_cluster, each entry is simply
+        # <IP>:<port> using the client port.
+        export ETCDCTL_PEERS=
+        OLD_IFS=$IFS
+        IFS=,
+        for server in $etcd_cluster
+        do
+            if [[ $server != $advertisement_ip ]]
+            then
+                ETCDCTL_PEERS="$server:4000,$ETCDCTL_PEERS"
+            fi
+        done
+        IFS=$OLD_IFS
+}
+
+
 join_cluster()
 {
         # Joining existing cluster
@@ -130,45 +148,19 @@ join_cluster()
          then
            echo "Not joining an unhealthy cluster"
            exit 2
-         fi
-
-        # If we're already in the member list, remove ourselves first. This
-        # copes with a race condition where member add succeeds but etcd
-        # doesn't then come up.
-        #
-        # The output of member list looks like:
-        # <id>[unstarted]: name=xx-xx-xx-xx peerURLs=http://xx.xx.xx.xx:2380 clientURLs=http://xx.xx.xx.xx:4000
-        # The [unstarted] is only present while the member hasn't fully
-        # joined the etcd cluster
-        member=$(/usr/bin/etcdctl member list | grep $listen_ip | sed -e 's/\(\[[^ ]*\]\)\?:.*$//g')
-        if [[ $member != '' ]]
-        then
-          /usr/bin/etcdctl member remove $member
-          if [[ $? != 0 ]]
-          then
-            echo "Failed to remove local node from cluster"
-            exit 2
-          elif [[ -d $DATA_DIR/$advertisement_ip ]]
-          then
-            rm -r $DATA_DIR/$advertisement_ip
-          fi
         fi
 
-        # Tell the cluster we're joining, this prints useful environment
-        # variables to stdout but also prints a success message so strip that
-        # out before saving the variables to the temp file.
-        /usr/bin/etcdctl member add $ETCD_NAME http://$advertisement_ip:2380 | grep -v "Added member" >> $TEMP_FILE
+        # Tell the cluster we're joining
+        /usr/bin/etcdctl member add $ETCD_NAME http://$advertisement_ip:2380
         if [[ $? != 0 ]]
         then
           echo "Failed to add local node to cluster"
           exit 2
         fi
+        ETCD_INITIAL_CLUSTER=$(/usr/share/clearwater/bin/get_etcd_initial_cluster.py $local_ip $etcd_cluster)
 
-        # Load the environment variables back into the local shell and export
-        # them so ./etcd can see them when it starts up.
-        . $TEMP_FILE
         CLUSTER_ARGS="--initial-cluster $ETCD_INITIAL_CLUSTER
-                      --initial-cluster-state $ETCD_INITIAL_CLUSTER_STATE"
+                      --initial-cluster-state existing"
 
         # daemon is not running, so attempt to start it.
         ulimit -Hn 10000
@@ -228,6 +220,22 @@ do_start()
 
         ETCD_NAME=${advertisement_ip//./-}
         CLUSTER_ARGS=
+
+        # If we're already in the member list but are 'unstarted', remove our data dir, which
+        # contains stale data from a previous unsuccessful startup attempt. This copes with a race
+        # condition where member add succeeds but etcd doesn't then come up.
+        #
+        # The output of member list looks like:
+        # <id>[unstarted]: name=xx-xx-xx-xx peerURLs=http://xx.xx.xx.xx:2380 clientURLs=http://xx.xx.xx.xx:4000
+        # The [unstarted] is only present while the member hasn't fully joined the etcd cluster
+        setup_etcdctl_peers
+        member=$(/usr/bin/etcdctl member list | grep "unstarted" | grep $listen_ip )
+        if [[ $member != '' ]]
+        then
+          member_id=$(echo $member | grep -o "^[^[]\+")
+          /usr/bin/etcdctl member remove $member_id
+          rm -rf $DATA_DIR/$advertisement_ip
+        fi
 
         if [ -n "$etcd_cluster" ] && [ -n "$etcd_proxy" ]
         then
