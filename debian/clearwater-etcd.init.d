@@ -157,7 +157,7 @@ join_cluster()
           echo "Failed to add local node to cluster"
           exit 2
         fi
-        ETCD_INITIAL_CLUSTER=$(/usr/share/clearwater/bin/get_etcd_initial_cluster.py $local_ip $etcd_cluster)
+        ETCD_INITIAL_CLUSTER=$(/usr/share/clearwater/bin/get_etcd_initial_cluster.py $advertisement_ip $etcd_cluster)
 
         CLUSTER_ARGS="--initial-cluster $ETCD_INITIAL_CLUSTER
                       --initial-cluster-state existing"
