@@ -32,13 +32,11 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-import unittest
 from .test_base import BaseQueueTest
 from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import EtcdFactory
-from metaswitch.clearwater.queue_manager.etcd_synchronizer import EtcdSynchronizer
+from metaswitch.clearwater.queue_manager.etcd_synchronizer import EtcdSynchronizer, WriteToEtcdStatus
 from .plugin import TestPlugin
 from mock import patch, MagicMock
-from threading import Thread
 from time import sleep
 import json
 
@@ -52,17 +50,30 @@ class SetForceQueueTest(BaseQueueTest):
         self._e = EtcdSynchronizer(self._p, "10.0.0.1", "local", "clearwater", "node")
         self._e.WAIT_FOR_TIMER_POP = 0
 
+    def set_force_helper(self, force):
+        success = False
+
+        for x in range(10):
+            if self._e.set_force(force) == WriteToEtcdStatus.SUCCESS:
+                success = True
+                break
+            sleep(1)
+
+        if not success:
+            print "Failed to successfully run set_force"
+
+    # Test that the FORCE value in the JSON can be correctly toggled
     def test_set_force(self):
         self.set_initial_val("{\"FORCE\": false, \"ERRORED\": [], \"COMPLETED\": [], \"QUEUED\": []}")
 
-        self._e.set_force(False)
+        self.set_force_helper(False)
         val = json.loads(self._e._client.read("/clearwater/local/configuration/queue_test").value)
         self.assertFalse(val.get("FORCE"))
 
-        self._e.set_force(True)
+        self.set_force_helper(True)
         val = json.loads(self._e._client.read("/clearwater/local/configuration/queue_test").value)
         self.assertTrue(val.get("FORCE"))
 
-        self._e.set_force(False)
+        self.set_force_helper(False)
         val = json.loads(self._e._client.read("/clearwater/local/configuration/queue_test").value)
         self.assertFalse(val.get("FORCE"))

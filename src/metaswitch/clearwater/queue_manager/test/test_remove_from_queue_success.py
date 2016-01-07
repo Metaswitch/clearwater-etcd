@@ -32,13 +32,11 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-import unittest
 from .test_base import BaseQueueTest
 from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import EtcdFactory
-from metaswitch.clearwater.queue_manager.etcd_synchronizer import EtcdSynchronizer
+from metaswitch.clearwater.queue_manager.etcd_synchronizer import EtcdSynchronizer, WriteToEtcdStatus
 from .plugin import TestPlugin
 from mock import patch, MagicMock
-from threading import Thread
 from time import sleep
 import json
 
@@ -52,22 +50,36 @@ class RemoveFromQueueSuccessTest(BaseQueueTest):
         self._e = EtcdSynchronizer(self._p, "10.0.0.1", "local", "clearwater", "node")
         self._e.WAIT_FOR_TIMER_POP = 0
 
+    def remove_from_queue_helper(self):
+        success = False
+
+        for x in range(10):
+            if self._e.remove_from_queue(True) == WriteToEtcdStatus.SUCCESS:
+                success = True
+                break
+            sleep(1)
+
+        if not success:
+            print "Failed to successfully remove the node from the queue"
+
+    # Test that marking a node as successful moves it to the COMPLETED list
     @patch("etcd.Client", new=EtcdFactory)
     def test_remove_from_queue_success(self):
-        self.set_initial_val("{\"FORCE\": false, \"ERRORED\": [], \"COMPLETED\": [], \"QUEUED\": [{\"ID\":\"10.0.0.1-node\",\"STATUS\":\"PROCESSING\"}]}")
-        self._e.remove_from_queue(True)
+        self.set_initial_val("{\"FORCE\": false, \"ERRORED\": [], \"COMPLETED\": [], \"QUEUED\": [{\"ID\":\"10.0.0.1-node\",\"STATUS\":\"PROCESSING\"}, {\"ID\":\"10.0.0.2-node\",\"STATUS\":\"QUEUED\"}]}")
+        self.remove_from_queue_helper()
 
         val = json.loads(self._e._client.read("/clearwater/local/configuration/queue_test").value)
         self.assertEqual(0, len(val.get("ERRORED")))
         self.assertEqual(1, len(val.get("COMPLETED")))
-        self.assertEqual(0, len(val.get("QUEUED")))
+        self.assertEqual(1, len(val.get("QUEUED")))
         self.assertEqual("10.0.0.1-node", val.get("COMPLETED")[0]["ID"])
         self.assertEqual("DONE", val.get("COMPLETED")[0]["STATUS"])
 
+    # Test that marking a node as successful when it is still in the queue doesn't move it to the COMPLETED list (but does take out the first entry)
     @patch("etcd.Client", new=EtcdFactory)
     def test_remove_from_queue_success_still_in_queue(self):
         self.set_initial_val("{\"FORCE\": false, \"ERRORED\": [], \"COMPLETED\": [], \"QUEUED\": [{\"ID\":\"10.0.0.1-node\",\"STATUS\":\"PROCESSING\"},{\"ID\":\"10.0.0.1-node\",\"STATUS\":\"QUEUED\"}]}")
-        self._e.remove_from_queue(True)
+        self.remove_from_queue_helper()
 
         val = json.loads(self._e._client.read("/clearwater/local/configuration/queue_test").value)
         self.assertEqual(0, len(val.get("ERRORED")))
@@ -75,10 +87,12 @@ class RemoveFromQueueSuccessTest(BaseQueueTest):
         self.assertEqual(1, len(val.get("QUEUED")))
         self.assertEqual("10.0.0.1-node", val.get("QUEUED")[0]["ID"])
 
+    # Test that calling this method when the node isn't at the front of the
+    # doesn't change the queue
     @patch("etcd.Client", new=EtcdFactory)
     def test_remove_from_queue_success_not_front_of_queue(self):
         self.set_initial_val("{\"FORCE\": false, \"ERRORED\": [{\"ID\":\"10.0.0.1-node\",\"STATUS\":\"UNRESPONSIVE\"}], \"COMPLETED\": [], \"QUEUED\": [{\"ID\":\"10.0.0.2-node\",\"STATUS\":\"PROCESSING\"}]}")
-        self._e.remove_from_queue(True)
+        self.remove_from_queue_helper()
 
         val = json.loads(self._e._client.read("/clearwater/local/configuration/queue_test").value)
         self.assertEqual(1, len(val.get("ERRORED")))

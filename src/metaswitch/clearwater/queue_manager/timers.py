@@ -66,7 +66,7 @@ class QueueTimer(object):
         self.timer_popped = False
         self._timer_running = True
         self._delay = delay
-        self._timer_thread = Thread(target=self.set_timer, name="Timer thread")
+        self._timer_thread = Thread(target=self.set_timer, name="Timer thread " + self.timer_id)
         self._timer_thread.start()
 
     def clear(self):

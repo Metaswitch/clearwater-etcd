@@ -34,6 +34,7 @@ from os import sys
 import etcd
 import logging
 from metaswitch.clearwater.queue_manager.etcd_synchronizer import EtcdSynchronizer
+from metaswitch.clearwater.queue_manager.queue_utils import WriteToEtcdStatus
 from metaswitch.clearwater.queue_manager.null_plugin import NullPlugin
 
 def make_key(site, clearwater_key, queue_key):
@@ -42,7 +43,7 @@ def make_key(site, clearwater_key, queue_key):
 logfile = "/var/log/clearwater-queue-manager/queue_operation.log"
 print "Detailed output being sent to %s" % logfile
 logging.basicConfig(filename=logfile,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    format='%(asctime)s.%(msecs)03d UTC %(levelname)s %(filename)s:%(lineno)d: %(message)s',
                     level=logging.DEBUG)
 
 operation = sys.argv[1]
@@ -57,28 +58,28 @@ logging.info("Using etcd key %s" % queue_key)
 queue_syncer = EtcdSynchronizer(NullPlugin(queue_key), local_ip, site, clearwater_key, node_type)
 
 if operation == "add":
-    print "Adding %s to queue to restart" % (local_ip + "-" + node_type)
+    logging.info("Adding %s to queue to restart" % (local_ip + "-" + node_type))
 
-    while not queue_syncer.add_to_queue():
+    while queue_syncer.add_to_queue() != WriteToEtcdStatus.SUCCESS:
         sleep(2)
 
-    print "Node successfully added to restart queue"
+    logging.info("Node successfully added to restart queue")
 elif operation == "remove_success":
-    print "Removing %s from front of queue" % (local_ip + "-" + node_type)
+    logging.info("Removing %s from front of queue" % (local_ip + "-" + node_type))
 
-    while not queue_syncer.remove_from_queue(True):
+    while queue_syncer.remove_from_queue(True) != WriteToEtcdStatus.SUCCESS:
         sleep(2)
 
-    print "Node successfully removed"
+    logging.info("Node successfully removed")
 elif operation == "remove_failure":
-    print "Removing %s from front of queue and marking as errored" % (local_ip + "-" + node_type)
+    logging.info("Removing %s from front of queue and marking as errored" % (local_ip + "-" + node_type))
 
-    while not queue_syncer.remove_from_queue(False):
+    while queue_syncer.remove_from_queue(False) != WriteToEtcdStatus.SUCCESS:
         sleep(2)
 
-    print "Node successfully removed"
+    logging.info("Node successfully removed")
 else:
-    print "Invalid operation requested"
+    logging.info("Invalid operation requested")
 
 queue_syncer.terminate()
 

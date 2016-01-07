@@ -130,6 +130,11 @@ class CommonEtcdSynchronizer(object):
         self._client = etcd.Client(cxn_ip, 4000)
         self._index = None
         self._last_value = None
+
+        # Set the terminate flag and the abort read flag to false initially
+        # The terminate flag controls whether the synchronizer as a whole
+        # should terminate, the abort flag ensures that any synchronizer
+        # threads controlled by a futures is shut down fully
         self._terminate_flag = False
         self._abort_read = False
         self.thread = Thread(target=self.main, name=self.thread_name())
@@ -219,6 +224,8 @@ class CommonEtcdSynchronizer(object):
     def tuple_from_result(self, result):
         if result is None:
             return (None, None)
+        elif self._abort_read is True:
+            return (self._last_value, self._index)
         else:
             return (result.value, result.modifiedIndex)
 

@@ -48,8 +48,9 @@ class ApplyConfigPlugin(QueuePluginBase):
         _log.info("Restarting services")
         run_command("service clearwater-infrastructure restart")
 
-        for restart_script in os.listdir("/usr/share/clearwater/infrastructure/scripts/restart"):
-            run_command("/usr/share/clearwater/infrastructure/scripts/restart/" + restart_script)
+        if os.path.exists("/usr/share/clearwater/infrastructure/scripts/restart"):
+            for restart_script in os.listdir("/usr/share/clearwater/infrastructure/scripts/restart"):
+                run_command("/usr/share/clearwater/infrastructure/scripts/restart/" + restart_script)
  
         if run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/check_node_health.py"):
             run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue remove_success apply_config")

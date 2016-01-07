@@ -36,17 +36,19 @@ import os
 import sys
 import subprocess
 from time import sleep
+import logging
+
+_log = logging.getLogger(__name__)
 
 class Status:
-    ok = 0
-    warn = 1
-    critical = 2
+    OK = 0
+    WARN = 1
+    CRITICAL = 2
 
 def check_status():
-
     output = subprocess.check_output(['monit', 'summary'])
 
-    result = Status.ok
+    result = Status.OK
     critical_errors = [
         'Does not exist',
         'Initializing',
@@ -64,24 +66,25 @@ def check_status():
     for line in output.split('\n'):
         if line.startswith('Process') or line.startswith('Program'):
             if any(err in line for err in critical_errors):
-                result = Status.critical
+                result = Status.CRITICAL
             elif any(err in line for err in warning_errors) or \
                     not any(status in line for status in successes):
-                result = max(result, Status.warn)
-    print 'check status returns ', result
+                result = max(result, Status.WARN)
+    _log.debug("Current status is %s" % result)
     return result
 
 def run_loop():
-    # seconds after which return error
+    # Seconds after which we return an error
     time_remaining = 300
-
     success_count = 0
+
     while time_remaining:
         status = check_status()
-        if status in (Status.ok, Status.warn):
+
+        if status in (Status.OK, Status.WARN):
             success_count += 1
 
-        if status == Status.critical:
+        if status == Status.CRITICAL:
             success_count = 0
 
         if success_count >= 30:
@@ -93,9 +96,8 @@ def run_loop():
     return False
 
 if not os.getuid() == 0:
-    print 'Must be run as root'
+    _log.error("Insufficient permissions to run the check status script")
     sys.exit(1)
 
-result_map = {True: 0, False: 1}
-result = result_map[run_loop()]
+result = 0 if run_loop() is True else 1
 sys.exit(result)

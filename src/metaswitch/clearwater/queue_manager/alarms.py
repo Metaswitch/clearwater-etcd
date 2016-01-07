@@ -44,22 +44,15 @@ class QueueAlarm(object):
         self._minor_alarm = minor
         self._critical_alarm = critical
         self._name = name
-        self._current_alarm = clear
 
     def clear(self):
-        if self._current_alarm != self._clear_alarm:
-            _log.debug("Clearing %s alarm" % self._name)
-            issue_alarm(self.clear)
-            self._current_alarm == self._clear_alarm
+        _log.debug("Clearing %s alarm" % self._name)
+        issue_alarm(self.clear)
 
     def minor(self):
-        if self._current_alarm != self._minor_alarm:
-            _log.debug("Raising minor %s alarm" % self._name)
-            issue_alarm(self.minor)
-            self._current_alarm == self._minor_alarm
+        _log.debug("Raising minor %s alarm" % self._name)
+        issue_alarm(self.minor)
 
     def critical(self):
-        if self._current_alarm != self._critical_alarm:
-            _log.debug("Raising critical %s alarm" % self._name)
-            issue_alarm(self.critical)
-            self._current_alarm == self._critical_alarm
+        _log.debug("Raising critical %s alarm" % self._name)
+        issue_alarm(self.critical)

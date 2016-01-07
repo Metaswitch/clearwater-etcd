@@ -30,7 +30,6 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 from metaswitch.clearwater.queue_manager.plugin_base import QueuePluginBase
-from mock import MagicMock
 
 class TestPlugin(QueuePluginBase):
     def key(self):
@@ -41,18 +40,18 @@ class TestPlugin(QueuePluginBase):
 
 class TestFrontOfQueueCallbackPlugin(QueuePluginBase):
     def __init__(self):
-        self._at_front_of_queue = MagicMock()
+        self._at_front_of_queue_called = False
 
     def key(self):
         return "queue_test"
 
     def at_front_of_queue(self):
-        return self._at_front_of_queue()
+        self._at_front_of_queue_called = True
 
 class TestNoTimerDelayPlugin(QueuePluginBase):
     def __init__(self):
-        self.wait_for_other_node = 0
-        self.wait_for_this_node = 0
+        self.WAIT_FOR_OTHER_NODE = 0
+        self.WAIT_FOR_THIS_NODE = 0
 
     def key(self):
         return "queue_test"
