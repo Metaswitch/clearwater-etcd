@@ -42,7 +42,7 @@ from ..etcd_synchronizer import EtcdSynchronizer
 from plugin import TestFVPlugin
 
 logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
-logging.getLogger().setLevel(logging.INFO)
+logging.getLogger().setLevel(logging.WARNING)
 
 def wait_for_success_or_fail(sync, pass_criteria):
     for x in range(300):
@@ -100,7 +100,7 @@ class QueueManagerTestBase(unittest.TestCase):
 
     # Test that a two node queue is processed appropriately
     @unittest.skipUnless(os.environ.get("SLOW"), "SLOW=T not set")
-    def test_two_node_queue(self):
+    def temp_test_two_node_queue(self):
         self.create_synchronizers(2)
         
         # Set up the plugins
@@ -108,10 +108,6 @@ class QueueManagerTestBase(unittest.TestCase):
             leave = partial(self.dummy_sync.remove_from_queue, False, sync._id)
             p.when_at_front_of_queue(leave)
             self.assertFalse(p.at_front_of_queue_called)
-
-        #for count in range(2):
-        #    self.plugins[count].when_at_front_of_queue(partial(self.dummy_sync.remove_from_queue, True, self.syncs[count]._id))
-        #   self.assertFalse(self.plugins[count].at_front_of_queue_called)
 
         # Add nodes to queue
         self.add_all_nodes_to_queue(False)
@@ -123,7 +119,7 @@ class QueueManagerTestBase(unittest.TestCase):
 
     # Test that a twenty node queue is processed appropriately
     @unittest.skipUnless(os.environ.get("SLOW"), "SLOW=T not set")
-    def test_twenty_node_queue(self):
+    def temp_test_twenty_node_queue(self):
         self.create_synchronizers(20)
 
         # Set up the plugins
@@ -142,7 +138,7 @@ class QueueManagerTestBase(unittest.TestCase):
     # Test that a twenty node queue where every node is marked as failed is
     # processed appropriately
     @unittest.skipUnless(os.environ.get("SLOW"), "SLOW=T not set")
-    def test_twenty_node_queue_force_true(self):
+    def temp_test_twenty_node_queue_force_true(self):
         self.create_synchronizers(20)
 
         # Set up the plugins
@@ -161,7 +157,7 @@ class QueueManagerTestBase(unittest.TestCase):
     # Test that a two node queue where every node fails aborts after the first failure if
     # force is false
     @unittest.skipUnless(os.environ.get("SLOW"), "SLOW=T not set")
-    def test_two_node_queue_force_false(self):
+    def temp_test_two_node_queue_force_false(self):
         self.create_synchronizers(2)
 
         # Set up the plugins

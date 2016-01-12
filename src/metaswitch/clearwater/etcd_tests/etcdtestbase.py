@@ -51,6 +51,11 @@ class EtcdTestBase(unittest.TestCase):
         self.assertEquals(2, len(s1.memberList()))
         c.delete_datadir()
 
+    def test_basic_clustering2(self):
+        c = EtcdCluster(10)
+        self.assertEquals(10, len(c.servers.values()[0].memberList()))
+        c.delete_datadir()
+
     def test_iss203(self):
         c = EtcdCluster(2)
         s1, s2 = c.servers.values()

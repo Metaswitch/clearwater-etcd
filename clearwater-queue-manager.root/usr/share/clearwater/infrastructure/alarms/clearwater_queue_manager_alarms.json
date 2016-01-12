@@ -1,0 +1,65 @@
+{
+    "alarms": [
+        {
+            "index": 9000,
+            "name": "QUEUE_MANAGER_PROCESS_FAIL",
+            "cause": "SOFTWARE_ERROR",
+            "levels": [
+                {
+                    "severity": "CLEARED",
+                    "details": "The queue manager process has been restored to normal operation.",
+                    "description": "Queue manager: Process failure cleared"
+                },
+                {
+                    "severity": "CRITICAL",
+                    "details": "Monit has detected that the local queue manager process has failed. A restart will automatically be attempted. If this alarm does not clear, the queue manager process may have been stopped or an unrecoverable failure may have occurred.",
+                    "description": "Queue manager: Process failure"
+                }
+            ]
+        },
+        {
+            "name": "GLOBAL_CONFIG_RESYNCHING",
+            "index": 9001,
+            "cause": "DATABASE_INCONSISTENCY",
+            "levels": [
+                {
+                  "severity": "CLEARED",
+                  "description": "etcd: Shared configuration is now consistent across the deployment.",
+                  "details": "All shared configuration has been synchronised across the deployment."
+                },
+                {
+                  "severity": "MINOR",
+                  "description": "etcd: Shared configuration is being synchronised across the cluster.",
+                  "details": "Shared configuration is being synchronised across the cluster. This involves restarting the clearwater processes on individual nodes."
+                },
+                {
+                  "severity": "CRITICAL",
+                  "description": "etcd: A node has failed to start successfully after receiving new shared configuration",
+                  "details": "A node has failed to start successfully after receiving new shared configuration. Check that the shared configuration is valid, and the node is alive."
+                }
+            ]
+        },
+        {
+            "name": "LOCAL_CONFIG_RESYNCHING",
+            "index": 9002,
+            "cause": "DATABASE_INCONSISTENCY",
+            "levels": [
+                {
+                  "severity": "CLEARED",
+                  "description": "etcd: Shared configuration has been learned by the local node.",
+                  "details": "All shared configuration has been synchronised to the local node."
+                },
+                {
+                  "severity": "MINOR",
+                  "description": "etcd: Shared configuration is being synchronised on this node.",
+                  "details": "Shared configuration is being synchronised on this node. This involves restarting the clearwater processes on this node."
+                },
+                {
+                  "severity": "CRITICAL",
+                  "description": "etcd: This node has failed to start successfully after receiving new shared configuration",
+                  "details": "This node has failed to start successfully after receiving new shared configuration. Check that the shared configuration is valid, and this node is alive."
+                }
+            ]
+        }
+    ]
+}

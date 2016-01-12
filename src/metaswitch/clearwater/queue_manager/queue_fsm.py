@@ -114,7 +114,8 @@ class QueueFSM(object):
 
         # Now, check the local state and perform any appropriate actions
         local_queue_state = self._queue_config.calculate_local_state()
-        _log.debug("Local state is %s".format(local_queue_state))
+        _log.debug("Local state is {}".format(local_queue_state))
+
         for local_state_action in self._local_fsm[local_queue_state]:
             local_state_action()
         

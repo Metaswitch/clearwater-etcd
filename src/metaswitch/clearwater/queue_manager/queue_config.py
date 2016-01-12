@@ -95,15 +95,15 @@ class QueueConfig(object):
         self._value[constants.JSON_FORCE] = force
 
     # Add the node to the QUEUE list
-    def add_to_queue(self):
+    def add_to_queue(self, node_id):
         # If the QUEUE is empty, first copy any errored nodes to the front of
         # the queue
         if self._is_json_list_empty(constants.JSON_QUEUED):
             self._copy_failed_nodes_to_queue()
             self._empty_json_list(constants.JSON_ERRORED)
 
-        self._add_node_to_json_list(self._node_id, constants.JSON_QUEUED, constants.S_QUEUED)
-        self._remove_node_from_json_list(self._node_id, constants.JSON_COMPLETED)
+        self._add_node_to_json_list(node_id, constants.JSON_QUEUED, constants.S_QUEUED)
+        self._remove_node_from_json_list(node_id, constants.JSON_COMPLETED)
 
     # Move a node from QUEUED to PROCESSING
     def move_to_processing(self):
@@ -117,16 +117,16 @@ class QueueConfig(object):
         self._remove_node_from_json_list(self.node_at_the_front_of_the_queue(), constants.JSON_ERRORED)
 
     # Remove a node from the queue 
-    def remove_from_queue(self, successful):
-        if self._node_is_being_processed():
+    def remove_from_queue(self, successful, node_id):
+        if self._node_is_being_processed(node_id):
             self._remove_first_entry_from_queue()
 
             if successful:
-                if not self._node_in_json_list(self._node_id, constants.JSON_QUEUED) and \
+                if not self._node_in_json_list(node_id, constants.JSON_QUEUED) and \
                     not self._is_json_list_empty(constants.JSON_QUEUED):
-                    self._add_node_to_json_list(self._node_id, constants.JSON_COMPLETED, constants.S_DONE)
+                    self._add_node_to_json_list(node_id, constants.JSON_COMPLETED, constants.S_DONE)
             else:
-                self._node_failure_processing(self._node_id, constants.S_FAILURE)
+                self._node_failure_processing(node_id, constants.S_FAILURE)
 
             self._remove_node_from_json_list(self.node_at_the_front_of_the_queue(), constants.JSON_ERRORED)
 
@@ -204,6 +204,6 @@ class QueueConfig(object):
         self._value[json_list] = remaining
 
     # Return whether a node is at the front of the queue and in the PROCESSING state 
-    def _node_is_being_processed(self):
-        return ((self.node_at_the_front_of_the_queue() == self._node_id) and \
+    def _node_is_being_processed(self, node_id):
+        return ((self.node_at_the_front_of_the_queue() == node_id) and \
                 (self._value[constants.JSON_QUEUED][0][constants.JSON_STATUS] == constants.S_PROCESSING))

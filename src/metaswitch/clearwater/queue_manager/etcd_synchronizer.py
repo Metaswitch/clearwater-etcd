@@ -64,9 +64,9 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
     def is_running(self):
         return self._fsm.is_running()
 
-    def default_value(self):
+    def default_value(self): #pragma: no cover
         return "{\"FORCE\": false, \"ERRORED\": [], \"COMPLETED\": [], \"QUEUED\": []}"
- 
+
     def main(self):
         # Continue looping while the FSM is running.
         while self._fsm.is_running():
@@ -104,8 +104,7 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
                 else: #pragma: no cover
                     _log.warning("read_from_etcd returned None, " +
                                  "indicating a failure to get data from etcd")
-                # ensure the other thread ends
-                
+
             executor.shutdown()    
 
         _log.info("Quitting FSM")
@@ -142,14 +141,15 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
 
     # Write the new cluster view to etcd. We may be expecting to create the key
     # for the first time.
-    def write_to_etcd(self, queue_config):
-        _log.debug("Writing state {} into etcd with index {}"
+    def write_to_etcd(self, queue_config, with_index=None):
+        index = with_index or self._index
+        _log.info("Writing state {} into etcd with index {}"
                    .format(queue_config, self._index))
         rc = WriteToEtcdStatus.SUCCESS
 
         try:
-            if self._index:
-                self._client.write(self.key(), queue_config, prevIndex=self._index)
+            if index:
+                self._client.write(self.key(), queue_config, prevIndex=index)
             else: # pragma: no cover
                 self._client.write(self.key(), queue_config, prevExist=False)
         except (EtcdAlreadyExist, ValueError): # pragma: no cover
@@ -159,7 +159,7 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
             # changes in the next etcd read
             self._last_value, self._last_index = None, None
             rc = WriteToEtcdStatus.CONTENTION
-        except Exception as e:
+        except Exception as e: #pragma: no cover
             # Catch-all error handler (for invalid requests, timeouts, etc) -
             # unset our state and start over.
             _log.error("{} caught {!r} when trying to write {} with index {}"
@@ -179,24 +179,29 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
     def edit_queue_config(self, function, *args, **kwargs):
         # Get and parse the current value
         etcd_result, idx = self.read_from_etcd(wait=False)
+        if etcd_result is None: #pragma: no cover
+            return WriteToEtcdStatus.ERROR
 
-        # Use the force
         queue_config = QueueConfig(self._id, json.loads(etcd_result))
         function(queue_config, *args, **kwargs)
-
         # If the JSON changed, write it back to etcd
         updated_etcd_result = json.dumps(queue_config.get_value())
 
         if updated_etcd_result != etcd_result:
-            return self.write_to_etcd(updated_etcd_result)
-        else:
+            return self.write_to_etcd(updated_etcd_result, idx)
+        else: #pragma: no cover
             return WriteToEtcdStatus.SUCCESS
 
     def set_force(self, force):
+        # Use the force
         return self.edit_queue_config(QueueConfig.set_force, force)
 
-    def add_to_queue(self):
-        return self.edit_queue_config(QueueConfig.add_to_queue)
+    def add_to_queue(self, node_id=None):
+        if node_id == None:
+            node_id = self._id
+        return self.edit_queue_config(QueueConfig.add_to_queue, node_id)
 
-    def remove_from_queue(self, successful):
-        return self.edit_queue_config(QueueConfig.remove_from_queue, successful)
+    def remove_from_queue(self, successful, node_id=None):
+        if node_id == None:
+            node_id = self._id
+        return self.edit_queue_config(QueueConfig.remove_from_queue, successful, node_id)

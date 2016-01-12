@@ -61,6 +61,7 @@ def check_status():
         'Running',
         'Status ok',
         'Waiting',
+        'Not monitored',
     ]
 
     for line in output.split('\n'):

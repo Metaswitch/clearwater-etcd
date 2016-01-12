@@ -9,6 +9,7 @@
 /clearwater_etcd_tests.egg-info/
 /_env/
 *.pyc
+*.log
 /.coverage
 /build/
 /htmlcov/

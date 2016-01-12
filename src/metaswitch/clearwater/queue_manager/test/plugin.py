@@ -30,6 +30,7 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 from metaswitch.clearwater.queue_manager.plugin_base import QueuePluginBase
+from metaswitch.clearwater.queue_manager.etcd_synchronizer import WriteToEtcdStatus
 
 class TestPlugin(QueuePluginBase):
     def key(self):
@@ -58,3 +59,21 @@ class TestNoTimerDelayPlugin(QueuePluginBase):
 
     def at_front_of_queue(self):
         pass
+
+class TestFVPlugin(QueuePluginBase):
+    def __init__(self, *args, **kwargs):
+        super(TestFVPlugin, self).__init__(*args, **kwargs)
+        self.at_front_of_queue_called = False
+        self.front_of_queue_callback = None
+
+    def key(self):
+        return "queue_test"
+
+    def when_at_front_of_queue(self, cb):
+        self.front_of_queue_callback = cb
+
+    def at_front_of_queue(self):
+        self.at_front_of_queue_called = True
+        rc = self.front_of_queue_callback()
+        while rc != WriteToEtcdStatus.SUCCESS:
+            rc = self.front_of_queue_callback()

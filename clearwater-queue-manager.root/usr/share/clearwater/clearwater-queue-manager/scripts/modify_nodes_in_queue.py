@@ -81,8 +81,6 @@ elif operation == "remove_failure":
 else:
     logging.info("Invalid operation requested")
 
-queue_syncer.terminate()
-
 c = etcd.Client(local_ip, 4000)
 key = make_key(site, clearwater_key, queue_key)
 queue = c.get(key).value
