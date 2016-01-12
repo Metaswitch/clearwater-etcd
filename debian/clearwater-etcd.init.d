@@ -493,6 +493,7 @@ case "$1" in
   decommission)
         log_daemon_msg "Decommissioning $DESC" "$NAME"
         service clearwater-cluster-manager decommission || /bin/true
+        service clearwater-queue-manager decommission || /bin/true
         service clearwater-config-manager decommission || /bin/true
         do_decommission
         ;;

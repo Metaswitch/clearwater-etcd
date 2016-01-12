@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015 Metaswitch Networks Ltd
 #
@@ -30,67 +32,33 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-from time import sleep
-import logging
-import sys
 import unittest
-from .etcdcluster import EtcdCluster
+from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import EtcdFactory
+from time import sleep
+from threading import Thread
+from mock import patch
+import json
 
-logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
-logging.getLogger().setLevel(logging.INFO)
+class BaseQueueTest(unittest.TestCase):
+    @patch("etcd.Client", new=EtcdFactory)
+    def set_initial_val(self, queue_config):
+        # Write some initial data into the key and start the synchronizer
+        self._e._client.write("/clearwater/local/configuration/queue_test", queue_config)
+        thread = Thread(target=self._e.main)
+        thread.daemon=True
+        thread.start()
 
-class EtcdTestBase(unittest.TestCase):
-    def test_basic_clustering(self):
-        c = EtcdCluster(2)
-        s1, s2 = c.servers.values()
+    @patch("etcd.Client", new=EtcdFactory)
+    def tearDown(self):
+        # Allow the EtcdSynchronizer to exit
+        self._e._terminate_flag = True
+        sleep(1)
 
-        hasOneLeader = s1.isLeader() != s2.isLeader()
-
-        self.assertTrue(hasOneLeader)
-        self.assertTrue(s1.memberList() == s2.memberList())
-        self.assertEquals(2, len(s1.memberList()))
-        c.delete_datadir()
-
-    def test_basic_clustering2(self):
-        c = EtcdCluster(10)
-        self.assertEquals(10, len(c.servers.values()[0].memberList()))
-        c.delete_datadir()
-
-    def test_iss203(self):
-        c = EtcdCluster(2)
-        s1, s2 = c.servers.values()
-        s3 = c.add_server(actually_start=False) # noqa
-        s4 = c.add_server()
-        s5 = c.add_server()
-        s6 = c.add_server()
-
-        # Try to start any failed nodes again (in the same way that Monit would
-        # when live)
-        sleep(2)
-
-        s4.recover()
-        s5.recover()
-        s6.recover()
-
-        sleep(2)
-
-        s4.recover()
-        s5.recover()
-        s6.recover()
-
-        sleep(2)
-
-        s4.recover()
-        s5.recover()
-        s6.recover()
-
-        sleep(2)
-
-        nameless = [m for m in s1.memberList() if not m['name']]
-
-        # s3 should have no name, but s4, s5 and s6 all should
-        self.assertEquals(1, len(nameless))
-        self.assertEquals(s1.memberList(), s4.memberList())
-        self.assertEquals(s1.memberList(), s5.memberList())
-        self.assertEquals(s1.memberList(), s6.memberList())
-        c.delete_datadir()
+    def wait_for_success_or_fail(self, pass_criteria):
+        for x in range(10):
+            val = json.loads(self._e._client.return_global_data())
+            if pass_criteria(val):
+                return True
+            sleep(1)
+        print "Queue config not updated as expected, final value was: ", val
+        return False

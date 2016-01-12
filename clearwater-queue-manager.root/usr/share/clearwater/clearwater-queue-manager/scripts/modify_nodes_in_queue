@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015 Metaswitch Networks Ltd
 #
@@ -30,67 +32,27 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-from time import sleep
-import logging
-import sys
-import unittest
-from .etcdcluster import EtcdCluster
+set -ue
 
-logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
-logging.getLogger().setLevel(logging.INFO)
+# Set up defaults for the site/etcd_key/etcd_cluster_key
+local_site_name=site1
+etcd_key=clearwater
+etcd_cluster_key=unknown
 
-class EtcdTestBase(unittest.TestCase):
-    def test_basic_clustering(self):
-        c = EtcdCluster(2)
-        s1, s2 = c.servers.values()
+# Pull in config
+if [ -d /usr/share/clearwater/node_type.d ]
+then
+  . /usr/share/clearwater/node_type.d/$(ls /usr/share/clearwater/node_type.d | head -n 1)
+fi
+. /etc/clearwater/config
 
-        hasOneLeader = s1.isLeader() != s2.isLeader()
+if [ $# -ne 2 ]
+then
+  echo "Usage: modify_nodes_in_queue <operation> <queue_key>"
+  exit 1
+fi
 
-        self.assertTrue(hasOneLeader)
-        self.assertTrue(s1.memberList() == s2.memberList())
-        self.assertEquals(2, len(s1.memberList()))
-        c.delete_datadir()
+operation=$1
+queue_key=$2
 
-    def test_basic_clustering2(self):
-        c = EtcdCluster(10)
-        self.assertEquals(10, len(c.servers.values()[0].memberList()))
-        c.delete_datadir()
-
-    def test_iss203(self):
-        c = EtcdCluster(2)
-        s1, s2 = c.servers.values()
-        s3 = c.add_server(actually_start=False) # noqa
-        s4 = c.add_server()
-        s5 = c.add_server()
-        s6 = c.add_server()
-
-        # Try to start any failed nodes again (in the same way that Monit would
-        # when live)
-        sleep(2)
-
-        s4.recover()
-        s5.recover()
-        s6.recover()
-
-        sleep(2)
-
-        s4.recover()
-        s5.recover()
-        s6.recover()
-
-        sleep(2)
-
-        s4.recover()
-        s5.recover()
-        s6.recover()
-
-        sleep(2)
-
-        nameless = [m for m in s1.memberList() if not m['name']]
-
-        # s3 should have no name, but s4, s5 and s6 all should
-        self.assertEquals(1, len(nameless))
-        self.assertEquals(s1.memberList(), s4.memberList())
-        self.assertEquals(s1.memberList(), s5.memberList())
-        self.assertEquals(s1.memberList(), s6.memberList())
-        c.delete_datadir()
+/usr/share/clearwater/clearwater-queue-manager/env/bin/python /usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue.py $operation ${management_local_ip:-$local_ip} $local_site_name $etcd_cluster_key $etcd_key $queue_key

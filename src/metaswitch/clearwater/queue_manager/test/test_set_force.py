@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015 Metaswitch Networks Ltd
 #
@@ -30,67 +32,48 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
+from .test_base import BaseQueueTest
+from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import EtcdFactory
+from metaswitch.clearwater.queue_manager.etcd_synchronizer import EtcdSynchronizer, WriteToEtcdStatus
+from .plugin import TestPlugin
+from mock import patch, MagicMock
 from time import sleep
-import logging
-import sys
-import unittest
-from .etcdcluster import EtcdCluster
+import json
 
-logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
-logging.getLogger().setLevel(logging.INFO)
+alarms_patch = patch("metaswitch.clearwater.queue_manager.alarms.issue_alarm", new=MagicMock)
 
-class EtcdTestBase(unittest.TestCase):
-    def test_basic_clustering(self):
-        c = EtcdCluster(2)
-        s1, s2 = c.servers.values()
+class SetForceQueueTest(BaseQueueTest):
+    @patch("etcd.Client", new=EtcdFactory)
+    def setUp(self):
+        alarms_patch.start()
+        self._p = TestPlugin()
+        self._e = EtcdSynchronizer(self._p, "10.0.0.1", "local", "clearwater", "node")
+        self._e.WAIT_FOR_TIMER_POP = 0
 
-        hasOneLeader = s1.isLeader() != s2.isLeader()
+    def set_force_helper(self, force):
+        success = False
 
-        self.assertTrue(hasOneLeader)
-        self.assertTrue(s1.memberList() == s2.memberList())
-        self.assertEquals(2, len(s1.memberList()))
-        c.delete_datadir()
+        for x in range(10):
+            if self._e.set_force(force) == WriteToEtcdStatus.SUCCESS:
+                success = True
+                break
+            sleep(1)
 
-    def test_basic_clustering2(self):
-        c = EtcdCluster(10)
-        self.assertEquals(10, len(c.servers.values()[0].memberList()))
-        c.delete_datadir()
+        if not success:
+            print "Failed to successfully run set_force"
 
-    def test_iss203(self):
-        c = EtcdCluster(2)
-        s1, s2 = c.servers.values()
-        s3 = c.add_server(actually_start=False) # noqa
-        s4 = c.add_server()
-        s5 = c.add_server()
-        s6 = c.add_server()
+    # Test that the FORCE value in the JSON can be correctly toggled
+    def test_set_force(self):
+        self.set_initial_val("{\"FORCE\": false, \"ERRORED\": [], \"COMPLETED\": [], \"QUEUED\": []}")
 
-        # Try to start any failed nodes again (in the same way that Monit would
-        # when live)
-        sleep(2)
+        self.set_force_helper(False)
+        val = json.loads(self._e._client.read("/clearwater/local/configuration/queue_test").value)
+        self.assertFalse(val.get("FORCE"))
 
-        s4.recover()
-        s5.recover()
-        s6.recover()
+        self.set_force_helper(True)
+        val = json.loads(self._e._client.read("/clearwater/local/configuration/queue_test").value)
+        self.assertTrue(val.get("FORCE"))
 
-        sleep(2)
-
-        s4.recover()
-        s5.recover()
-        s6.recover()
-
-        sleep(2)
-
-        s4.recover()
-        s5.recover()
-        s6.recover()
-
-        sleep(2)
-
-        nameless = [m for m in s1.memberList() if not m['name']]
-
-        # s3 should have no name, but s4, s5 and s6 all should
-        self.assertEquals(1, len(nameless))
-        self.assertEquals(s1.memberList(), s4.memberList())
-        self.assertEquals(s1.memberList(), s5.memberList())
-        self.assertEquals(s1.memberList(), s6.memberList())
-        c.delete_datadir()
+        self.set_force_helper(False)
+        val = json.loads(self._e._client.read("/clearwater/local/configuration/queue_test").value)
+        self.assertFalse(val.get("FORCE"))

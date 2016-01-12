@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015 Metaswitch Networks Ltd
 #
@@ -30,67 +32,41 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
+from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import EtcdFactory
+from metaswitch.clearwater.queue_manager.etcd_synchronizer import EtcdSynchronizer
+from .plugin import TestFrontOfQueueCallbackPlugin
+from mock import patch, MagicMock
 from time import sleep
-import logging
-import sys
-import unittest
-from .etcdcluster import EtcdCluster
+from .test_base import BaseQueueTest
 
-logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
-logging.getLogger().setLevel(logging.INFO)
+alarms_patch = patch("metaswitch.clearwater.queue_manager.alarms.issue_alarm", new=MagicMock)
 
-class EtcdTestBase(unittest.TestCase):
-    def test_basic_clustering(self):
-        c = EtcdCluster(2)
-        s1, s2 = c.servers.values()
+class PluginTest(BaseQueueTest):
+    @patch("etcd.Client", new=EtcdFactory)
+    def setUp(self):
+        alarms_patch.start()
+        self._p = TestFrontOfQueueCallbackPlugin()
+        self._e = EtcdSynchronizer(self._p, "10.0.0.1", "local", "clearwater", "node")
+        self._e.WAIT_FOR_TIMER_POP = 0
 
-        hasOneLeader = s1.isLeader() != s2.isLeader()
+    def check_plugin_called(self):
+        for x in range(10):
+            if self._p._at_front_of_queue_called:
+                return True
+            sleep(1)
+        print "Plugin's at_front_of_queue method hasn't been called"
 
-        self.assertTrue(hasOneLeader)
-        self.assertTrue(s1.memberList() == s2.memberList())
-        self.assertEquals(2, len(s1.memberList()))
-        c.delete_datadir()
+    # Tests that a node at the front of the queue calls into its plugin
+    def test_front_of_queue_processing(self):
+        self.set_initial_val("{\"FORCE\": false, \"ERRORED\": [], \"COMPLETED\": [], \"QUEUED\": []}")
 
-    def test_basic_clustering2(self):
-        c = EtcdCluster(10)
-        self.assertEquals(10, len(c.servers.values()[0].memberList()))
-        c.delete_datadir()
-
-    def test_iss203(self):
-        c = EtcdCluster(2)
-        s1, s2 = c.servers.values()
-        s3 = c.add_server(actually_start=False) # noqa
-        s4 = c.add_server()
-        s5 = c.add_server()
-        s6 = c.add_server()
-
-        # Try to start any failed nodes again (in the same way that Monit would
-        # when live)
+        # It's unpleasant using sleeps here, but there's no nice
+        # way to check that the synchronizer has started
         sleep(2)
 
-        s4.recover()
-        s5.recover()
-        s6.recover()
+        # Check that the plugin hasn't been called
+        self.assertFalse(self._p._at_front_of_queue_called)
 
-        sleep(2)
-
-        s4.recover()
-        s5.recover()
-        s6.recover()
-
-        sleep(2)
-
-        s4.recover()
-        s5.recover()
-        s6.recover()
-
-        sleep(2)
-
-        nameless = [m for m in s1.memberList() if not m['name']]
-
-        # s3 should have no name, but s4, s5 and s6 all should
-        self.assertEquals(1, len(nameless))
-        self.assertEquals(s1.memberList(), s4.memberList())
-        self.assertEquals(s1.memberList(), s5.memberList())
-        self.assertEquals(s1.memberList(), s6.memberList())
-        c.delete_datadir()
+        # Write a new value into etcd, and check that the plugin is called
+        self._e._client.write("/clearwater/local/configuration/queue_test", "{\"FORCE\": false, \"ERRORED\": [], \"COMPLETED\": [], \"QUEUED\": [{\"ID\":\"10.0.0.1-node\",\"STATUS\":\"QUEUED\"}]}")
+        self.assertTrue(self.check_plugin_called())

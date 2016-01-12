@@ -29,68 +29,51 @@
 # "OpenSSL Licenses" means the OpenSSL License and Original SSLeay License
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
+from metaswitch.clearwater.queue_manager.plugin_base import QueuePluginBase
+from metaswitch.clearwater.queue_manager.etcd_synchronizer import WriteToEtcdStatus
 
-from time import sleep
-import logging
-import sys
-import unittest
-from .etcdcluster import EtcdCluster
+class TestPlugin(QueuePluginBase):
+    def key(self):
+        return "queue_test"
 
-logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
-logging.getLogger().setLevel(logging.INFO)
+    def at_front_of_queue(self):
+        pass
 
-class EtcdTestBase(unittest.TestCase):
-    def test_basic_clustering(self):
-        c = EtcdCluster(2)
-        s1, s2 = c.servers.values()
+class TestFrontOfQueueCallbackPlugin(QueuePluginBase):
+    def __init__(self):
+        self._at_front_of_queue_called = False
 
-        hasOneLeader = s1.isLeader() != s2.isLeader()
+    def key(self):
+        return "queue_test"
 
-        self.assertTrue(hasOneLeader)
-        self.assertTrue(s1.memberList() == s2.memberList())
-        self.assertEquals(2, len(s1.memberList()))
-        c.delete_datadir()
+    def at_front_of_queue(self):
+        self._at_front_of_queue_called = True
 
-    def test_basic_clustering2(self):
-        c = EtcdCluster(10)
-        self.assertEquals(10, len(c.servers.values()[0].memberList()))
-        c.delete_datadir()
+class TestNoTimerDelayPlugin(QueuePluginBase):
+    def __init__(self):
+        self.WAIT_FOR_OTHER_NODE = 0
+        self.WAIT_FOR_THIS_NODE = 0
 
-    def test_iss203(self):
-        c = EtcdCluster(2)
-        s1, s2 = c.servers.values()
-        s3 = c.add_server(actually_start=False) # noqa
-        s4 = c.add_server()
-        s5 = c.add_server()
-        s6 = c.add_server()
+    def key(self):
+        return "queue_test"
 
-        # Try to start any failed nodes again (in the same way that Monit would
-        # when live)
-        sleep(2)
+    def at_front_of_queue(self):
+        pass
 
-        s4.recover()
-        s5.recover()
-        s6.recover()
+class TestFVPlugin(QueuePluginBase):
+    def __init__(self, *args, **kwargs):
+        super(TestFVPlugin, self).__init__(*args, **kwargs)
+        self.at_front_of_queue_called = False
+        self.front_of_queue_callback = None
 
-        sleep(2)
+    def key(self):
+        return "queue_test"
 
-        s4.recover()
-        s5.recover()
-        s6.recover()
+    def when_at_front_of_queue(self, cb):
+        self.front_of_queue_callback = cb
 
-        sleep(2)
-
-        s4.recover()
-        s5.recover()
-        s6.recover()
-
-        sleep(2)
-
-        nameless = [m for m in s1.memberList() if not m['name']]
-
-        # s3 should have no name, but s4, s5 and s6 all should
-        self.assertEquals(1, len(nameless))
-        self.assertEquals(s1.memberList(), s4.memberList())
-        self.assertEquals(s1.memberList(), s5.memberList())
-        self.assertEquals(s1.memberList(), s6.memberList())
-        c.delete_datadir()
+    def at_front_of_queue(self):
+        self.at_front_of_queue_called = True
+        rc = self.front_of_queue_callback()
+        while rc != WriteToEtcdStatus.SUCCESS:
+            rc = self.front_of_queue_callback()

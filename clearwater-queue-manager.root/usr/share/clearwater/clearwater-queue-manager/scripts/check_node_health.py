@@ -1,3 +1,5 @@
+#! /usr/bin/python
+
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015 Metaswitch Networks Ltd
 #
@@ -30,67 +32,73 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
+import os
+import sys
+import subprocess
 from time import sleep
 import logging
-import sys
-import unittest
-from .etcdcluster import EtcdCluster
 
-logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
-logging.getLogger().setLevel(logging.INFO)
+_log = logging.getLogger(__name__)
 
-class EtcdTestBase(unittest.TestCase):
-    def test_basic_clustering(self):
-        c = EtcdCluster(2)
-        s1, s2 = c.servers.values()
+class Status:
+    OK = 0
+    WARN = 1
+    CRITICAL = 2
 
-        hasOneLeader = s1.isLeader() != s2.isLeader()
+def check_status():
+    output = subprocess.check_output(['monit', 'summary'])
 
-        self.assertTrue(hasOneLeader)
-        self.assertTrue(s1.memberList() == s2.memberList())
-        self.assertEquals(2, len(s1.memberList()))
-        c.delete_datadir()
+    result = Status.OK
+    critical_errors = [
+        'Does not exist',
+        'Initializing',
+        'Data access error',
+    ]
+    warning_errors = [
+        'Uptime failed',
+    ]
+    successes = [
+        'Running',
+        'Status ok',
+        'Waiting',
+        'Not monitored',
+    ]
 
-    def test_basic_clustering2(self):
-        c = EtcdCluster(10)
-        self.assertEquals(10, len(c.servers.values()[0].memberList()))
-        c.delete_datadir()
+    for line in output.split('\n'):
+        if line.startswith('Process') or line.startswith('Program'):
+            if any(err in line for err in critical_errors):
+                result = Status.CRITICAL
+            elif any(err in line for err in warning_errors) or \
+                    not any(status in line for status in successes):
+                result = max(result, Status.WARN)
+    _log.debug("Current status is %s" % result)
+    return result
 
-    def test_iss203(self):
-        c = EtcdCluster(2)
-        s1, s2 = c.servers.values()
-        s3 = c.add_server(actually_start=False) # noqa
-        s4 = c.add_server()
-        s5 = c.add_server()
-        s6 = c.add_server()
+def run_loop():
+    # Seconds after which we return an error
+    time_remaining = 300
+    success_count = 0
 
-        # Try to start any failed nodes again (in the same way that Monit would
-        # when live)
-        sleep(2)
+    while time_remaining:
+        status = check_status()
 
-        s4.recover()
-        s5.recover()
-        s6.recover()
+        if status in (Status.OK, Status.WARN):
+            success_count += 1
 
-        sleep(2)
+        if status == Status.CRITICAL:
+            success_count = 0
 
-        s4.recover()
-        s5.recover()
-        s6.recover()
+        if success_count >= 30:
+            return True
 
-        sleep(2)
+        sleep(1)
+        time_remaining -= 1
 
-        s4.recover()
-        s5.recover()
-        s6.recover()
+    return False
 
-        sleep(2)
+if not os.getuid() == 0:
+    _log.error("Insufficient permissions to run the check status script")
+    sys.exit(1)
 
-        nameless = [m for m in s1.memberList() if not m['name']]
-
-        # s3 should have no name, but s4, s5 and s6 all should
-        self.assertEquals(1, len(nameless))
-        self.assertEquals(s1.memberList(), s4.memberList())
-        self.assertEquals(s1.memberList(), s5.memberList())
-        self.assertEquals(s1.memberList(), s6.memberList())
-        c.delete_datadir()
+result = 0 if run_loop() is True else 1
+sys.exit(result)

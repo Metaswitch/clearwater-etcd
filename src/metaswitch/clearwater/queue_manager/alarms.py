@@ -30,67 +30,29 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-from time import sleep
+from metaswitch.common.alarms import issue_alarm as int_issue_alarm
 import logging
-import sys
-import unittest
-from .etcdcluster import EtcdCluster
 
-logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
-logging.getLogger().setLevel(logging.INFO)
+_log = logging.getLogger("queue_manager.alarms")
 
-class EtcdTestBase(unittest.TestCase):
-    def test_basic_clustering(self):
-        c = EtcdCluster(2)
-        s1, s2 = c.servers.values()
+def issue_alarm(identifier): # pragma : no cover
+    int_issue_alarm("queue-manager", identifier)
 
-        hasOneLeader = s1.isLeader() != s2.isLeader()
+class QueueAlarm(object):
+    def __init__(self, clear, minor, critical, name):
+        self._clear_alarm = clear
+        self._minor_alarm = minor
+        self._critical_alarm = critical
+        self._name = name
 
-        self.assertTrue(hasOneLeader)
-        self.assertTrue(s1.memberList() == s2.memberList())
-        self.assertEquals(2, len(s1.memberList()))
-        c.delete_datadir()
+    def clear(self):
+        _log.debug("Clearing %s alarm" % self._name)
+        issue_alarm(self.clear)
 
-    def test_basic_clustering2(self):
-        c = EtcdCluster(10)
-        self.assertEquals(10, len(c.servers.values()[0].memberList()))
-        c.delete_datadir()
+    def minor(self):
+        _log.debug("Raising minor %s alarm" % self._name)
+        issue_alarm(self.minor)
 
-    def test_iss203(self):
-        c = EtcdCluster(2)
-        s1, s2 = c.servers.values()
-        s3 = c.add_server(actually_start=False) # noqa
-        s4 = c.add_server()
-        s5 = c.add_server()
-        s6 = c.add_server()
-
-        # Try to start any failed nodes again (in the same way that Monit would
-        # when live)
-        sleep(2)
-
-        s4.recover()
-        s5.recover()
-        s6.recover()
-
-        sleep(2)
-
-        s4.recover()
-        s5.recover()
-        s6.recover()
-
-        sleep(2)
-
-        s4.recover()
-        s5.recover()
-        s6.recover()
-
-        sleep(2)
-
-        nameless = [m for m in s1.memberList() if not m['name']]
-
-        # s3 should have no name, but s4, s5 and s6 all should
-        self.assertEquals(1, len(nameless))
-        self.assertEquals(s1.memberList(), s4.memberList())
-        self.assertEquals(s1.memberList(), s5.memberList())
-        self.assertEquals(s1.memberList(), s6.memberList())
-        c.delete_datadir()
+    def critical(self):
+        _log.debug("Raising critical %s alarm" % self._name)
+        issue_alarm(self.critical)

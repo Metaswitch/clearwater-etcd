@@ -67,7 +67,14 @@ class EtcdCluster(object):
         srv1.waitUntilAlive()
         for _ in range(n-1):
             ret.append(self.add_server())
-        [x.waitUntilAlive() for x in ret]
+
+        # Now start all the other servers, and check that they actually come up
+        for server in ret:
+            rc = server.waitUntilAlive()
+            while not rc:
+                server.recover()
+                rc = server.waitUntilAlive()
+
         return ret
 
     def __del__(self):

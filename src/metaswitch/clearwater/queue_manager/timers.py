@@ -1,5 +1,7 @@
+# @file timers.py
+#
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015  Metaswitch Networks Ltd
+# Copyright (C) 2014  Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -30,41 +32,49 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-from metaswitch.clearwater.config_manager.plugin_base import ConfigPluginBase, FileStatus
-from metaswitch.clearwater.etcd_shared.plugin_utils import run_command, safely_write
-from time import sleep
 import logging
-import shutil
-import os
+from threading import Thread, Condition
 
-_log = logging.getLogger("shared_config_plugin")
-_file = "/etc/clearwater/shared_config"
+_log = logging.getLogger("queue_manager.timers")
 
-class SharedConfigPlugin(ConfigPluginBase):
-    def __init__(self, _params):
-        pass
+class QueueTimer(object):
+    def __init__(self, f):
+        self._condvar = Condition()
+        self._timer_thread = None
+        self.timer_popped = False
+        self._timer_running = False
+        self._delay = 1
+        self.timer_id = "NO_ID"
+        self._function_call = f
 
-    def key(self):
-        return "shared_config"
+    def set_timer(self):
+        self._condvar.acquire()
+        self._condvar.wait(self._delay)
+        
+        if self._timer_running:
+            # Trigger FSM
+            self.timer_popped = True
+            self._timer_running = False
+            if self._function_call:
+                self._function_call()
 
-    def file(self):
-        return _file
+        self._condvar.release()
 
-    def status(self, value):
-        try:
-            with open(_file, "r") as ifile:
-                current = ifile.read()
-                if current == value:
-                    return FileStatus.UP_TO_DATE
-                else:
-                    return FileStatus.OUT_OF_SYNC
-        except IOError:
-            return FileStatus.MISSING
+    def set(self, tid, delay):
+        self.clear()
+        self.timer_id = tid
+        self.timer_popped = False
+        self._timer_running = True
+        self._delay = delay
+        self._timer_thread = Thread(target=self.set_timer, name="Timer thread " + self.timer_id)
+        self._timer_thread.start()
 
-    def on_config_changed(self, value, alarm):
-        _log.info("Updating shared configuration file")
-        safely_write(_file, value)
-        run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config")
-
-def load_as_plugin(params):
-    return SharedConfigPlugin(params)
+    def clear(self):
+        if self._timer_thread is not None:
+            self._timer_running = False
+            self._condvar.acquire()
+            self._condvar.notify()
+            self._condvar.release()
+            self._timer_thread.join()
+            self.timer_id = "NO_ID"
+            self._timer_thread = None
