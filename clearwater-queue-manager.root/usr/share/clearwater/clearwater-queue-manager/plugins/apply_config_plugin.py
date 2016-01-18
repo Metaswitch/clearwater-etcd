@@ -53,9 +53,9 @@ class ApplyConfigPlugin(QueuePluginBase):
                 run_command("/usr/share/clearwater/infrastructure/scripts/restart/" + restart_script)
  
         if run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/check_node_health.py"):
-            run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue remove_success apply_config")
-        else:
             run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue remove_failure apply_config")
+        else:
+            run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue remove_success apply_config")
 
 def load_as_plugin(params):
     return ApplyConfigPlugin(params)
