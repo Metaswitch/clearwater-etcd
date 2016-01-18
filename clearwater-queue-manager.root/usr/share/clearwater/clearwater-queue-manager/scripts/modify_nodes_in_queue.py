@@ -33,8 +33,7 @@
 from os import sys
 import etcd
 import logging
-from metaswitch.clearwater.queue_manager.etcd_synchronizer import EtcdSynchronizer
-from metaswitch.clearwater.queue_manager.queue_utils import WriteToEtcdStatus
+from metaswitch.clearwater.queue_manager.etcd_synchronizer import EtcdSynchronizer, WriteToEtcdStatus
 from metaswitch.clearwater.queue_manager.null_plugin import NullPlugin
 
 def make_key(site, clearwater_key, queue_key):
