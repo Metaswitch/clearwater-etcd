@@ -35,6 +35,7 @@ import etcd
 import logging
 from metaswitch.clearwater.queue_manager.etcd_synchronizer import EtcdSynchronizer, WriteToEtcdStatus
 from metaswitch.clearwater.queue_manager.null_plugin import NullPlugin
+from time import sleep
 
 def make_key(site, clearwater_key, queue_key):
         return "/{}/{}/configuration/{}".format(clearwater_key, site, queue_key)
