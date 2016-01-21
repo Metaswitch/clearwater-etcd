@@ -3,7 +3,7 @@
         {
             "name": "GLOBAL_CONFIG_NOT_SYNCHED",
             "index": 8500,
-            "cause": "SOFTWARE_ERROR",
+            "cause": "DATABASE_INCONSISTENCY",
             "levels": [
                 {
                   "severity": "CLEARED",

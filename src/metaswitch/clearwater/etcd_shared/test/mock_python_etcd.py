@@ -66,6 +66,9 @@ class MockEtcdClient(object):
         global_data = ""
         global_condvar.release()
 
+    def return_global_data(self):
+        return global_data
+
     def fake_result(self):
         r = EtcdResult(None, {})
         r.value = global_data

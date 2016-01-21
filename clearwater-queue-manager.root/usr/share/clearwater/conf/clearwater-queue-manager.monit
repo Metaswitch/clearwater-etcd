@@ -1,0 +1,17 @@
+# Check the clearwater-queue-manager process.
+
+# Monitor the service's PID file and memory use.
+check process clearwater_queue_manager with pidfile /var/run/clearwater-queue-manager.pid
+
+  start program = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 6500.3; /etc/init.d/clearwater-queue-manager start'"
+  stop program = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 6500.3; /etc/init.d/clearwater-queue-manager stop'"
+  restart program = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 6500.3; /etc/init.d/clearwater-queue-manager restart'"
+
+  # Check the service's resource usage, and abort the process if it's too high. This will
+  # generate a (dummy) core file and trigger diagnostics collection.
+  if memory > 80% for 6 cycles then exec "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 6500.3; /etc/init.d/clearwater-queue-manager abort'"
+
+  # Clear any alarms if the process has been running for 30 seconds
+  if uptime < 30 seconds
+     then exec "/bin/true"
+     else if succeeded then exec "/usr/share/clearwater/bin/issue_alarm.py monit 6500.1"

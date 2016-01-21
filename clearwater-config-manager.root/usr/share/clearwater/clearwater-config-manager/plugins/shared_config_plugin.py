@@ -62,30 +62,9 @@ class SharedConfigPlugin(ConfigPluginBase):
             return FileStatus.MISSING
 
     def on_config_changed(self, value, alarm):
-        if os.path.exists(_file) and not os.path.exists(_file + ".apply"):
-            _log.debug("Ignoring shared config change - Shared config already learnt")
-            return
-
-        _log.info("Updating shared configuration")
+        _log.info("Updating shared configuration file")
         safely_write(_file, value)
-
-        _log.info("Restarting services")
-        run_command("service clearwater-infrastructure restart")
-
-        for restart_script in os.listdir("/usr/share/clearwater/infrastructure/scripts/restart"):
-            run_command("/usr/share/clearwater/infrastructure/scripts/restart/" + restart_script)
-
-        # Wait to let restarts finish
-        sleep(20)
-
-        # Config file is now up-to-date
-        alarm.update_file(_file)
-
-        # Remove the apply file if present.
-        try:
-            os.remove(_file + ".apply")
-        except OSError:
-            pass
+        run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config")
 
 def load_as_plugin(params):
     return SharedConfigPlugin(params)

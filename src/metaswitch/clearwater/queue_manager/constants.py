@@ -1,7 +1,5 @@
-#!/bin/bash
-
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015  Metaswitch Networks Ltd
+# Copyright (C) 2015 Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -32,23 +30,31 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-if [[ $EUID -ne 0 ]]
-then
-  echo "You must run this script with root permissions"
-  exit 1
-fi
+# JSON values
+JSON_QUEUED = "QUEUED"
+JSON_ERRORED = "ERRORED"
+JSON_COMPLETED = "COMPLETED"
+JSON_FORCE = "FORCE"
+JSON_ID = "ID"
+JSON_STATUS = "STATUS"
 
-[ $# -le 1 ] || { echo "Usage: apply_shared_config [--sync]" >&2 ; exit 2 ; }
+# STATUS values
+S_QUEUED = "QUEUED"
+S_PROCESSING = "PROCESSING"
+S_FAILURE = "FAILURE"
+S_UNRESPONSIVE = "UNRESPONSIVE"
+S_DONE = "DONE"
 
-FILENAME=/etc/clearwater/shared_config.apply
-touch $FILENAME
-service clearwater-config-manager restart
+# GLOBAL states
+GS_NO_SYNC = "NO_SYNC"
+GS_NO_SYNC_ERROR = "NO_SYNC_ERROR"
+GS_SYNC = "SYNC"
+GS_SYNC_ERROR = "SYNC_ERROR"
 
-# If we're running with sync, wait until the shared config has been successfully
-# applied before exiting
-if [ -n "$1" ] && [ $1 == "--sync" ]; then
-  echo "Shared config applied, waiting for services to restart"
-  while [ -e $FILENAME ]; do
-    sleep 1
-  done
-fi
+# LOCAL states
+LS_NO_QUEUE = "NO_QUEUE"
+LS_NO_QUEUE_ERROR = "NO_QUEUE_ERROR"
+LS_FIRST_IN_QUEUE = "FIRST_IN_QUEUE"
+LS_PROCESSING = "PROCESSING"
+LS_WAITING_ON_OTHER_NODE = "WAITING_ON_OTHER_NODE"
+LS_WAITING_ON_OTHER_NODE_ERROR = "WAITING_ON_OTHER_NODE_ERROR"

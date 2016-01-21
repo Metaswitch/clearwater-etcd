@@ -56,7 +56,7 @@ class EtcdServer(object):
                 me = json.loads(cxn.getresponse().read())
                 self._id = me['id']
 
-            # Learn about my peera
+            # Learn about my peers
             cxn.request("GET", "/v2/members?consistent=false");
             member_data = json.loads(cxn.getresponse().read())
             for m in member_data['members']:
@@ -71,8 +71,8 @@ class EtcdServer(object):
 
         if actually_start:
             self._subprocess = Popen(self._cmd,
-                                    stdout=self._logfile,
-                                    stderr=STDOUT)
+                                     stdout=self._logfile,
+                                     stderr=STDOUT)
         else:
             self._subprocess = None
 

@@ -5,6 +5,8 @@ omit =
   **/etcd_tests/**
   **/main.py
   **/plugin_utils.py
+  src/metaswitch/clearwater/queue_manager/pdlogs.py
+  src/metaswitch/clearwater/queue_manager/null_plugin.py
 parallel = False
 
 [report]
