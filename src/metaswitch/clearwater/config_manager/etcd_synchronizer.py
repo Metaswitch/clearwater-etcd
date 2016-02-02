@@ -52,11 +52,12 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
             # This blocks on changes to the watched key in etcd.
             _log.debug("Waiting for change from etcd for key {}".format(
                          self._plugin.key()))
+            old_value = self._last_value
             value = self.update_from_etcd()
             if self._terminate_flag:
                 break
 
-            if value:
+            if value and value != old_value:
                 _log.info("Got new config value from etcd - filename {}, file size {}, MD5 hash {}".format(
                     self._plugin.file(),
                     len(value),

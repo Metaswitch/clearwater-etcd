@@ -52,6 +52,8 @@ class QueueFSM(object):
         self._local_alarm = QueueAlarm(*self._plugin.local_alarm())
         self._global_alarm = QueueAlarm(*self._plugin.global_alarm())
 
+        self._last_local_state = None
+
         # List of functions when in each local state. All the functions get
         # called, even if they change the local state
         self._local_fsm = {constants.LS_NO_QUEUE: [self._local_alarm.clear],
@@ -107,17 +109,22 @@ class QueueFSM(object):
                     self._local_alarm.critical()
 
                 self._queue_config.mark_node_as_unresponsive(self._queue_config.node_at_the_front_of_the_queue())
+                self._timer.clear()
                 self._timer = None
                 return
             else: #pragma: no cover
+                self._timer.clear()
                 self._timer = None
 
         # Now, check the local state and perform any appropriate actions
         local_queue_state = self._queue_config.calculate_local_state()
         _log.debug("Local state is {}".format(local_queue_state))
 
-        for local_state_action in self._local_fsm[local_queue_state]:
-            local_state_action()
+        if local_queue_state != self._last_local_state:
+            for local_state_action in self._local_fsm[local_queue_state]:
+                local_state_action()
+
+        self._last_local_state = local_queue_state
         
         # Recalculate the global state, and raise the appropriate alarm given the
         # global state of the queue operation
@@ -127,9 +134,13 @@ class QueueFSM(object):
             global_state_action()
 
     def _set_timer_with_current_node_id(self):
+        if self._timer != None: #pragma: no cover
+            self._timer.clear()
         self._timer = QueueTimer(self._timer_callback_func)
         self._timer.set(self._queue_config.node_at_the_front_of_the_queue(), self._plugin.WAIT_FOR_OTHER_NODE)
 
     def _set_timer_with_id(self):
+        if self._timer != None: #pragma: no cover
+            self._timer.clear()
         self._timer = QueueTimer(self._timer_callback_func)
         self._timer.set(self._id, self._plugin.WAIT_FOR_THIS_NODE)
