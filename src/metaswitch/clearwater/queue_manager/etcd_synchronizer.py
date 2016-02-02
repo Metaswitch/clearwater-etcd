@@ -157,7 +157,7 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
             # Our etcd write failed because someone got there before us. We
             # don't need to retry in this case as we'll just pick up the
             # changes in the next etcd read
-            self._last_value, self._last_index = None, None
+            self._last_value, self._last_index, self._fsm._last_local_state = None, None, None
             rc = WriteToEtcdStatus.CONTENTION
         except Exception as e: #pragma: no cover
             # Catch-all error handler (for invalid requests, timeouts, etc) -
@@ -170,7 +170,7 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
             # read from etcd will trigger the state machine, which will mean
             # that any necessary work/state changes get retried.
             # Sleep briefly to avoid hammering a failed server
-            self._last_value, self._last_index = None, None
+            self._last_value, self._last_index, self._fsm._last_local_state = None, None, None
             self.pause()
             rc = WriteToEtcdStatus.ERROR
      
