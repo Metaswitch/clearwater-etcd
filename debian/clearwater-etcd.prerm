@@ -60,6 +60,20 @@ case "$1" in
     upgrade|deconfigure|remove)
         rm -f /etc/monit/conf.d/$NAME.monit
         reload clearwater-monit &> /dev/null || true
+
+        # Make sure the process is stopped
+        service clearwater-etcd stop
+
+        # Now do necessary cleanup. Don't remove the
+        # user/logs/data dir if we're just upgrading.
+        if [ $1 != "upgrade" ]; then
+          if grep -q "^$NAME:" /etc/passwd ; then
+            userdel $NAME
+          fi
+
+          rm -rf /var/log/$NAME
+          rm -rf /var/lib/$NAME
+        fi
     ;;
 
     failed-upgrade)
