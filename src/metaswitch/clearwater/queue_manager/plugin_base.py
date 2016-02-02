@@ -52,7 +52,7 @@ class QueuePluginBase(object): # pragma : no cover
         return (alarm_constants.GLOBAL_CONFIG_RESYNCHING_CLEARED,
                 alarm_constants.GLOBAL_CONFIG_RESYNCHING_MINOR,
                 alarm_constants.GLOBAL_CONFIG_RESYNCHING_CRITICAL,
-                "local")
+                "global")
 
     @abstractmethod
     def key(self):
