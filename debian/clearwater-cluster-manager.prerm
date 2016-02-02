@@ -56,18 +56,22 @@ case "$1" in
         # Stop monitoring the process
         rm -f /etc/monit/conf.d/clearwater-cluster-manager.monit
         reload clearwater-monit &> /dev/null || true
+
         # Make sure the process is stopped - do this before env is removed,
         # or init.d script won't work
         service clearwater-cluster-manager stop
+
         # Now do necessary cleanup
         rm -rf $BASE_DIR/env
         rm -rf /var/run/$NAME
 
-        # Don't remove the user if we're just upgrading.
+        # Don't remove the user/logs if we're just upgrading.
         if [ $1 != "upgrade" ]; then
           if grep -q "^$NAME:" /etc/passwd ; then
             userdel $NAME
           fi
+
+          rm -rf /var/log/$NAME
         fi
     ;;
 
