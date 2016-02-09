@@ -226,7 +226,7 @@ do_start()
         # <id>[unstarted]: name=xx-xx-xx-xx peerURLs=http://xx.xx.xx.xx:2380 clientURLs=http://xx.xx.xx.xx:4000
         # The [unstarted] is only present while the member hasn't fully joined the etcd cluster
         setup_etcdctl_peers
-        member=$(/usr/bin/etcdctl member list | grep "unstarted" | grep $listen_ip )
+        member=$(/usr/bin/etcdctl member list | grep "unstarted" | grep -F -w $listen_ip )
         if [[ $member != '' ]]
         then
           member_id=$(echo $member | grep -o "^[^[]\+")
