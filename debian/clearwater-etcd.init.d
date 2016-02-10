@@ -373,7 +373,7 @@ do_decommission()
           return 2
         fi
 
-        id=$(/usr/bin/etcdctl member list | grep ${advertisement_ip//./-} | cut -f 1 -d :)
+        id=$(/usr/bin/etcdctl member list | grep -F -w ${advertisement_ip//./-} | cut -f 1 -d :)
         if [[ -z $id ]]
         then
           echo Local node does not appear in the cluster
