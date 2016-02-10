@@ -36,7 +36,7 @@ import collections
 
 PluginParams = collections.namedtuple(
                  'PluginParams',
-                 ['ip', 'mgmt_ip', 'local_site', 'remote_site', 'signaling_namespace', 'etcd_key', 'etcd_cluster_key'])
+                 ['ip', 'mgmt_ip', 'local_site', 'remote_cassandra_seeds', 'signaling_namespace', 'etcd_key', 'etcd_cluster_key'])
 
 
 class SynchroniserPluginBase(object): # pragma: no cover
@@ -58,11 +58,6 @@ class SynchroniserPluginBase(object): # pragma: no cover
         """This should return the files managed by this plugin,
         to avoid conflicts"""
         return []
-
-    def should_be_in_cluster(self):
-
-        """Allows a plugin to monitor, but not join, a remote cluster"""
-        return True
 
     @abstractmethod
     def on_cluster_changing(self, cluster_view):

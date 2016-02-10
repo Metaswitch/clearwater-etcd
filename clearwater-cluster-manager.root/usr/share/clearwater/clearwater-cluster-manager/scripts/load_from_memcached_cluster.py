@@ -37,9 +37,8 @@ import os
 
 local_ip = sys.argv[1]
 local_site = sys.argv[2]
-remote_site = sys.argv[3]
-node_type = sys.argv[4]
-etcd_key = sys.argv[5]
+node_type = sys.argv[3]
+etcd_key = sys.argv[4]
 
 assert os.path.exists("/etc/init.d/clearwater-memcached"), \
     "This script should be run on a node that's running Memcached"
@@ -47,9 +46,6 @@ assert os.path.exists("/etc/init.d/clearwater-memcached"), \
 local_etcd_key = "/{}/{}/{}/clustering/memcached".format(etcd_key,
                                                          local_site,
                                                          node_type)
-remote_etcd_key = "/{}/{}/{}/clustering/memcached".format(etcd_key,
-                                                          remote_site,
-                                                          node_type)
 
 def strip_port(server):
     return server.rsplit(":", 1)[0].strip()
@@ -81,6 +77,3 @@ if node_type == 'memento' and os.path.isfile('/etc/clearwater/memento_cluster_se
     load_file_into_etcd('/etc/clearwater/memento_cluster_settings', local_etcd_key)
 else:
     load_file_into_etcd('/etc/clearwater/cluster_settings', local_etcd_key)
-
-if remote_site != "":
-    load_file_into_etcd('/etc/clearwater/remote_cluster_settings', remote_etcd_key)

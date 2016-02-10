@@ -37,7 +37,6 @@ import json
 mgmt_node = sys.argv[1]
 local_node = sys.argv[2]
 local_site = sys.argv[3]
-remote_site = sys.argv[4]
 
 client = etcd.Client(mgmt_node, 4000)
 

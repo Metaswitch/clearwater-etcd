@@ -141,19 +141,6 @@ class SyncFSM(object):
         # cluster, and where the local node is in ERROR state. These can happen
         # in any cluster state, so don't fit neatly into the main function body.
 
-        if not self._plugin.should_be_in_cluster():
-            # This plugin is just monitoring a remote cluster.
-            if cluster_state in [constants.JOINING_CONFIG_CHANGING,
-                                 constants.LEAVING_CONFIG_CHANGING]:
-                # This branch is not guaranteed to be hit due to
-                # https://github.com/Metaswitch/clearwater-etcd/issues/158.
-                safe_plugin(self._plugin.on_cluster_changing, # pragma: no cover
-                            cluster_view)
-            elif cluster_state == constants.STABLE:
-                safe_plugin(self._plugin.on_stable_cluster,
-                            cluster_view)
-            return None
-
         if local_state is None:
             if cluster_state in [constants.EMPTY, constants.STABLE, constants.JOIN_PENDING]:
                 return constants.WAITING_TO_JOIN
