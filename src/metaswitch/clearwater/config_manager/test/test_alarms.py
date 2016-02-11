@@ -35,22 +35,39 @@
 
 import unittest
 from mock import patch
-from metaswitch.clearwater.config_manager.alarms import ConfigAlarm, GLOBAL_CONFIG_NOT_SYNCHED_CLEARED, GLOBAL_CONFIG_NOT_SYNCHED_CRITICAL
+from metaswitch.clearwater.config_manager.alarms import (
+        ConfigAlarm, GLOBAL_CONFIG_NOT_SYNCHED, GLOBAL_CONFIG_NOT_SYNCHED)
 
 class AlarmTest(unittest.TestCase):
-    @patch("metaswitch.clearwater.config_manager.alarms.issue_alarm")
-    def test_nonexistent_file(self, issue_alarm):
+    @patch("metaswitch.clearwater.config_manager.alarms.alarm_manager")
+    def test_correct_alarm(self, mock_alarm_manager):
+        a = ConfigAlarm(files=["/nonexistent"])
+        mock_get_alarm = mock_alarm_manager.get_alarm
+        mock_get_alarm.assert_called_once_with('config-manager',
+                                               GLOBAL_CONFIG_NOT_SYNCHED)
+
+    @patch("metaswitch.clearwater.config_manager.alarms.alarm_manager")
+    def test_nonexistent_file(self, mock_alarm_manager):
         # Create a ConfigAlarm for a file that doesn't exist. The alarm should
         # be raised.
         a = ConfigAlarm(files=["/nonexistent"])
-        issue_alarm.assert_called_with(GLOBAL_CONFIG_NOT_SYNCHED_CRITICAL)
+
+        # Check that the correct alarm is used.
+        mock_get_alarm = mock_alarm_manager.get_alarm
+        mock_get_alarm.assert_called_once_with('config-manager',
+                                               GLOBAL_CONFIG_NOT_SYNCHED)
+
+        mock_alarm = mock_get_alarm.return_value
+        mock_alarm.set.assert_called_with()
+
         # Now create that file. The alarm should be cleared.
         a.update_file("/nonexistent")
-        issue_alarm.assert_called_with(GLOBAL_CONFIG_NOT_SYNCHED_CLEARED)
+        mock_alarm.clear.assert_called_with()
 
-    @patch("metaswitch.clearwater.config_manager.alarms.issue_alarm")
-    def test_existing_file(self, issue_alarm):
+    @patch("metaswitch.clearwater.config_manager.alarms.alarm_manager")
+    def test_existing_file(self, mock_alarm_manager):
         # Create a ConfigAlarm for a file that exists. The alarm should
         # immediately be cleared.
         ConfigAlarm(files=["/etc/passwd"])
-        issue_alarm.assert_called_with(GLOBAL_CONFIG_NOT_SYNCHED_CLEARED)
+        mock_alarm = mock_alarm_manager.get_alarm.return_value
+        mock_alarm.clear.assert_called_once_with()

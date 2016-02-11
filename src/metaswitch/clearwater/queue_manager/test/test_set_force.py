@@ -40,7 +40,7 @@ from mock import patch, MagicMock
 from time import sleep
 import json
 
-alarms_patch = patch("metaswitch.clearwater.queue_manager.alarms.issue_alarm", new=MagicMock)
+alarms_patch = patch("metaswitch.clearwater.queue_manager.alarms.alarm_manager")
 
 class SetForceQueueTest(BaseQueueTest):
     @patch("etcd.Client", new=EtcdFactory)
@@ -77,3 +77,6 @@ class SetForceQueueTest(BaseQueueTest):
         self.set_force_helper(False)
         val = json.loads(self._e._client.read("/clearwater/local/configuration/queue_test").value)
         self.assertFalse(val.get("FORCE"))
+
+    def tearDown(self):
+        alarms_patch.stop()

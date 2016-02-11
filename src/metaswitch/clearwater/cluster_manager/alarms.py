@@ -40,13 +40,12 @@
 
 import logging
 from threading import Thread, Condition
-from .alarm_constants import TOO_LONG_CLUSTERING_MINOR, TOO_LONG_CLUSTERING_CLEARED
-from metaswitch.common.alarms import issue_alarm as int_issue_alarm
+from .alarm_constants import TOO_LONG_CLUSTERING
+from metaswitch.common.alarms import alarm_manager
 
 _log = logging.getLogger("cluster_manager.alarms")
 
-def issue_alarm(identifier):
-    int_issue_alarm("cluster-manager", identifier) # pragma: no cover
+ALARM_ISSUER_NAME = "cluster-manager"
 
 
 class TooLongAlarm(object):
@@ -54,6 +53,8 @@ class TooLongAlarm(object):
         self._condition = Condition()
         self._timer_thread = None
         self._should_alarm = False
+        self._alarm = alarm_manager.get_alarm(ALARM_ISSUER_NAME,
+                                              TOO_LONG_CLUSTERING)
         self._delay = delay
 
     def alarm(self):
@@ -61,7 +62,7 @@ class TooLongAlarm(object):
             self._condition.wait(self._delay)
             if self._should_alarm:
                 _log.info("Raising TOO_LONG_CLUSTERING alarm")
-                issue_alarm(TOO_LONG_CLUSTERING_MINOR)
+                self._alarm.set()
 
     def trigger(self, thread_name="Alarm thread"):
         self._should_alarm = True
@@ -88,4 +89,4 @@ class TooLongAlarm(object):
             self._timer_thread = None
 
             # clear the alarm
-            issue_alarm(TOO_LONG_CLUSTERING_CLEARED)
+            self._alarm.clear()

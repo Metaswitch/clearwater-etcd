@@ -39,7 +39,7 @@ from mock import patch, MagicMock
 from time import sleep
 from .test_base import BaseQueueTest
 
-alarms_patch = patch("metaswitch.clearwater.queue_manager.alarms.issue_alarm", new=MagicMock)
+alarms_patch = patch("metaswitch.clearwater.queue_manager.alarms.alarm_manager")
 
 class PluginTest(BaseQueueTest):
     @patch("etcd.Client", new=EtcdFactory)
@@ -70,3 +70,6 @@ class PluginTest(BaseQueueTest):
         # Write a new value into etcd, and check that the plugin is called
         self._e._client.write("/clearwater/local/configuration/queue_test", "{\"FORCE\": false, \"ERRORED\": [], \"COMPLETED\": [], \"QUEUED\": [{\"ID\":\"10.0.0.1-node\",\"STATUS\":\"QUEUED\"}]}")
         self.assertTrue(self.check_plugin_called())
+
+    def tearDown(self):
+        alarms_patch.stop()

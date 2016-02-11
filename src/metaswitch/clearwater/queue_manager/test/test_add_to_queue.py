@@ -40,7 +40,7 @@ from mock import patch, MagicMock
 from time import sleep
 import json
 
-alarms_patch = patch("metaswitch.clearwater.queue_manager.alarms.issue_alarm", new=MagicMock)
+alarms_patch = patch("metaswitch.clearwater.queue_manager.alarms.alarm_manager")
 
 class AddToQueueTest(BaseQueueTest):
     @patch("etcd.Client", new=EtcdFactory)
@@ -198,3 +198,6 @@ class AddToQueueTest(BaseQueueTest):
         self.assertEqual("10.0.0.2-node", val.get("QUEUED")[0]["ID"])
         self.assertEqual("10.0.0.1-node", val.get("QUEUED")[1]["ID"])
         self.assertEqual("QUEUED", val.get("QUEUED")[1]["STATUS"])
+
+    def tearDown(self):
+        alarms_patch.stop()

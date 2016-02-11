@@ -38,7 +38,7 @@ from .plugin import TestNoTimerDelayPlugin
 from mock import patch, MagicMock
 from .test_base import BaseQueueTest
 
-alarms_patch = patch("metaswitch.clearwater.queue_manager.alarms.issue_alarm", new=MagicMock)
+alarms_patch = patch("metaswitch.clearwater.queue_manager.alarms.alarm_manager")
 
 class TimersTest(BaseQueueTest):
     @patch("etcd.Client", new=EtcdFactory)
@@ -105,3 +105,6 @@ class TimersTest(BaseQueueTest):
                    ("UNRESPONSIVE" == val.get("ERRORED")[0]["STATUS"])
 
         self.assertTrue(self.wait_for_success_or_fail(pass_criteria))
+
+    def tearDown(self):
+        alarms_patch.stop()
