@@ -56,17 +56,15 @@ class ConfigAlarm(object):
         self._alarm = alarm_manager.get_alarm(ALARM_ISSUER_NAME,
                                               GLOBAL_CONFIG_NOT_SYNCHED)
         self._lock = Lock()
-        self._lock.acquire()
-        for file in files:
-            self._files[file] = os.path.isfile(file)
-        self.check_alarm()
-        self._lock.release()
+        with self._lock:
+            for file in files:
+                self._files[file] = os.path.isfile(file)
+            self.check_alarm()
 
     def update_file(self, filename):
-        self._lock.acquire()
-        self._files[filename] = True;
-        self.check_alarm()
-        self._lock.release()
+        with self._lock:
+            self._files[filename] = True;
+            self.check_alarm()
 
     def check_alarm(self):
         if all(self._files.values()):
