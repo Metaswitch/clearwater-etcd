@@ -214,6 +214,3 @@ def main(args):
     _log.debug("%d threads outstanding at exit" % activeCount())
     pdlogs.EXITING.log()
     syslog.closelog()
-    # Use os.exit to skip exit handlers - otherwise the concurrent.futures exit
-    # handler waits for an infinite wait to end
-    os._exit(0)
