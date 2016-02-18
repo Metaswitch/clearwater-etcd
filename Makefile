@@ -19,6 +19,15 @@ fvtest: fvtest_setup.py env
 .PHONY: test
 test: coverage
 
+.PHONY: test_cluster_mgr
+test_cluster_mgr: coverage_cluster_mgr
+
+.PHONY: test_queue_mgr
+test_queue_mgr: coverage_queue_mgr
+
+.PHONY: test_config_mgr
+test_config_mgr: coverage_config_mgr
+
 .PHONY: run_test
 run_test: queue_mgr_setup.py config_mgr_setup.py cluster_mgr_setup.py env
 	PYTHONPATH=src:common ${ENV_PYTHON} cluster_mgr_setup.py test -v && PYTHONPATH=src:common ${ENV_PYTHON} queue_mgr_setup.py test -v && PYTHONPATH=src:common ${ENV_PYTHON} config_mgr_setup.py test -v
@@ -46,6 +55,30 @@ coverage: ${ENV_DIR}/bin/coverage cluster_mgr_setup.py queue_mgr_setup.py config
 	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run -a queue_mgr_setup.py test
 	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run -a config_mgr_setup.py test
 	${ENV_DIR}/bin/coverage combine
+	${ENV_DIR}/bin/coverage report -m --fail-under 100
+	${ENV_DIR}/bin/coverage xml
+
+.PHONY: coverage_cluster_mgr
+coverage_cluster_mgr: ${ENV_DIR}/bin/coverage cluster_mgr_setup.py
+	rm -rf htmlcov/
+	${ENV_DIR}/bin/coverage erase
+	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run cluster_mgr_setup.py test
+	${ENV_DIR}/bin/coverage report -m --fail-under 100
+	${ENV_DIR}/bin/coverage xml
+
+.PHONY: coverage_queue_mgr
+coverage_queue_mgr: ${ENV_DIR}/bin/coverage queue_mgr_setup.py
+	rm -rf htmlcov/
+	${ENV_DIR}/bin/coverage erase
+	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run queue_mgr_setup.py test
+	${ENV_DIR}/bin/coverage report -m --fail-under 100
+	${ENV_DIR}/bin/coverage xml
+
+.PHONY: coverage_config_mgr
+coverage_config_mgr: ${ENV_DIR}/bin/coverage config_mgr_setup.py
+	rm -rf htmlcov/
+	${ENV_DIR}/bin/coverage erase
+	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run config_mgr_setup.py test
 	${ENV_DIR}/bin/coverage report -m --fail-under 100
 	${ENV_DIR}/bin/coverage xml
 
