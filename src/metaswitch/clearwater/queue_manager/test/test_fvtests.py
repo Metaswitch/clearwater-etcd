@@ -41,8 +41,6 @@ from metaswitch.clearwater.etcd_tests.etcdcluster import EtcdCluster
 from ..etcd_synchronizer import EtcdSynchronizer
 from plugin import TestFVPlugin
 
-logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
-logging.getLogger().setLevel(logging.WARNING)
 
 def wait_for_success_or_fail(sync, pass_criteria):
     for x in range(300):

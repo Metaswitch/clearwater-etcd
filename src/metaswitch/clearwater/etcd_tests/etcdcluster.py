@@ -35,8 +35,8 @@ import sys
 from shutil import rmtree
 from .etcdserver import EtcdServer
 
-logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
-logging.getLogger().setLevel(logging.INFO)
+from metaswitch.common.logging_config import configure_test_logging
+configure_test_logging()
 
 class EtcdCluster(object):
     def __init__(self, n=1):
