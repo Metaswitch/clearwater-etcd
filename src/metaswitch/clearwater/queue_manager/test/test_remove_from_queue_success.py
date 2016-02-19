@@ -100,6 +100,4 @@ class RemoveFromQueueSuccessTest(BaseQueueTest):
         self.assertEqual(1, len(val.get("QUEUED")))
         self.assertEqual("10.0.0.2-node", val.get("QUEUED")[0]["ID"])
         self.assertEqual("PROCESSING", val.get("QUEUED")[0]["STATUS"])
-
-    def tearDown(self):
         alarms_patch.stop()

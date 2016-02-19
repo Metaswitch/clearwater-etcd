@@ -77,6 +77,3 @@ class SetForceQueueTest(BaseQueueTest):
         self.set_force_helper(False)
         val = json.loads(self._e._client.read("/clearwater/local/configuration/queue_test").value)
         self.assertFalse(val.get("FORCE"))
-
-    def tearDown(self):
-        alarms_patch.stop()

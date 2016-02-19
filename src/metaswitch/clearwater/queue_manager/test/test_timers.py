@@ -105,6 +105,3 @@ class TimersTest(BaseQueueTest):
                    ("UNRESPONSIVE" == val.get("ERRORED")[0]["STATUS"])
 
         self.assertTrue(self.wait_for_success_or_fail(pass_criteria))
-
-    def tearDown(self):
-        alarms_patch.stop()

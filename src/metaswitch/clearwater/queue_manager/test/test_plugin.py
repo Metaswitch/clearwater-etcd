@@ -70,6 +70,3 @@ class PluginTest(BaseQueueTest):
         # Write a new value into etcd, and check that the plugin is called
         self._e._client.write("/clearwater/local/configuration/queue_test", "{\"FORCE\": false, \"ERRORED\": [], \"COMPLETED\": [], \"QUEUED\": [{\"ID\":\"10.0.0.1-node\",\"STATUS\":\"QUEUED\"}]}")
         self.assertTrue(self.check_plugin_called())
-
-    def tearDown(self):
-        alarms_patch.stop()

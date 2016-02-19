@@ -198,6 +198,3 @@ class AddToQueueTest(BaseQueueTest):
         self.assertEqual("10.0.0.2-node", val.get("QUEUED")[0]["ID"])
         self.assertEqual("10.0.0.1-node", val.get("QUEUED")[1]["ID"])
         self.assertEqual("QUEUED", val.get("QUEUED")[1]["STATUS"])
-
-    def tearDown(self):
-        alarms_patch.stop()

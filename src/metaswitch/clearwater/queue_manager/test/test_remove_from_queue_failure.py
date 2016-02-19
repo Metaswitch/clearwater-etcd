@@ -120,6 +120,3 @@ class RemoveFromQueueFailureTest(BaseQueueTest):
         self.assertEqual(0, len(val.get("ERRORED")))
         self.assertEqual(0, len(val.get("COMPLETED")))
         self.assertEqual(2, len(val.get("QUEUED")))
-
-    def tearDown(self):
-        alarms_patch.stop()
