@@ -41,8 +41,6 @@ from time import sleep
 
 
 class TestTooLongAlarm(unittest.TestCase):
-    def setUp(self):
-        pass
 
     @patch("metaswitch.clearwater.cluster_manager.alarms.alarm_manager")
     def test_correct_alarm(self, mock_alarm_manager):
@@ -50,6 +48,7 @@ class TestTooLongAlarm(unittest.TestCase):
         mock_get_alarm = mock_alarm_manager.get_alarm
         mock_get_alarm.assert_called_once_with('cluster-manager',
                                                TOO_LONG_CLUSTERING)
+        alarm.quit()
 
     @patch("metaswitch.clearwater.cluster_manager.alarms.alarm_manager")
     def test_raising(self, mock_alarm_manager):

@@ -36,7 +36,7 @@
 import unittest
 from mock import patch
 from metaswitch.clearwater.config_manager.alarms import (
-        ConfigAlarm, GLOBAL_CONFIG_NOT_SYNCHED, GLOBAL_CONFIG_NOT_SYNCHED)
+    ConfigAlarm, GLOBAL_CONFIG_NOT_SYNCHED)
 
 class AlarmTest(unittest.TestCase):
     @patch("metaswitch.clearwater.config_manager.alarms.alarm_manager")

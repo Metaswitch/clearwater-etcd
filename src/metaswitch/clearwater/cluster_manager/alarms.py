@@ -61,13 +61,13 @@ class TooLongAlarm(object):
         with self._condition:
             self._condition.wait(self._delay)
             if self._should_alarm:
-                _log.info("Raising TOO_LONG_CLUSTERING alarm")
+                _log.debug("Raising TOO_LONG_CLUSTERING alarm")
                 self._alarm.set()
 
     def trigger(self, thread_name="Alarm thread"):
         self._should_alarm = True
         if self._timer_thread is None:
-            _log.info("TOO_LONG_CLUSTERING alarm triggered, will fire in {} seconds".format(self._delay))
+            _log.debug("TOO_LONG_CLUSTERING alarm triggered, will fire in {} seconds".format(self._delay))
             self._timer_thread = Thread(target=self.alarm, name=thread_name)
             self._timer_thread.start()
 
