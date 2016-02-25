@@ -44,21 +44,22 @@ def load_plugins_in_dir(dir, params=None):
         - returning a list containing the return values of all load_as_plugin()
         calls
         """
-    files = os.listdir(dir)
     plugins = []
-    for filename in files:
-        _log.info("Inspecting {}".format(filename))
-        module_name, suffix = os.path.splitext(filename)
-        if suffix == ".py":
-            file, pathname, description = imp.find_module(module_name, [dir])
-            if file:
-                mod = imp.load_module(module_name, file, pathname, description)
-                if hasattr(mod, "load_as_plugin"):
-                    plugin = mod.load_as_plugin(params)
-                    _log.info("Loading {}".format(filename))
-                    if plugin is not None:
-                        _log.info("Loaded {} successfully".format(filename))
-                        plugins.append(plugin)
-                    else: # pragma : no cover
-                        _log.info("{} did not load (load_as_plugin returned None)".format(filename))
+    if os.path.isdir(dir):
+        files = os.listdir(dir)
+        for filename in files:
+            _log.info("Inspecting {}".format(filename))
+            module_name, suffix = os.path.splitext(filename)
+            if suffix == ".py":
+                file, pathname, description = imp.find_module(module_name, [dir])
+                if file:
+                    mod = imp.load_module(module_name, file, pathname, description)
+                    if hasattr(mod, "load_as_plugin"):
+                        plugin = mod.load_as_plugin(params)
+                        _log.info("Loading {}".format(filename))
+                        if plugin is not None:
+                            _log.info("Loaded {} successfully".format(filename))
+                            plugins.append(plugin)
+                        else: # pragma : no cover
+                            _log.info("{} did not load (load_as_plugin returned None)".format(filename))
     return plugins
