@@ -13,7 +13,12 @@ exec 200>$PIDFILE_LOCK
 
 # Exit unless we have an exclusive lock on file handle 200 (the lock file) -
 # i.e. unless no other etcd process is running
-flock --nonblock 200 || exit 99
+if ! flock --nonblock 200
+then
+  existing_pid=$(cat $PIDFILE)
+  echo "Error: could not acquire lock on $PIDFILE_LOCK, pid $existing_pid holds it" >> /var/log/clearwater-etcd/clearwater-etcd.log 2>&1
+  exit 99
+fi
 
 # After this point, we can be sure we're the only script running, so we can
 # write to the pidfile without fear that another etcd process will start

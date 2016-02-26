@@ -64,9 +64,6 @@ case "$1" in
         # Make sure the process is stopped
         service clearwater-etcd stop
 
-        # Clean up old pidfile
-        rm -f /var/run/$NAME.pid
-
         # Now do necessary cleanup. Don't remove the
         # user/logs/data dir if we're just upgrading.
         if [ $1 != "upgrade" ]; then
