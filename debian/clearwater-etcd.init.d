@@ -54,7 +54,7 @@
 DESC="etcd"
 NAME=clearwater-etcd
 DATA_DIR=/var/lib/$NAME
-PIDFILE=/var/run/$NAME.pid
+PIDFILE=/var/run/$NAME/$NAME.pid
 DAEMON=/usr/bin/etcd
 DAEMONWRAPPER=/usr/bin/etcdwrapper
 
@@ -265,6 +265,9 @@ do_start()
           return 2
         fi
 
+        # Allow us to write to the pidfile directory
+        install -m 755 -o $NAME -g root -d /var/run/$NAME && chown -R $NAME /var/run/$NAME
+
         # Common arguments
         DAEMON_ARGS="--listen-client-urls http://$listen_ip:4000
                      --advertise-client-urls http://$advertisement_ip:4000
@@ -299,7 +302,7 @@ do_rebuild()
                      --name $ETCD_NAME
                      --force-new-cluster"
 
-        start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --startas $DAEMONWRAPPER --chuid $NAME -- $DAEMON_ARGS $CLUSTER_ARGS \
+        start-stop-daemon --start --quiet --background --pidfile $PIDFILE --startas $DAEMONWRAPPER --chuid $NAME -- $DAEMON_ARGS $CLUSTER_ARGS \
                 || return 2
 
         wait_for_etcd
