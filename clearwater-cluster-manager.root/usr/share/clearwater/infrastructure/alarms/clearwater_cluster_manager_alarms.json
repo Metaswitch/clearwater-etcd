@@ -8,12 +8,18 @@
                 {
                     "severity": "CLEARED",
                     "details": "An automatic scale-up or scale-down process has completed after running for more than 15 minutes. Further nodes can now be added to or removed from the cluster.",
-                    "description": "etcd: Scaling process has finished"
+                    "description": "etcd: Scaling process has finished.",
+                    "cause": "The deployment does not have any scaling operations that are taking too long to complete. Further nodes can now be added to or removed from the cluster. Adding or removing nodes to/from a cluster causes this alarm. The previously issued alarm has been cleared.",
+                    "effect": "The system capacity has been increased or reduced depending on whether a node was being added or removed.",
+                    "action": "No action."
                 },
                 {
                     "severity": "MINOR",
                     "details": "An automatic scale-up or scale-down process has been running for more than 15 minutes. Service is not impacted, but the scaling has not completed, and no further nodes can be added to or removed from the cluster until it completes.",
-                    "description": "etcd: Scaling process has been running for more than 15 minutes"
+                    "description": "etcd: Scaling process has been running for more than 15 minutes.",
+                    "cause": "An automatic scale-up or scale-down process has been running for more than 15 minutes.",
+                    "effect": "Service is not impacted, but the scaling has not completed, and no further nodes can be added to or removed from the cluster until it completes. The system capacity has not been increased or reduced depending on whether a node was being added or removed.",
+                    "action": "Monitor for the alarm to clear. This alarm may be raised alongside other etcd alarms and they may specify possible actions. If the alarm fails to clear then contact your support representative."
                 }
             ]
         },
@@ -25,12 +31,18 @@
                 {
                     "severity": "CLEARED",
                     "details": "The local Chronos process is synchronized with the rest of the cluster. Timer requests sent to this node will be correctly replicated across the Chronos cluster.",
-                    "description": "Chronos: The local Chronos is part of the Chronos cluster"
+                    "description": "Chronos: The local Chronos is part of the Chronos cluster.",
+                    "cause": "The local Chronos process is synchronized with the rest of the cluster. Timer requests sent to this node will be correctly replicated across the Chronos cluster. Adding a node that uses Chronos timers causes this alarm. The previously issued alarm has been cleared.",
+                    "effect": "The node being added has completed the Chronos clustering and is now operational.",
+                    "action": "No action. The user can continue with any scaling operations (e.g. add the node to DNS or turn it down)."
                 },
                 {
                     "severity": "MAJOR",
                     "details": "The local Chronos process is not yet part of a Chronos cluster. Timer requests sent to this node will not be replicated correctly. You should not direct service traffic to this node until this alarm is cleared.",
-                    "description": "Chronos: The local Chronos is not yet part of a cluster"
+                    "description": "Chronos: The local Chronos is not yet part of a cluster.",
+                    "cause": "The local Chronos process is not yet part of a Chronos cluster. Timers set by this node will not be handled correctly. You should not direct service traffic to this node until this alarm is cleared. Adding a node that uses chronos timers causes this alarm.",
+                    "effect": "The Clearwater node being added has not completed the Chronos clustering and is not yet operational.",
+                    "action": "Monitor for the alarm to clear. If the alarm fails to clear then contact your support representative."
                 }
             ]
         },
@@ -42,12 +54,18 @@
                 {
                     "severity": "CLEARED",
                     "details": "The local Memcached process is synchronized with the rest of the cluster. Changes made by this node (e.g. to subscriber registrations) will be correctly replicated.",
-                    "description": "Memcached: The local Memcached is part of the cluster"
+                    "description": "Memcached: The local Memcached is part of the cluster.",
+                    "cause": "The local Memcached process is synchronized with the rest of the cluster. Changes made by this node will be correctly replicated. The previously issued alarm has been cleared.",
+                    "effect": "Memcached data replication is fully operational.",
+                    "action": "No action. The user can continue with any scaling operations (e.g. add the node to DNS or turn it down)."
                 },
                 {
                     "severity": "MAJOR",
-                    "details": "The local Memcached process is not yet part of a cluster. This node will not see any changes made by other nodes, or vice versa.You should not direct service traffic to this node until this alarm is cleared.",
-                    "description": "Memcached: The local Memcached is not yet part of a cluster"
+                    "details": "The local Memcached process is not yet part of a cluster. This node will not see any changes made by other nodes, or vice versa. You should not direct service traffic to this node until this alarm is cleared.",
+                    "description": "Memcached: The local Memcached is not yet part of a cluster.",
+                    "cause": "The local Memcached process is not yet part of a cluster. Adding a node that uses memcached causes this alarm.",
+                    "effect": "This node will not see any changes made by other nodes, or vice versa.",
+                    "action": "You should not direct service traffic to this node until this alarm is cleared. If the alarm fails to clear then contact your support representative."
                 }
             ]
         },
@@ -59,12 +77,18 @@
                 {
                     "severity": "CLEARED",
                     "details": "The local Cassandra process is synchronized with the rest of the cluster.",
-                    "description": "Cassandra: The local Cassandra is part of the Cassandra cluster"
+                    "description": "Cassandra: The local Cassandra is part of the Cassandra cluster.",
+                    "cause": "The local Cassandra process is synchronized with the rest of the cluster. All Cassandra ring nodes have been restored to normal operation. The previously issued alarm has been cleared.",
+                    "effect": "Cassandra database replication is fully operational.",
+                    "action": "No action. The user can continue with any scaling operations (e.g. add the node to DNS or turn it down)."
                 },
                 {
                     "severity": "MAJOR",
                     "details": "The local Cassandra process is not yet part of a cluster. This node will not see any changes made by other nodes, or vice versa.You should not direct service traffic to this node until this alarm is cleared.",
-                    "description": "Cassandra: The local Cassandra is not yet part of a cluster"
+                    "description": "Cassandra: The local Cassandra is not yet part of a cluster.",
+                    "cause": "The local Cassandra process is not yet part of a cluster. This node will not see any changes made by other nodes, or vice versa. Adding nodes that use Cassandra to a cluster will cause this alarm.",
+                    "effect": "The Cassandra database is no longer fully replicated on each node. Data written to the local Cassandra database by this node is not visible to other nodes in the cluster. You should not direct service traffic to this node until this alarm is cleared.",
+                    "action": "Monitor for the alarm to clear. If the alarm fails to clear then contact your support representative."
                 }
             ]
         },
@@ -75,13 +99,19 @@
             "levels": [
                 {
                     "severity": "CLEARED",
-                    "details": "The local Cassandra process has been decommissioned and can now be terminated without risk of loss of data.",
-                    "description": "Cassandra: The local Cassandra has been removed from the Cassandra cluster"
+                    "details": "The local Cassandra process is not being decommissioned.",
+                    "description": "Cassandra: The local Cassandra process is not being decommissioned.",
+                    "cause": "If the local Cassandra node was being removed from the cluster, decommissioning has successfully completed.",
+                    "effect": "If the local Cassandra node was being removed from the cluster, the system capacity has been reduced and the local Cassandra process can now be terminated without risk of loss of data.",
+                    "action": "If the local Cassandra node was being removed from the cluster, it can now be safely terminated."
                 },
                 {
                     "severity": "MAJOR",
                     "details": "The local Cassandra process is being decommissioned. This node should not be terminated until decommissioning is complete. Doing so could result in loss of data.",
-                    "description": "Cassandra: The local Cassandra is being decommissioned"
+                    "description": "Cassandra: The local Cassandra is being decommissioned.",
+                    "cause": "The Cassandra process is being removed from the cluster.",
+                    "effect": "No service impact.",
+                    "action": "Do not terminate the node until decommissioning is complete."
                 }
             ]
         }
