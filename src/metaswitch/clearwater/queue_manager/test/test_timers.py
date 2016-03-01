@@ -35,7 +35,7 @@
 from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import EtcdFactory
 from metaswitch.clearwater.queue_manager.etcd_synchronizer import EtcdSynchronizer
 from .plugin import TestNoTimerDelayPlugin
-from mock import patch, MagicMock
+from mock import patch
 from .test_base import BaseQueueTest
 
 alarms_patch = patch("metaswitch.clearwater.queue_manager.alarms.alarm_manager")

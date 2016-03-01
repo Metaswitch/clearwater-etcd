@@ -38,7 +38,7 @@ from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import EtcdFactory
 from metaswitch.clearwater.config_manager.etcd_synchronizer import \
     EtcdSynchronizer
 from .plugin import TestPlugin
-from mock import patch, MagicMock
+from mock import patch
 from threading import Thread
 from time import sleep
 

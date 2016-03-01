@@ -36,7 +36,7 @@ from .test_base import BaseQueueTest
 from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import EtcdFactory
 from metaswitch.clearwater.queue_manager.etcd_synchronizer import EtcdSynchronizer, WriteToEtcdStatus
 from .plugin import TestPlugin
-from mock import patch, MagicMock
+from mock import patch
 from time import sleep
 import json
 
