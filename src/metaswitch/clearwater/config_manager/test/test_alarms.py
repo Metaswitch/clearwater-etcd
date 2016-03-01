@@ -41,7 +41,7 @@ from metaswitch.clearwater.config_manager.alarms import (
 class AlarmTest(unittest.TestCase):
     @patch("metaswitch.clearwater.config_manager.alarms.alarm_manager")
     def test_correct_alarm(self, mock_alarm_manager):
-        a = ConfigAlarm(files=["/nonexistent"])
+        ConfigAlarm(files=["/nonexistent"])
         mock_get_alarm = mock_alarm_manager.get_alarm
         mock_get_alarm.assert_called_once_with('config-manager',
                                                GLOBAL_CONFIG_NOT_SYNCHED)

@@ -44,7 +44,7 @@ from .dummy_plugin import DummyPlugin
 from time import sleep
 import json
 from etcd import EtcdKeyError
-from mock import patch, MagicMock
+from mock import patch
 
 alarms_patch = patch("metaswitch.clearwater.cluster_manager.alarms.alarm_manager")
 

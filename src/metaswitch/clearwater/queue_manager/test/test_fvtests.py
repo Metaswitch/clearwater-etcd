@@ -31,8 +31,6 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 from time import sleep
-import logging
-import sys
 import unittest
 import json
 import os

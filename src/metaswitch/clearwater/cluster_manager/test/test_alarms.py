@@ -33,7 +33,7 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 import unittest
-from mock import patch, call
+from mock import patch
 from metaswitch.clearwater.cluster_manager.alarms import TooLongAlarm
 from metaswitch.clearwater.cluster_manager.alarm_constants import \
     TOO_LONG_CLUSTERING
