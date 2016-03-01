@@ -38,7 +38,7 @@ from .plugin import TestNoTimerDelayPlugin
 from mock import patch, MagicMock
 from .test_base import BaseQueueTest
 
-alarms_patch = patch("metaswitch.clearwater.queue_manager.alarms.issue_alarm", new=MagicMock)
+alarms_patch = patch("metaswitch.clearwater.queue_manager.alarms.alarm_manager")
 
 class TimersTest(BaseQueueTest):
     @patch("etcd.Client", new=EtcdFactory)

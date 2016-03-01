@@ -87,7 +87,7 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
             # marked as done (making sure that the other thread terminates by
             # setting the appropriate flags for each future)
             if self._terminate_flag:
-                executor.shutdown(wait=False)    
+                executor.shutdown(wait=False)
                 break
 
             if fsm_timer_future.done():
@@ -105,7 +105,7 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
                     _log.warning("read_from_etcd returned None, " +
                                  "indicating a failure to get data from etcd")
 
-            executor.shutdown()    
+            executor.shutdown()
 
         _log.info("Quitting FSM")
         self._fsm.quit()
@@ -128,7 +128,7 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
                     queue_config = json.loads(self._last_value)
             else:
                 queue_config = json.loads(etcd_value)
-        except: # pragma: no cover
+        except Exception: # pragma: no cover
             queue_config = json.loads(self.default_value())
 
         self._fsm.fsm_update(queue_config)
@@ -173,7 +173,7 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
             self._last_value, self._last_index, self._fsm._last_local_state = None, None, None
             self.pause()
             rc = WriteToEtcdStatus.ERROR
-     
+
         return rc
 
     def edit_queue_config(self, function, *args, **kwargs):

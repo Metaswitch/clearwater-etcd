@@ -40,7 +40,7 @@ from mock import patch, MagicMock
 from time import sleep
 import json
 
-alarms_patch = patch("metaswitch.clearwater.queue_manager.alarms.issue_alarm", new=MagicMock)
+alarms_patch = patch("metaswitch.clearwater.queue_manager.alarms.alarm_manager")
 
 class AddToQueueTest(BaseQueueTest):
     @patch("etcd.Client", new=EtcdFactory)

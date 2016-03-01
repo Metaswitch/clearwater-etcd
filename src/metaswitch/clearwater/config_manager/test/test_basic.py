@@ -42,7 +42,6 @@ from mock import patch, MagicMock
 from threading import Thread
 from time import sleep
 
-alarms_patch = patch("metaswitch.clearwater.config_manager.alarms.issue_alarm", new=MagicMock)
 
 class BasicTest(unittest.TestCase):
     @patch("etcd.Client", new=EtcdFactory)

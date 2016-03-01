@@ -39,7 +39,7 @@ from mock import patch, MagicMock
 from time import sleep
 from .test_base import BaseQueueTest
 
-alarms_patch = patch("metaswitch.clearwater.queue_manager.alarms.issue_alarm", new=MagicMock)
+alarms_patch = patch("metaswitch.clearwater.queue_manager.alarms.alarm_manager")
 
 class PluginTest(BaseQueueTest):
     @patch("etcd.Client", new=EtcdFactory)
