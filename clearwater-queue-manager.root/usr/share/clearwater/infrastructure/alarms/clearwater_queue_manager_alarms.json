@@ -50,7 +50,7 @@
                     "details": "A node has failed to start successfully after receiving new shared configuration. Check that the shared configuration is valid, and the node is alive.",
                     "cause": "A change has been made to shared configuration which has been rejected by a process on another node.",
                     "effect": "Service may have been lost. Check for other raised alarms to determine which process has failed to start and what effect that has.",
-                    "action": "If the alarm doesn't clear, contact your support representative."
+                    "action": "Check that the shared configuration is valid. If it isn't, correct it and re-upload it. If the alarm still doesn't clear, contact your support representative."
                 }
             ]
         },
@@ -81,7 +81,7 @@
                     "details": "This node has failed to start successfully after receiving new shared configuration. Check that the shared configuration is valid, and this node is alive.",
                     "cause": "A change has been made to shared configuration which has been rejected by a process on this node.",
                     "effect": "Service may have been lost. Check for other raised alarms to determine which process has failed to start and what effect that has.",
-                    "action": "If the alarm doesn't clear, contact your support representative."
+                    "action": "Check that the shared configuration is valid. If it isn't, correct it and re-upload it. If the alarm still doesn't clear, contact your support representative."
                 }
             ]
         }
