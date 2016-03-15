@@ -35,11 +35,11 @@
 from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import EtcdFactory
 from metaswitch.clearwater.queue_manager.etcd_synchronizer import EtcdSynchronizer
 from .plugin import TestFrontOfQueueCallbackPlugin
-from mock import patch, MagicMock
+from mock import patch
 from time import sleep
 from .test_base import BaseQueueTest
 
-alarms_patch = patch("metaswitch.clearwater.queue_manager.alarms.issue_alarm", new=MagicMock)
+alarms_patch = patch("metaswitch.clearwater.queue_manager.alarms.alarm_manager")
 
 class PluginTest(BaseQueueTest):
     @patch("etcd.Client", new=EtcdFactory)

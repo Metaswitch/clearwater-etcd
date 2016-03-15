@@ -30,15 +30,10 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-import logging
-import sys
-import os
 import random
+from metaswitch.common.logging_config import configure_test_logging
 
-logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
-logging.getLogger().setLevel(logging.ERROR)
-if os.environ.get('NOISY'):
-    logging.getLogger().setLevel(logging.DEBUG)
+configure_test_logging()
 
 seed = random.randrange(2000)
 print "\n\n===\nGenerated random seed {}\n===\n\n".format(seed)

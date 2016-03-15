@@ -38,11 +38,10 @@ from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import EtcdFactory
 from metaswitch.clearwater.config_manager.etcd_synchronizer import \
     EtcdSynchronizer
 from .plugin import TestPlugin
-from mock import patch, MagicMock
+from mock import patch
 from threading import Thread
 from time import sleep
 
-alarms_patch = patch("metaswitch.clearwater.config_manager.alarms.issue_alarm", new=MagicMock)
 
 class BasicTest(unittest.TestCase):
     @patch("etcd.Client", new=EtcdFactory)

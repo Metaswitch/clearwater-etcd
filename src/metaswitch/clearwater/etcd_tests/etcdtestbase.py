@@ -31,13 +31,12 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 from time import sleep
-import logging
-import sys
 import unittest
 from .etcdcluster import EtcdCluster
+from metaswitch.common.logging_config import configure_test_logging
 
-logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
-logging.getLogger().setLevel(logging.INFO)
+configure_test_logging()
+
 
 class EtcdTestBase(unittest.TestCase):
     def test_basic_clustering(self):

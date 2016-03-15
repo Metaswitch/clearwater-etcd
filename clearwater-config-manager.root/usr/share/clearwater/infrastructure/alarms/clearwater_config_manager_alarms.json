@@ -6,14 +6,20 @@
             "cause": "DATABASE_INCONSISTENCY",
             "levels": [
                 {
-                  "severity": "CLEARED",
-                  "description": "etcd: Shared configuration has been learned by the local node.",
-                  "details": "All shared configuration has been synchronised to the local node. Once the local node has joined any backend clusters, it may be safely added to DNS to allow it to start providing service."
+                    "severity": "CLEARED",
+                    "description": "etcd: Shared configuration has been learned by the local node.",
+                    "details": "All shared configuration has been synchronised to the local node.",
+                    "cause": "All shared configuration has been synchronised to the local node. Once the local node has joined any backend clusters, it may be safely added to DNS to allow it to start providing service. The previous issued alarm has been cleared",
+                    "effect": "Shared configuration is up to date on the local node.",
+                    "action": "No action."
                 },
                 {
-                  "severity": "CRITICAL",
-                  "description": "etcd: Shared configuration has not been learned on the local node",
-                  "details": "Some shared configuration has not been received at the local node yet.  If you have not uploaded all the shared config yet, this alarm will clear once that is done.  You should not add the local node to DNS until this alarm clears."
+                    "severity": "CRITICAL",
+                    "description": "etcd: Shared configuration has not been learned on the local node",
+                    "details": "Some shared configuration has not been received at the local node yet.",
+                    "cause": "Some shared configuration has not been received at the local node yet. If you have not uploaded all the shared config yet, this alarm will clear once that is done. You should not add the local node to DNS until this alarm clears.",
+                    "effect": "The local node is still running with the state of the shared configuration data as it was prior to the last configuration data update.",
+                    "action": "Monitor this alarm, and wait for it to clear. Shared configuration can take up to 30 seconds per node to percolate through the deployment. If the alarm doesn't clear in a timely fashion, contact your support representative."
                 }
             ]
         }

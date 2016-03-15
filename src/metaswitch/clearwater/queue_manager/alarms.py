@@ -30,29 +30,28 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-from metaswitch.common.alarms import issue_alarm as int_issue_alarm
+from metaswitch.common.alarms import alarm_manager, MINOR, CRITICAL
 import logging
 
 _log = logging.getLogger("queue_manager.alarms")
 
-def issue_alarm(identifier): # pragma : no cover
-    int_issue_alarm("queue-manager", identifier)
+ALARM_ISSUER_NAME = "queue-manager"
+
 
 class QueueAlarm(object):
-    def __init__(self, clear, minor, critical, name):
-        self._clear_alarm = clear
-        self._minor_alarm = minor
-        self._critical_alarm = critical
+    def __init__(self, alarm_handle, name):
+        self._alarm = alarm_manager.get_alarm(ALARM_ISSUER_NAME,
+                                              alarm_handle)
         self._name = name
 
     def clear(self):
         _log.debug("Clearing %s alarm" % self._name)
-        issue_alarm(self.clear)
+        self._alarm.clear()
 
     def minor(self):
         _log.debug("Raising minor %s alarm" % self._name)
-        issue_alarm(self.minor)
+        self._alarm.set(MINOR)
 
     def critical(self):
         _log.debug("Raising critical %s alarm" % self._name)
-        issue_alarm(self.critical)
+        self._alarm.set(CRITICAL)

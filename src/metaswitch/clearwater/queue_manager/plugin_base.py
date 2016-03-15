@@ -43,15 +43,11 @@ class QueuePluginBase(object): # pragma : no cover
     WAIT_FOR_OTHER_NODE = 330
 
     def local_alarm(self):
-        return (alarm_constants.LOCAL_CONFIG_RESYNCHING_CLEARED,
-                alarm_constants.LOCAL_CONFIG_RESYNCHING_MINOR,
-                alarm_constants.LOCAL_CONFIG_RESYNCHING_CRITICAL,
+        return (alarm_constants.LOCAL_CONFIG_RESYNCHING,
                 "local")
 
     def global_alarm(self):
-        return (alarm_constants.GLOBAL_CONFIG_RESYNCHING_CLEARED,
-                alarm_constants.GLOBAL_CONFIG_RESYNCHING_MINOR,
-                alarm_constants.GLOBAL_CONFIG_RESYNCHING_CRITICAL,
+        return (alarm_constants.GLOBAL_CONFIG_RESYNCHING,
                 "global")
 
     @abstractmethod

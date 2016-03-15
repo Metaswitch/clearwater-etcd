@@ -39,7 +39,7 @@ _log = logging.getLogger("queue_manager.timers")
 
 class QueueTimer(object):
     def __init__(self, f):
-        self._condvar = Condition()
+        self._condition = Condition()
         self._timer_thread = None
         self.timer_popped = False
         self._timer_running = False
@@ -48,17 +48,15 @@ class QueueTimer(object):
         self._function_call = f
 
     def set_timer(self):
-        self._condvar.acquire()
-        self._condvar.wait(self._delay)
-        
-        if self._timer_running:
-            # Trigger FSM
-            self.timer_popped = True
-            self._timer_running = False
-            if self._function_call:
-                self._function_call()
+        with self._condition:
+            self._condition.wait(self._delay)
 
-        self._condvar.release()
+            if self._timer_running:
+                # Trigger FSM
+                self.timer_popped = True
+                self._timer_running = False
+                if self._function_call:
+                    self._function_call()
 
     def set(self, tid, delay):
         self.clear()
@@ -72,9 +70,8 @@ class QueueTimer(object):
     def clear(self):
         if self._timer_thread is not None:
             self._timer_running = False
-            self._condvar.acquire()
-            self._condvar.notify()
-            self._condvar.release()
+            with self._condition:
+                self._condition.notify()
             self._timer_thread.join()
             self.timer_id = "NO_ID"
             self._timer_thread = None

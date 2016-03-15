@@ -19,6 +19,18 @@ fvtest: fvtest_setup.py env
 .PHONY: test
 test: coverage
 
+.PHONY: test_cluster_mgr
+test_cluster_mgr: cluster_mgr_setup.py env
+	PYTHONPATH=src:common ${ENV_PYTHON} cluster_mgr_setup.py test -v
+
+.PHONY: test_queue_mgr
+test_queue_mgr: queue_mgr_setup.py env
+	PYTHONPATH=src:common ${ENV_PYTHON} queue_mgr_setup.py test -v
+
+.PHONY: test_config_mgr
+test_config_mgr: config_mgr_setup.py env
+	PYTHONPATH=src:common ${ENV_PYTHON} config_mgr_setup.py test -v
+
 .PHONY: run_test
 run_test: queue_mgr_setup.py config_mgr_setup.py cluster_mgr_setup.py env
 	PYTHONPATH=src:common ${ENV_PYTHON} cluster_mgr_setup.py test -v && PYTHONPATH=src:common ${ENV_PYTHON} queue_mgr_setup.py test -v && PYTHONPATH=src:common ${ENV_PYTHON} config_mgr_setup.py test -v
@@ -102,11 +114,11 @@ ${ENV_DIR}/.cluster-mgr-build-eggs: cluster_mgr_setup.py shared_setup.py common/
 
 	touch $@
 
-src/metaswitch/clearwater/queue_manager/alarm_constants.py: clearwater-queue-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_queue_manager_alarms.json common/metaswitch/common/alarms_writer.py
+src/metaswitch/clearwater/queue_manager/alarm_constants.py: clearwater-queue-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_queue_manager_alarms.json common/metaswitch/common/alarms_writer.py common/metaswitch/common/alarms_parser.py common/metaswitch/common/alarm_severities.py
 	python common/metaswitch/common/alarms_writer.py --json-file="clearwater-queue-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_queue_manager_alarms.json" --constants-file=$@
-src/metaswitch/clearwater/config_manager/alarm_constants.py: clearwater-config-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_config_manager_alarms.json common/metaswitch/common/alarms_writer.py
+src/metaswitch/clearwater/config_manager/alarm_constants.py: clearwater-config-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_config_manager_alarms.json common/metaswitch/common/alarms_writer.py common/metaswitch/common/alarms_parser.py common/metaswitch/common/alarm_severities.py
 	python common/metaswitch/common/alarms_writer.py --json-file="clearwater-config-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_config_manager_alarms.json" --constants-file=$@
-src/metaswitch/clearwater/cluster_manager/alarm_constants.py: clearwater-cluster-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_cluster_manager_alarms.json common/metaswitch/common/alarms_writer.py
+src/metaswitch/clearwater/cluster_manager/alarm_constants.py: clearwater-cluster-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_cluster_manager_alarms.json common/metaswitch/common/alarms_writer.py common/metaswitch/common/alarms_parser.py common/metaswitch/common/alarm_severities.py
 	python common/metaswitch/common/alarms_writer.py --json-file="clearwater-cluster-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_cluster_manager_alarms.json" --constants-file=$@
 
 .PHONY: deb

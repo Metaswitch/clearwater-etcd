@@ -40,34 +40,34 @@
 
 import logging
 from threading import Thread, Condition
-from .alarm_constants import TOO_LONG_CLUSTERING_MINOR, TOO_LONG_CLUSTERING_CLEARED
-from metaswitch.common.alarms import issue_alarm as int_issue_alarm
+from .alarm_constants import TOO_LONG_CLUSTERING
+from metaswitch.common.alarms import alarm_manager
 
 _log = logging.getLogger("cluster_manager.alarms")
 
-def issue_alarm(identifier):
-    int_issue_alarm("cluster-manager", identifier) # pragma: no cover
+ALARM_ISSUER_NAME = "cluster-manager"
 
 
 class TooLongAlarm(object):
     def __init__(self, delay=(15*60)):
-        self._condvar = Condition()
+        self._condition = Condition()
         self._timer_thread = None
         self._should_alarm = False
+        self._alarm = alarm_manager.get_alarm(ALARM_ISSUER_NAME,
+                                              TOO_LONG_CLUSTERING)
         self._delay = delay
 
     def alarm(self):
-        self._condvar.acquire()
-        self._condvar.wait(self._delay)
-        if self._should_alarm:
-            _log.info("Raising TOO_LONG_CLUSTERING alarm")
-            issue_alarm(TOO_LONG_CLUSTERING_MINOR)
-        self._condvar.release()
+        with self._condition:
+            self._condition.wait(self._delay)
+            if self._should_alarm:
+                _log.debug("Raising TOO_LONG_CLUSTERING alarm")
+                self._alarm.set()
 
     def trigger(self, thread_name="Alarm thread"):
         self._should_alarm = True
         if self._timer_thread is None:
-            _log.info("TOO_LONG_CLUSTERING alarm triggered, will fire in {} seconds".format(self._delay))
+            _log.debug("TOO_LONG_CLUSTERING alarm triggered, will fire in {} seconds".format(self._delay))
             self._timer_thread = Thread(target=self.alarm, name=thread_name)
             self._timer_thread.start()
 
@@ -75,20 +75,18 @@ class TooLongAlarm(object):
         if self._timer_thread is not None:
             self._should_alarm = False
             _log.info("TOO_LONG_CLUSTERING alarm cancelled when quitting")
-            self._condvar.acquire()
-            self._condvar.notify()
-            self._condvar.release()
+            with self._condition:
+                self._condition.notify()
             self._timer_thread.join()
 
     def cancel(self):
-        self._condvar.acquire()
-        self._should_alarm = False
-        _log.info("TOO_LONG_CLUSTERING alarm cancelled")
+        with self._condition:
+            self._should_alarm = False
+            _log.info("TOO_LONG_CLUSTERING alarm cancelled")
 
-        # cancel the thread
-        self._condvar.notify()
-        self._timer_thread = None
+            # cancel the thread
+            self._condition.notify()
+            self._timer_thread = None
 
-        # clear the alarm
-        issue_alarm(TOO_LONG_CLUSTERING_CLEARED)
-        self._condvar.release()
+            # clear the alarm
+            self._alarm.clear()
