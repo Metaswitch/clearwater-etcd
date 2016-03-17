@@ -47,11 +47,11 @@ check process etcd_process with pidfile /var/run/clearwater-etcd/clearwater-etcd
   if memory > 80% for 6 cycles then exec "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 6500.3; /etc/init.d/clearwater-etcd stop'"
 
 # Clear any alarms if the process has been running long enough.
-check program etcd_uptime with path "/usr/share/clearwater/bin/check-uptime /var/run/clearwater-etcd/clearwater-etcd.pid"
+check program etcd_uptime with path "/usr/share/clearwater/bin/check-uptime /var/run/clearwater-etcd/clearwater-etcd.pid monit 6500.1"
   group etcd
   depends on etcd_process
   every 3 cycles
-  if status = 0 then exec "/usr/share/clearwater/bin/issue_alarm.py monit 6500.1"
+  if status != 0 then alert
 
 # Monitor cluster health.  If connectivity is lost to any node issue an alarm,
 # otherwise clear it (alarm handling is done in the check script to avoid
