@@ -63,8 +63,10 @@ class SharedConfigPlugin(ConfigPluginBase):
 
     def on_config_changed(self, value, alarm):
         _log.info("Updating shared configuration file")
-        safely_write(_file, value)
-        run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config")
+
+        if self.status(value) != FileStatus.UP_TO_DATE:
+            safely_write(_file, value)
+            run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config")
 
 def load_as_plugin(params):
     return SharedConfigPlugin(params)
