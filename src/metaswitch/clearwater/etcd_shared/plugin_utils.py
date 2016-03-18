@@ -53,9 +53,12 @@ def run_command(command, namespace=None, log_error=True):
         command = "ip netns exec {} ".format(namespace) + command
 
     try:
+        # Pass the close_fds argument to avoid the pidfile lock being held by
+        # child processes
         output = subprocess.check_output(command,
                                          shell=True,
-                                         stderr=subprocess.STDOUT)
+                                         stderr=subprocess.STDOUT,
+                                         close_fds=True)
         _log.debug("Command {} succeeded and printed output {!r}".
                    format(command, output))
         return 0
