@@ -79,6 +79,7 @@ class SyncFSM(object):
         self._plugin = plugin
         self._id = local_ip
         self._running = True
+        self._startup = True
         self._alarm = TooLongAlarm()
 
     def quit(self):
@@ -129,6 +130,10 @@ class SyncFSM(object):
                       cluster_state,
                       cluster_view))
         assert(self._running)
+        if self._startup:
+            safe_plugin(self._plugin.on_startup,
+                        cluster_view)
+            self._startup = False
 
         # If we're mid-scale-up, ensure that the "scaling operation taking too
         # long" alarm is running, and cancel it if we're not
