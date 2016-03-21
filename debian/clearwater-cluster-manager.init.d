@@ -101,6 +101,10 @@ do_start()
   signaling_namespace=""
   etcd_key=clearwater
   etcd_cluster_key=""
+  
+  # This sets up $uuid - it's created by /usr/share/clearwater/infrastructure/scripts/node_identity
+  . /etc/clearwater/node_identity
+
   if [ -d /usr/share/clearwater/node_type.d ]
   then
     . /usr/share/clearwater/node_type.d/$(ls /usr/share/clearwater/node_type.d | head -n 1)
@@ -115,6 +119,7 @@ do_start()
                --local-site=$local_site_name
                --remote-site=$remote_site_name
                --signaling-namespace=$signaling_namespace
+               --uuid=$uuid
                --etcd-key=$etcd_key
                --etcd-cluster-key=$etcd_cluster_key
                --log-level=$log_level
