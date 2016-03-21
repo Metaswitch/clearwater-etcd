@@ -35,7 +35,7 @@
 """Clearwater Cluster Manager
 
 Usage:
-  main.py --mgmt-local-ip=IP --sig-local-ip=IP --local-site=NAME --remote-site=NAME --etcd-key=KEY --etcd-cluster-key=CLUSTER_KEY
+  main.py --mgmt-local-ip=IP --sig-local-ip=IP --local-site=NAME --remote-site=NAME --uuid=UUID --etcd-key=KEY --etcd-cluster-key=CLUSTER_KEY
           [--signaling-namespace=NAME] [--foreground] [--log-level=LVL]
           [--log-directory=DIR] [--pidfile=FILE]
 
@@ -46,6 +46,7 @@ Options:
   --local-site=NAME              Name of local site
   --remote-site=NAME             Name of remote site
   --signaling-namespace=NAME     Name of the signaling namespace
+  --uuid=UUID                    UUID uniquely identifying this node
   --etcd-key=KEY                 Etcd key (top level)
   --etcd-cluster-key=CLUSTER_KEY Etcd key (used in the data store clusters)
   --foreground                   Don't daemonise
@@ -69,6 +70,7 @@ import syslog
 from threading import activeCount
 from time import sleep
 import signal
+from uuid import UUID
 
 _log = logging.getLogger("cluster_manager.main")
 
@@ -117,6 +119,7 @@ def main(args):
     local_site_name = arguments['--local-site']
     remote_site_name = arguments['--remote-site']
     signaling_namespace = arguments.get('--signaling-namespace')
+    local_uuid = UUID(arguments['--uuid'])
     etcd_key = arguments.get('--etcd-key')
     etcd_cluster_key = arguments.get('--etcd-cluster-key')
     log_dir = arguments['--log-directory']
@@ -165,6 +168,7 @@ def main(args):
                                                local_site=local_site_name,
                                                remote_site=remote_site_name,
                                                signaling_namespace=signaling_namespace,
+                                               uuid=local_uuid,
                                                etcd_key=etcd_key,
                                                etcd_cluster_key=etcd_cluster_key))
     plugins.sort(key=lambda x: x.key())
