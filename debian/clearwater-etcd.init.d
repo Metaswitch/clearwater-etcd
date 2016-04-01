@@ -275,7 +275,7 @@ do_start()
                      --name $ETCD_NAME
                      --debug"
 
-        start-stop-daemon --start --quiet --background --make-pidfile --pidfile $PIDFILE --startas $DAEMONWRAPPER --chuid $NAME -- $DAEMON_ARGS $CLUSTER_ARGS \
+        start-stop-daemon --start --quiet --background --pidfile $PIDFILE --startas $DAEMONWRAPPER --chuid $NAME -- $DAEMON_ARGS $CLUSTER_ARGS \
                 || return 2
 
         wait_for_etcd
