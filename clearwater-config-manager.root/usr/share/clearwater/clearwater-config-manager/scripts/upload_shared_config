@@ -37,6 +37,21 @@ local_site_name=site1
 etcd_key=clearwater
 . /etc/clearwater/config
 
+[ $# -le 1 ] || { echo "Usage: upload_shared_config [--force]" >&2 ; exit 2 ; }
+
+force=false
+if [ -n "$1" ];
+then
+  first_val=$1
+  if [ $first_val == "--force" ]
+  then
+    force=true
+  else
+    echo "Usage: upload_shared_config [--force]"
+    exit 2
+  fi
+fi
+
 # Check we can contact `etcd`
 if ! nc -z ${management_local_ip:-$local_ip} 4000
 then
@@ -64,5 +79,16 @@ if [ $rc != 0 ] ; then
   cat /tmp/upload-shared-config.stdout.$$              >&2
 fi
 rm -f /tmp/upload-shared-config.stderr.$$ /tmp/upload-shared-config.stdout.$$
+
+# Add this node to the list of nodes to restart
+/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config
+
+# Set the force value
+if $force
+then
+  /usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue force_true apply_config
+else
+  /usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue force_false apply_config
+fi
 
 exit $rc

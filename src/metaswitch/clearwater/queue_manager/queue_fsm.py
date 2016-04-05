@@ -61,8 +61,8 @@ class QueueFSM(object):
                            constants.LS_FIRST_IN_QUEUE: [self._local_alarm.minor,
                                                          self.move_to_processing],
                            constants.LS_PROCESSING: [self._local_alarm.minor,
-                                                     self._plugin.at_front_of_queue,
-                                                     self._set_timer_with_id],
+                                                     self._set_timer_with_id,
+                                                     self._plugin.at_front_of_queue],
                            constants.LS_WAITING_ON_OTHER_NODE: [self._local_alarm.clear,
                                                                 self._set_timer_with_current_node_id],
                            constants.LS_WAITING_ON_OTHER_NODE_ERROR: [self._local_alarm.critical,
@@ -121,7 +121,7 @@ class QueueFSM(object):
         local_queue_state = self._queue_config.calculate_local_state()
         _log.debug("Local state is {}".format(local_queue_state))
 
-        if local_queue_state != self._last_local_state:
+        if (local_queue_state != constants.LS_PROCESSING) or (local_queue_state != self._last_local_state):
             for local_state_action in self._local_fsm[local_queue_state]:
                 local_state_action()
 
