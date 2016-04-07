@@ -97,7 +97,6 @@ do_start()
 
   # Make sure to pull in the node_type files before local_config
   local_site_name=site1
-  remote_site_name=""
   remote_cassandra_seeds=""
   signaling_namespace=""
   etcd_key=clearwater
@@ -118,7 +117,6 @@ do_start()
   DAEMON_ARGS="--mgmt-local-ip=${management_local_ip:-$local_ip}
                --sig-local-ip=$local_ip
                --local-site=$local_site_name
-               --remote-site=$remote_site_name
                --remote-cassandra-seeds=$remote_cassandra_seeds
                --signaling-namespace=$signaling_namespace
                --uuid=$uuid
