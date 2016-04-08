@@ -185,10 +185,10 @@ class AddToQueueTest(BaseQueueTest):
         self.assertEqual("10.0.0.1-node", val.get("QUEUED")[1]["ID"])
         self.assertEqual("QUEUED", val.get("QUEUED")[1]["STATUS"])
 
-    # Test that adding a node that's marked as errored when it's not at the front of the queue doesn't change hte errored state
+    # Test that adding a node that's marked as errored when it's not at the front of the queue doesn't change the errored state
     @patch("etcd.Client", new=EtcdFactory)
     def test_add_to_queue_while_errored(self):
-        self.set_initial_val("{\"FORCE\": false, \"ERRORED\": [{\"ID\":\"10.0.0.1-node\",\"STATUS\":\"FAILURE\"}], \"COMPLETED\": [], \"QUEUED\": [{\"ID\":\"10.0.0.2-node\",\"STATUS\":\"PROCESSING\"}]}")
+        self.set_initial_val("{\"FORCE\": true, \"ERRORED\": [{\"ID\":\"10.0.0.1-node\",\"STATUS\":\"FAILURE\"}], \"COMPLETED\": [], \"QUEUED\": [{\"ID\":\"10.0.0.2-node\",\"STATUS\":\"PROCESSING\"}]}")
         self.add_to_queue()
 
         val = json.loads(self._e._client.read("/clearwater/local/configuration/queue_test").value)
