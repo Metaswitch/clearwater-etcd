@@ -35,8 +35,7 @@
 """Clearwater Cluster Manager
 
 Usage:
-  main.py --mgmt-local-ip=IP --sig-local-ip=IP --local-site=NAME --remote-site=NAME
-          --remote-cassandra-seeds=IPs --uuid=UUID --etcd-key=KEY --etcd-cluster-key=CLUSTER_KEY
+  main.py --mgmt-local-ip=IP --sig-local-ip=IP --local-site=NAME --remote-site=NAME --remote-cassandra-seeds=IPs --uuid=UUID --etcd-key=KEY --etcd-cluster-key=CLUSTER_KEY
           [--signaling-namespace=NAME] [--foreground] [--log-level=LVL]
           [--log-directory=DIR] [--pidfile=FILE]
 
