@@ -8,8 +8,8 @@
                 {
                     "severity": "CLEARED",
                     "description": "etcd: Shared configuration has been learned by the local node.",
-                    "details": "All shared configuration has been synchronised to the local node.",
-                    "cause": "All shared configuration has been synchronised to the local node. Once the local node has joined any backend clusters, it may be safely added to DNS to allow it to start providing service. The previous issued alarm has been cleared",
+                    "details": "All shared configuration has been synchronized to the local node.",
+                    "cause": "All shared configuration has been synchronized to the local node. Once the local node has joined any backend clusters, it may be safely added to DNS to allow it to start providing service. The previous issued alarm has been cleared",
                     "effect": "Shared configuration is up to date on the local node.",
                     "action": "No action."
                 },
