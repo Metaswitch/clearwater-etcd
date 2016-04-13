@@ -10,7 +10,7 @@
                     "details": "The queue manager process has been restored to normal operation.",
                     "description": "Queue manager: Process failure cleared.",
                     "cause": "The queue manager process has been restored to normal operation. The previously issued alarm has been cleared.",
-                    "effect": "Changes to shared config will be synchronised across the cluster.",
+                    "effect": "Changes to shared config will be synchronized across the cluster.",
                     "action": "No action."
                 },
                 {
@@ -18,7 +18,7 @@
                     "details": "Monit has detected that the local queue manager process has failed. A restart will automatically be attempted. If this alarm does not clear, the queue manager process may have been stopped or an unrecoverable failure may have occurred.",
                     "description": "Queue manager: Process failure.",
                     "cause": "Monit has detected that the local queue manager process has failed. A restart will automatically be attempted.",
-                    "effect": "Changes to shared config will not be synchronised across the cluster.",
+                    "effect": "Changes to shared config will not be synchronized across the cluster.",
                     "action": "If this alarm does not clear, the queue manager process may have been stopped or an unrecoverable failure may have occurred. Contact your support representative."
                 }
             ]
@@ -31,15 +31,15 @@
                 {
                     "severity": "CLEARED",
                     "description": "etcd: Shared configuration is now consistent across the deployment.",
-                    "details": "All shared configuration has been synchronised across the deployment.",
+                    "details": "All shared configuration has been synchronized across the deployment.",
                     "cause": "Shared configuration is now consistent across the deployment.",
                     "effect": "Changes to shared configuration have been picked up by all nodes in the deployment.",
                     "action": "No action."
                 },
                 {
                     "severity": "MINOR",
-                    "description": "etcd: Shared configuration is being synchronised across the cluster.",
-                    "details": "Shared configuration is being synchronised across the cluster. This involves restarting the clearwater processes on individual nodes.",
+                    "description": "etcd: Shared configuration is being synchronized across the cluster.",
+                    "details": "Shared configuration is being synchronized across the cluster. This involves restarting the clearwater processes on individual nodes.",
                     "cause": "A change has been made to shared configuration.",
                     "effect": "Changes to shared configuration are synchronized across the cluster and processes are restarted to pick up the changes.",
                     "action": "Monitor this alarm, and wait for it to clear. Shared configuration can take up to 30 seconds per node to percolate through the deployment. If the alarm doesn't clear in a timely fashion, contact your support representative."
@@ -62,15 +62,15 @@
                 {
                     "severity": "CLEARED",
                     "description": "etcd: Shared configuration has been learned by the local node.",
-                    "details": "All shared configuration has been synchronised to the local node.",
-                    "cause": "All shared configuration has been synchronised to the local node. Once the local node has joined any backend clusters, it may be safely added to DNS to allow it to start providing service. The previous issued alarm has been cleared",
+                    "details": "All shared configuration has been synchronized to the local node.",
+                    "cause": "All shared configuration has been synchronized to the local node. Once the local node has joined any backend clusters, it may be safely added to DNS to allow it to start providing service. The previous issued alarm has been cleared",
                     "effect": "Shared configuration is up to date on the local node.",
                     "action": "No action."
                 },
                 {
                     "severity": "MINOR",
-                    "description": "etcd: Shared configuration is being synchronised on this node.",
-                    "details": "Shared configuration is being synchronised on this node. This involves restarting the processes on this node.",
+                    "description": "etcd: Shared configuration is being synchronized on this node.",
+                    "details": "Shared configuration is being synchronized on this node. This involves restarting the processes on this node.",
                     "cause": "This node is picking up a change that has been made to shared configuration.",
                     "effect": "Processes on this node are restarted to pick up the changes to shared configuration.",
                     "action": "Monitor this alarm, and wait for it to clear. Shared configuration can take up to 30 seconds to be picked up. If the alarm doesn't clear in a timely fashion, contact your support representative."
