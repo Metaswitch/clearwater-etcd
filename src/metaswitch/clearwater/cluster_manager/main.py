@@ -35,7 +35,7 @@
 """Clearwater Cluster Manager
 
 Usage:
-  main.py --mgmt-local-ip=IP --sig-local-ip=IP --local-site=NAME --remote-site=NAME --uuid=UUID --etcd-key=KEY --etcd-cluster-key=CLUSTER_KEY
+  main.py --mgmt-local-ip=IP --sig-local-ip=IP --local-site=NAME --remote-site=NAME --remote-cassandra-seeds=IPs --uuid=UUID --etcd-key=KEY --etcd-cluster-key=CLUSTER_KEY
           [--signaling-namespace=NAME] [--foreground] [--log-level=LVL]
           [--log-directory=DIR] [--pidfile=FILE]
 
@@ -45,6 +45,7 @@ Options:
   --sig-local-ip=IP              Signaling IP address
   --local-site=NAME              Name of local site
   --remote-site=NAME             Name of remote site
+  --remote-cassandra-seeds=IPs   Comma separated list of at least one IP address from each remote Cassandra site
   --signaling-namespace=NAME     Name of the signaling namespace
   --uuid=UUID                    UUID uniquely identifying this node
   --etcd-key=KEY                 Etcd key (top level)
@@ -118,6 +119,11 @@ def main(args):
     sig_ip = arguments['--sig-local-ip']
     local_site_name = arguments['--local-site']
     remote_site_name = arguments['--remote-site']
+    remote_cassandra_seeds = arguments['--remote-cassandra-seeds']
+    if remote_cassandra_seeds:
+        remote_cassandra_seeds = remote_cassandra_seeds.split(',')
+    else:
+        remote_cassandra_seeds = []
     signaling_namespace = arguments.get('--signaling-namespace')
     local_uuid = UUID(arguments['--uuid'])
     etcd_key = arguments.get('--etcd-key')
@@ -167,6 +173,7 @@ def main(args):
                                                mgmt_ip=mgmt_ip,
                                                local_site=local_site_name,
                                                remote_site=remote_site_name,
+                                               remote_cassandra_seeds=remote_cassandra_seeds,
                                                signaling_namespace=signaling_namespace,
                                                uuid=local_uuid,
                                                etcd_key=etcd_key,
