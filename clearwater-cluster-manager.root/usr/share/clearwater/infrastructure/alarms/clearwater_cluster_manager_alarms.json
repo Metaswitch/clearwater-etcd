@@ -78,13 +78,13 @@
                     "severity": "CLEARED",
                     "details": "The local Cassandra process is synchronized with the rest of the cluster.",
                     "description": "Cassandra: The local Cassandra is part of the Cassandra cluster.",
-                    "cause": "The local Cassandra process is synchronized with the rest of the cluster. All Cassandra ring nodes have been restored to normal operation. The previously issued alarm has been cleared.",
+                    "cause": "The local Cassandra process is synchronized with the rest of the cluster.",
                     "effect": "Cassandra database replication is fully operational.",
                     "action": "No action. The user can continue with any scaling operations (e.g. add the node to DNS or turn it down)."
                 },
                 {
                     "severity": "MAJOR",
-                    "details": "The local Cassandra process is not yet part of a cluster. This node will not see any changes made by other nodes, or vice versa.You should not direct service traffic to this node until this alarm is cleared.",
+                    "details": "The local Cassandra process is not yet part of a cluster. This node will not see any changes made by other nodes, or vice versa. You should not direct service traffic to this node until this alarm is cleared.",
                     "description": "Cassandra: The local Cassandra is not yet part of a cluster.",
                     "cause": "The local Cassandra process is not yet part of a cluster. This node will not see any changes made by other nodes, or vice versa. Adding nodes that use Cassandra to a cluster will cause this alarm.",
                     "effect": "The Cassandra database is no longer fully replicated on each node. Data written to the local Cassandra database by this node is not visible to other nodes in the cluster. You should not direct service traffic to this node until this alarm is cleared.",
