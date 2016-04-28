@@ -7,7 +7,7 @@
             "levels": [
                 {
                     "severity": "CLEARED",
-                    "details": "An automatic scale-up or scale-down process has completed after running for more than 15 minutes. Further nodes can now be added to or removed from the cluster.",
+                    "details": "An automatic scale-in or scale-out process has completed after running for more than 15 minutes. Further nodes can now be added to or removed from the cluster.",
                     "description": "etcd: Scaling process has finished.",
                     "cause": "The deployment does not have any scaling operations that are taking too long to complete. Further nodes can now be added to or removed from the cluster. Adding or removing nodes to/from a cluster causes this alarm. The previously issued alarm has been cleared.",
                     "effect": "The system capacity has been increased or reduced depending on whether a node was being added or removed.",
@@ -15,9 +15,9 @@
                 },
                 {
                     "severity": "MINOR",
-                    "details": "An automatic scale-up or scale-down process has been running for more than 15 minutes. Service is not impacted, but the scaling has not completed, and no further nodes can be added to or removed from the cluster until it completes.",
+                    "details": "An automatic scale-in or scale-out process has been running for more than 15 minutes. Service is not impacted, but the scaling has not completed, and no further nodes can be added to or removed from the cluster until it completes.",
                     "description": "etcd: Scaling process has been running for more than 15 minutes.",
-                    "cause": "An automatic scale-up or scale-down process has been running for more than 15 minutes.",
+                    "cause": "An automatic scale-in or scale-out process has been running for more than 15 minutes.",
                     "effect": "Service is not impacted, but the scaling has not completed, and no further nodes can be added to or removed from the cluster until it completes. The system capacity has not been increased or reduced depending on whether a node was being added or removed.",
                     "action": "Monitor for the alarm to clear. This alarm may be raised alongside other etcd alarms and they may specify possible actions. If the alarm fails to clear then contact your support representative."
                 }
