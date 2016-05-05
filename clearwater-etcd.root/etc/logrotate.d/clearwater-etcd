@@ -1,0 +1,12 @@
+/var/log/clearwater-etcd/clearwater-etcd.log
+{
+        rotate 4
+        weekly
+        maxsize 100M
+        missingok
+        notifempty
+        compress
+        delaycompress
+        copytruncate
+}
+

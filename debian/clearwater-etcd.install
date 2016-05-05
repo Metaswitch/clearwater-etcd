@@ -1,1 +1,2 @@
-clearwater-etcd/* /
+clearwater-etcd.root/* /
+debian/tmp/usr/bin/* /usr/bin

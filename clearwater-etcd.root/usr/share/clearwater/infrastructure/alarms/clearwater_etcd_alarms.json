@@ -1,0 +1,58 @@
+{
+    "alarms": [
+        {
+            "index": 6500,
+            "name": "ETCD_PROCESS_FAIL",
+            "cause": "SOFTWARE_ERROR",
+            "levels": [
+                {
+                    "severity": "CLEARED",
+                    "details": "The etcd process has been restored to normal operation.",
+                    "description": "etcd: Process failure cleared.",
+                    "cause": "The etcd process has been restored to normal operation. The previously issued alarm has been cleared.",
+                    "effect": "Cluster resizing and configuration sharing is now operational.",
+                    "action": "No action."
+                },
+                {
+                    "severity": "CRITICAL",
+                    "details": "Monit has detected that the local etcd process has failed. A restart will automatically be attempted. If this alarm does not clear, the etcd process may have been stopped or an unrecoverable failure may have occurred.",
+                    "description": "etcd: Process failure.",
+                    "cause": "Monit has detected that the local etcd process has failed. A restart will automatically be attempted.",
+                    "effect": "Configuration information will not get synchronized to all cluster nodes. Also, some scaling operations may be unable to start or complete.",
+                    "action": "If this alarm does not clear, the etcd process may have been stopped or an unrecoverable failure may have occurred. Please contact your support representative."
+                }
+            ]
+        },
+        {
+            "index": 6501,
+            "name": "ETCD_CLUSTER_HEALTH",
+            "cause": "UNDERLYING_RESOURCE_UNAVAILABLE",
+            "levels": [
+                {
+                    "severity": "CLEARED",
+                    "details": "All etcd cluster members are reporting normal operation.",
+                    "description": "etcd: Cluster is healthy.",
+                    "cause": "An unhealthy cluster has recovered and this alarm clears the previously issued unhealthy cluster alarm.",
+                    "effect": "Cluster operation is back to normal.",
+                    "action": "No action."
+                },
+                {
+                    "severity": "MAJOR",
+                    "details": "etcd is unable to confirm the health of one of its cluster nodes. It will periodically attempt to reconnect. If this alarm does not clear, ensure that all etcd instances are operational and verify network connectivity to reporting nodes.",
+                    "description": "etcd: Cluster node is unhealthy.",
+                    "cause": "etcd is unable to confirm the health of one of its cluster nodes. It will periodically attempt to reconnect. This alarm is raised by all working nodes in the cluster if the cluster is not entirely healthy (e.g. if an etcd process has failed).",
+                    "effect": "Configuration information will not get synchronized to all cluster nodes. Also, some scaling operations may be unable to start or complete.",
+                    "action": "If this alarm does not clear, ensure that all etcd instances are operational and verify network connectivity to reporting nodes. If the alarm fails to clear then contact your support representative."
+                },
+                {
+                    "severity": "CRITICAL",
+                    "details": "etcd is unable to contact a quorum of its cluster nodes.It will periodically attempt to reconnect. If this alarm does not clear, ensure that all etcd instances are operational and verify network connectivity to reporting nodes.",
+                    "description": "etcd: Cluster is unhealthy.",
+                    "cause": "etcd is unable to contact a quorum of its cluster nodes. It will periodically attempt to reconnect.",
+                    "effect": "Configuration information will not get synchronized to all cluster nodes. Also, some scaling operations may be unable to start or complete.",
+                    "action": "If this alarm does not clear, ensure that all etcd instances are operational and verify network connectivity to reporting nodes. If the alarm fails to clear then contact your support representative."
+                }
+            ]
+        }
+    ]
+}

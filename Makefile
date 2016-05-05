@@ -84,7 +84,7 @@ ${ENV_DIR}/.queue-mgr-build-eggs: queue_mgr_setup.py shared_setup.py common/setu
         # Download the egg files they depend upon
 	${ENV_DIR}/bin/easy_install -zmaxd queue_mgr_eggs/ queue_mgr_eggs/clearwater_queue_manager-1.0-py2.7.egg
 	${ENV_DIR}/bin/easy_install -zmaxd queue_mgr_eggs/ queue_mgr_eggs/clearwater_etcd_shared-1.0-py2.7.egg
-	${ENV_DIR}/bin/easy_install -zmaxd queue_mgr_eggs/ queue_mgr_eggs/metaswitchcommon-0.1-py2.7-linux-x86_64.egg
+	${ENV_DIR}/bin/easy_install -zmaxd queue_mgr_eggs/ queue_mgr_eggs/metaswitchcommon-0.1-py2.7-linux-$(shell uname -m).egg
 
 	touch $@
 
@@ -97,7 +97,7 @@ ${ENV_DIR}/.config-mgr-build-eggs: config_mgr_setup.py shared_setup.py common/se
 	# Download the egg files they depend upon
 	${ENV_DIR}/bin/easy_install -zmaxd config_mgr_eggs/ config_mgr_eggs/clearwater_config_manager-1.0-py2.7.egg
 	${ENV_DIR}/bin/easy_install -zmaxd config_mgr_eggs/ config_mgr_eggs/clearwater_etcd_shared-1.0-py2.7.egg
-	${ENV_DIR}/bin/easy_install -zmaxd config_mgr_eggs/ config_mgr_eggs/metaswitchcommon-0.1-py2.7-linux-x86_64.egg
+	${ENV_DIR}/bin/easy_install -zmaxd config_mgr_eggs/ config_mgr_eggs/metaswitchcommon-0.1-py2.7-linux-$(shell uname -m).egg
 
 	touch $@
 
@@ -110,7 +110,7 @@ ${ENV_DIR}/.cluster-mgr-build-eggs: cluster_mgr_setup.py shared_setup.py common/
 	# Download the egg files they depend upon
 	${ENV_DIR}/bin/easy_install -zmaxd cluster_mgr_eggs/ cluster_mgr_eggs/clearwater_cluster_manager-1.0-py2.7.egg
 	${ENV_DIR}/bin/easy_install -zmaxd cluster_mgr_eggs/ cluster_mgr_eggs/clearwater_etcd_shared-1.0-py2.7.egg
-	${ENV_DIR}/bin/easy_install -zmaxd cluster_mgr_eggs/ cluster_mgr_eggs/metaswitchcommon-0.1-py2.7-linux-x86_64.egg
+	${ENV_DIR}/bin/easy_install -zmaxd cluster_mgr_eggs/ cluster_mgr_eggs/metaswitchcommon-0.1-py2.7-linux-$(shell uname -m).egg
 
 	touch $@
 

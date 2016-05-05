@@ -16,15 +16,20 @@
 # This has to be exported to make some magic below work.
 export DH_OPTIONS
 
+DEB_HOST_ARCH ?= $(shell dpkg-architecture -qDEB_HOST_ARCH)
+
 %:
 	dh $@
 
-# Don't clean, build, test or install
+# Don't clean, build, test or install, but do copy the right build for the host architecture
 override_dh_auto_clean:
 override_dh_auto_build:
 override_dh_auto_test:
 override_dh_auto_install:
 	mkdir debian/tmp
+	mkdir -p debian/tmp/usr/bin
+	cp clearwater-etcd/$(DEB_HOST_ARCH)/etcd debian/tmp/usr/bin
+	cp clearwater-etcd/$(DEB_HOST_ARCH)/etcdctl debian/tmp/usr/bin
 
 # Don't start - monit does that for us.
 override_dh_installinit:
