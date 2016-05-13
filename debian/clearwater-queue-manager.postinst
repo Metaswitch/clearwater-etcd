@@ -70,7 +70,7 @@ case "$1" in
 
         # Start monit monitoring
         install -D --mode=0644 /usr/share/clearwater/conf/clearwater-queue-manager.monit /etc/monit/conf.d/
-        reload clearwater-monit || true
+        pkill -HUP monit || true
 
         # Restart clearwater-queue-manager. Always do this by terminating
         # clearwater-queue-manager so monit will restart it more-or-less immediately.

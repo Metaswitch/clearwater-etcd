@@ -55,7 +55,7 @@ case "$1" in
     remove|upgrade|deconfigure)
         # Stop monitoring the process
         rm -f /etc/monit/conf.d/clearwater-config-manager.monit
-        reload clearwater-monit &> /dev/null || true
+        pkill -HUP monit &> /dev/null || true
 
         # Make sure the process is stopped - do this before env is removed,
         # or init.d script won't work

@@ -70,7 +70,7 @@ case "$1" in
         
         # Start monit monitoring
         install -D --mode=0644 /usr/share/clearwater/conf/clearwater-cluster-manager.monit /etc/monit/conf.d/        
-        reload clearwater-monit || true
+        pkill -HUP monit || true
 
         # Restart clearwater-cluster-manager.  Always do this by terminating clearwater-cluster-manager so monit will
         # restart it more-or-less immediately.  (monit restart seems to have
