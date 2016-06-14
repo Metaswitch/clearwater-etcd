@@ -94,7 +94,7 @@ do_start()
   fi
   . /etc/clearwater/config
 
-  if [[ -z $local_ip ]]
+  if [ -z "$local_ip" ]
   then
     echo "/etc/clearwater/local_config not provided, not starting"
     return 3
