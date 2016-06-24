@@ -38,13 +38,13 @@
 check process etcd_process with pidfile /var/run/clearwater-etcd/clearwater-etcd.pid
   group etcd
 
-  start program    = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 6500.3; /etc/init.d/clearwater-etcd start'"
-  stop program     = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 6500.3; /etc/init.d/clearwater-etcd stop'"
-  restart program  = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 6500.3; /etc/init.d/clearwater-etcd restart'"
+  start program    = "/bin/bash -c '/usr/share/clearwater/bin/issue-alarm monit 6500.3; /etc/init.d/clearwater-etcd start'"
+  stop program     = "/bin/bash -c '/usr/share/clearwater/bin/issue-alarm monit 6500.3; /etc/init.d/clearwater-etcd stop'"
+  restart program  = "/bin/bash -c '/usr/share/clearwater/bin/issue-alarm monit 6500.3; /etc/init.d/clearwater-etcd restart'"
 
   # Check the service's resource usage, and stop the process if it's too high.
   # Monit will raise an alarm when it restarts the process
-  if memory > 80% for 6 cycles then exec "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 6500.3; /etc/init.d/clearwater-etcd stop'"
+  if memory > 80% for 6 cycles then exec "/bin/bash -c '/usr/share/clearwater/bin/issue-alarm monit 6500.3; /etc/init.d/clearwater-etcd stop'"
 
 # Clear any alarms if the process has been running long enough.
 check program etcd_uptime with path /usr/share/clearwater/infrastructure/scripts/check-etcd-uptime
@@ -67,4 +67,4 @@ check program poll_etcd_cluster with path "/usr/share/clearwater/bin/poll_etcd_c
 check program poll_etcd with path "/usr/share/clearwater/bin/poll_etcd.sh"
   group etcd
   depends on etcd_process
-  if status != 0 for 2 cycles then exec "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 6500.3; /etc/init.d/clearwater-etcd stop'"
+  if status != 0 for 2 cycles then exec "/bin/bash -c '/usr/share/clearwater/bin/issue-alarm monit 6500.3; /etc/init.d/clearwater-etcd stop'"
