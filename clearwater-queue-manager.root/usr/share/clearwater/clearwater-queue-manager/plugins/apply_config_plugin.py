@@ -45,16 +45,20 @@ class ApplyConfigPlugin(QueuePluginBase):
         return "apply_config"
 
     def at_front_of_queue(self):
-        _log.info("Restarting services")
+        _log.info("Restarting clearwater-infrastructure")
         run_command("service clearwater-infrastructure restart")
 
         if os.path.exists("/usr/share/clearwater/infrastructure/scripts/restart"):
+            _log.info("Restarting services")
             for restart_script in os.listdir("/usr/share/clearwater/infrastructure/scripts/restart"):
                 run_command("/usr/share/clearwater/infrastructure/scripts/restart/" + restart_script)
  
+        _log.info("Checking service health")
         if run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/check_node_health.py"):
+            _log.info("Services failed to restart successfully")
             run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue remove_failure apply_config")
         else:
+            _log.info("Services restarted successfully")
             run_command("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue remove_success apply_config")
 
 def load_as_plugin(params):

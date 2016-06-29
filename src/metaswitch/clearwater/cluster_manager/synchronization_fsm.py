@@ -139,7 +139,7 @@ class SyncFSM(object):
         # long" alarm is running, and cancel it if we're not
         if local_state == constants.NORMAL:
             self._alarm.cancel()
-        else:
+        elif self._plugin.should_be_in_cluster():
             self._alarm.trigger(self._id)
 
         # Handle the abnormal cases first - where the local node isn't in the

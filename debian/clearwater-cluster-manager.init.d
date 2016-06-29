@@ -101,6 +101,8 @@ do_start()
   signaling_namespace=""
   etcd_key=clearwater
   etcd_cluster_key=""
+  log_level=3
+  log_directory=/var/log/clearwater-cluster-manager
   
   # This sets up $uuid - it's created by /usr/share/clearwater/infrastructure/scripts/node_identity
   . /etc/clearwater/node_identity
@@ -110,9 +112,12 @@ do_start()
     . /usr/share/clearwater/node_type.d/$(ls /usr/share/clearwater/node_type.d | head -n 1)
   fi
   . /etc/clearwater/config
-  log_level=3
-  log_directory=/var/log/clearwater-cluster-manager
-  [ -r /etc/clearwater/user_settings ] && . /etc/clearwater/user_settings
+
+  if [ -z "$local_ip" ]
+  then
+    echo "/etc/clearwater/local_config not provided, not starting"
+    return 3
+  fi
 
   DAEMON_ARGS="--mgmt-local-ip=${management_local_ip:-$local_ip}
                --sig-local-ip=$local_ip

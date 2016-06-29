@@ -7,7 +7,7 @@
             "levels": [
                 {
                     "severity": "CLEARED",
-                    "details": "An automatic scale-up or scale-down process has completed after running for more than 15 minutes. Further nodes can now be added to or removed from the cluster.",
+                    "details": "An automatic scale-in or scale-out process has completed after running for more than 15 minutes. Further nodes can now be added to or removed from the cluster.",
                     "description": "etcd: Scaling process has finished.",
                     "cause": "The deployment does not have any scaling operations that are taking too long to complete. Further nodes can now be added to or removed from the cluster. Adding or removing nodes to/from a cluster causes this alarm. The previously issued alarm has been cleared.",
                     "effect": "The system capacity has been increased or reduced depending on whether a node was being added or removed.",
@@ -15,9 +15,9 @@
                 },
                 {
                     "severity": "MINOR",
-                    "details": "An automatic scale-up or scale-down process has been running for more than 15 minutes. Service is not impacted, but the scaling has not completed, and no further nodes can be added to or removed from the cluster until it completes.",
+                    "details": "An automatic scale-in or scale-out process has been running for more than 15 minutes. Service is not impacted, but the scaling has not completed, and no further nodes can be added to or removed from the cluster until it completes.",
                     "description": "etcd: Scaling process has been running for more than 15 minutes.",
-                    "cause": "An automatic scale-up or scale-down process has been running for more than 15 minutes.",
+                    "cause": "An automatic scale-in or scale-out process has been running for more than 15 minutes.",
                     "effect": "Service is not impacted, but the scaling has not completed, and no further nodes can be added to or removed from the cluster until it completes. The system capacity has not been increased or reduced depending on whether a node was being added or removed.",
                     "action": "Monitor for the alarm to clear. This alarm may be raised alongside other etcd alarms and they may specify possible actions. If the alarm fails to clear then contact your support representative."
                 }
@@ -78,13 +78,13 @@
                     "severity": "CLEARED",
                     "details": "The local Cassandra process is synchronized with the rest of the cluster.",
                     "description": "Cassandra: The local Cassandra is part of the Cassandra cluster.",
-                    "cause": "The local Cassandra process is synchronized with the rest of the cluster. All Cassandra ring nodes have been restored to normal operation. The previously issued alarm has been cleared.",
+                    "cause": "The local Cassandra process is synchronized with the rest of the cluster.",
                     "effect": "Cassandra database replication is fully operational.",
                     "action": "No action. The user can continue with any scaling operations (e.g. add the node to DNS or turn it down)."
                 },
                 {
                     "severity": "MAJOR",
-                    "details": "The local Cassandra process is not yet part of a cluster. This node will not see any changes made by other nodes, or vice versa.You should not direct service traffic to this node until this alarm is cleared.",
+                    "details": "The local Cassandra process is not yet part of a cluster. This node will not see any changes made by other nodes, or vice versa. You should not direct service traffic to this node until this alarm is cleared.",
                     "description": "Cassandra: The local Cassandra is not yet part of a cluster.",
                     "cause": "The local Cassandra process is not yet part of a cluster. This node will not see any changes made by other nodes, or vice versa. Adding nodes that use Cassandra to a cluster will cause this alarm.",
                     "effect": "The Cassandra database is no longer fully replicated on each node. Data written to the local Cassandra database by this node is not visible to other nodes in the cluster. You should not direct service traffic to this node until this alarm is cleared.",

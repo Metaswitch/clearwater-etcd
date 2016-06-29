@@ -1,7 +1,5 @@
-#! /usr/bin/python
-
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015 Metaswitch Networks Ltd
+# Copyright (C) 2016 Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -32,73 +30,25 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-import os
+import etcd
 import sys
-import subprocess
-from time import sleep
-import logging
 
-_log = logging.getLogger(__name__)
+mgmt_node = sys.argv[1]
+local_site = sys.argv[2]
+queue_key = sys.argv[3]
 
-class Status:
-    OK = 0
-    WARN = 1
-    CRITICAL = 2
+client = etcd.Client(mgmt_node, 4000)
+key = "/clearwater/{}/configuration/{}".format(local_site, queue_key)
+default_value = "{\"ERRORED\": [], \"FORCE\": false, \"COMPLETED\": [], \"QUEUED\": []}"
 
-def check_status():
-    output = subprocess.check_output(['monit', 'summary'])
+c = etcd.Client(mgmt_node, 4000)
+old = c.get(key).value
 
-    result = Status.OK
-    critical_errors = [
-        'Does not exist',
-        'Initializing',
-        'Data access error',
-    ]
-    warning_errors = [
-        'Uptime failed',
-    ]
-    successes = [
-        'Running',
-        'Status ok',
-        'Waiting',
-        'Not monitored',
-    ]
+print "Replacing old data %s with new data %s" % (old, default_value)
 
-    for line in output.split('\n'):
-        if line.startswith('Process') or line.startswith('Program'):
-            if any(err in line for err in critical_errors):
-                result = Status.CRITICAL
-            elif any(err in line for err in warning_errors) or \
-                    not any(status in line for status in successes):
-                result = max(result, Status.WARN)
-    _log.debug("Current status is %s" % result)
-    return result
+new = c.write(key, default_value).value
 
-def run_loop():
-    # Seconds after which we return an error
-    time_remaining = 450
-    success_count = 0
-
-    while time_remaining:
-        status = check_status()
-
-        if status in (Status.OK, Status.WARN):
-            success_count += 1
-
-        if status == Status.CRITICAL:
-            success_count = 0
-
-        if success_count >= 30:
-            return True
-
-        sleep(1)
-        time_remaining -= 1
-
-    return False
-
-if not os.getuid() == 0:
-    _log.error("Insufficient permissions to run the check status script")
-    sys.exit(1)
-
-result = 0 if run_loop() is True else 1
-sys.exit(result)
+if new == default_value:
+    print "Update succeeded"
+else:
+    print "Update failed"

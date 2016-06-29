@@ -36,11 +36,9 @@ class QueuePluginBase(object): # pragma : no cover
     __metaclass__ = ABCMeta
 
     # How long to wait for a node to do whatever it does while it's
-    # at the front of the queue. The time for another node should
-    # be greater than for the local node so that it's likely that
-    # a node can report its own failure
-    WAIT_FOR_THIS_NODE = 300
-    WAIT_FOR_OTHER_NODE = 330
+    # at the front of the queue.
+    WAIT_FOR_THIS_NODE = 480
+    WAIT_FOR_OTHER_NODE = 480
 
     def local_alarm(self):
         return (alarm_constants.LOCAL_CONFIG_RESYNCHING,
