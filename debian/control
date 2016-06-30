@@ -11,22 +11,22 @@ Homepage: http://projectclearwater.org/
 
 Package: clearwater-etcd
 Architecture: all
-Depends: python-dev, python-pip, libffi-dev, libssl-dev, clearwater-infrastructure
+Depends: python-dev, python-pip, libffi-dev, libssl-dev, clearwater-infrastructure, clearwater-monit
 Description: etcd configured for Clearwater
 
 Package: clearwater-cluster-manager
 Architecture: all
-Depends: python-dev, python-pip, libffi-dev, libssl-dev, libzmq3-dev, python-virtualenv, clearwater-etcd
+Depends: python-dev, python-pip, libffi-dev, libssl-dev, libzmq3-dev, python-virtualenv, clearwater-etcd, clearwater-monit
 Description: Cluster manager for Clearwater
 
 Package: clearwater-queue-manager
 Architecture: all
-Depends: python-dev, python-pip, libffi-dev, libssl-dev, libzmq3-dev, python-virtualenv, clearwater-etcd
+Depends: python-dev, python-pip, libffi-dev, libssl-dev, libzmq3-dev, python-virtualenv, clearwater-etcd, clearwater-monit
 Description: Queue manager for Clearwater
 
 Package: clearwater-config-manager
 Architecture: all
-Depends: python-dev, python-pip, libffi-dev, libssl-dev, libzmq3-dev, python-virtualenv, clearwater-etcd, clearwater-queue-manager
+Depends: python-dev, python-pip, libffi-dev, libssl-dev, libzmq3-dev, python-virtualenv, clearwater-etcd, clearwater-queue-manager, clearwater-monit
 Description: Configuration manager for Clearwater
 
 Package: clearwater-management
