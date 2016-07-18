@@ -100,7 +100,7 @@ create_cluster()
 
         # Build the initial cluster view string based on the IP addresses in
         # $etcd_cluster.
-        generate_initial_cluster $etcd_cluser
+        generate_initial_cluster $etcd_cluster
 
         CLUSTER_ARGS="--initial-cluster $ETCD_INITIAL_CLUSTER
                       --initial-cluster-state new"
