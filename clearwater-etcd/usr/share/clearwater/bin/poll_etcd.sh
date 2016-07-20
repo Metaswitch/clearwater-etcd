@@ -49,7 +49,15 @@ if [ -n "$1" ] && [ $1 == "--quorum" ]; then
   output="\"key\":\"$key\",\"value\":\"True\""
 else
   path="http://${management_local_ip:-$local_ip}:4000/v2/stats/self"
-  output="\"name\":\"${management_local_ip:-$local_ip}\""
+  if [ ! -z "$etcd_cluster" ]; then
+    # Configured as a master, so we will be in the list of etcd nodes.
+    output="\"name\":\"${management_local_ip:-$local_ip}\""
+  else
+    # Configured as a proxy, so we won't be in the list of etcd nodes.
+    # Just check that there is a configured master - we don't really
+    # care about what it's name or address is.
+    output="\"name\":\""
+  fi
 fi
 
 curl -L $path 2> /tmp/poll-etcd.sh.stderr.$$ | tee /tmp/poll-etcd.sh.stdout.$$ | grep -q $output
