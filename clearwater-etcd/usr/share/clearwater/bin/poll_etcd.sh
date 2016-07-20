@@ -49,7 +49,7 @@ if [ -n "$1" ] && [ $1 == "--quorum" ]; then
   output="\"key\":\"$key\",\"value\":\"True\""
 else
   path="http://${management_local_ip:-$local_ip}:4000/v2/stats/self"
-  if [ ! -z $etcd_cluster ]; then
+  if [ ! -z "$etcd_cluster" ]; then
     # Configured as a master, so we will be in the list of etcd nodes.
     output="\"name\":\"${management_local_ip:-$local_ip}\""
   else
