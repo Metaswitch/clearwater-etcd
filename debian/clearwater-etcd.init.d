@@ -77,25 +77,51 @@ DAEMONWRAPPER=/usr/bin/etcdwrapper
 listen_ip=${management_local_ip:-$local_ip}
 advertisement_ip=${management_local_ip:-$local_ip}
 
-create_cluster()
+generate_initial_cluster()
 {
-        # Creating a new cluster
-        echo Creating new cluster...
-
-        # Build the initial cluster view string based on the IP addresses in
-        # $etcd_cluster. Each entry looks like <name>=<peer url>. Replace
-        # commas with whitespace, then split on whitespace (to cope with
-        # etcd_cluster values that have spaces)
+        # We are provided with a comma or space separated list of IP
+        # addresses. We need to produce a list of comma separated
+        # entries, where each entry should look like <name>=<peer url>.
+        # Replace commas with whitespace, then split on whitespace (to
+        # cope with etcd_cluster values that have spaces)
+        # We generate names by just replacing dots with dashes.
         ETCD_INITIAL_CLUSTER=
-        for server in ${etcd_cluster//,/ }
+        for server in ${1//,/ }
         do
             server_name=${server%:*}
             server_name=${server_name//./-}
             ETCD_INITIAL_CLUSTER="${server_name}=http://$server:2380,$ETCD_INITIAL_CLUSTER"
         done
+}
+
+create_cluster()
+{
+        echo Creating new cluster...
+
+        # Build the initial cluster view string based on the IP addresses in
+        # $etcd_cluster.
+        generate_initial_cluster $etcd_cluster
 
         CLUSTER_ARGS="--initial-cluster $ETCD_INITIAL_CLUSTER
                       --initial-cluster-state new"
+}
+
+join_cluster_as_proxy()
+{
+        echo Joining cluster as proxy...
+
+        # We can either be supplied with a complete proxy setup string
+        # in $etcd_proxy, or a list of IP addresses, like etcd_cluster
+        # Disambiguate the two based on if it has an "=" sign it.
+        if [[ $etcd_proxy == *"="* ]]; then
+            ETCD_INITIAL_CLUSTER="${etcd_proxy}"
+        else
+            # Build the initial cluster view string based on the IP addresses in
+            # $etcd_proxy.
+            generate_initial_cluster $etcd_proxy
+        fi
+
+        CLUSTER_ARGS="--initial-cluster $ETCD_INITIAL_CLUSTER --proxy on"
 }
 
 setup_etcdctl_peers()
@@ -259,7 +285,7 @@ do_start()
         then
           # Run etcd as a proxy talking to the cluster.
 
-          CLUSTER_ARGS="--initial-cluster $etcd_proxy --proxy on"
+          join_cluster_as_proxy
         else
           echo "Must specify either etcd_cluster or etcd_proxy"
           return 2
