@@ -54,7 +54,7 @@ else
     output="\"name\":\"${management_local_ip:-$local_ip}\""
   else
     # Configured as a proxy, so we won't be in the list of etcd nodes.
-    # Just chck that there is a configured master - we don't really
+    # Just check that there is a configured master - we don't really
     # care about what it's name or address is.
     output="\"name\":\""
   fi
