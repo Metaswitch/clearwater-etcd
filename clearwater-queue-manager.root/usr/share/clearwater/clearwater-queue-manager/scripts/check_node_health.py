@@ -39,6 +39,7 @@ from time import sleep
 import logging
 
 _log = logging.getLogger(__name__)
+logfile = r"/tmp/node.log"
 
 class Status:
     OK = 0
@@ -46,7 +47,14 @@ class Status:
     CRITICAL = 2
 
 def check_status():
-    output = subprocess.check_output(['monit', 'summary'])
+
+    try:
+        output = subprocess.check_output(['monit', 'summary'])
+    except subprocess.CalledProcessError, e:
+        with open(logfile, 'a') as log:
+            log.write("Hit CalledProcessError in node health check \n")
+        _log.error ("subprocess.check_output hit CalledProcessError, output: %s", e.output)
+        return Status.CRITICAL
 
     result = Status.OK
     critical_errors = [
@@ -87,6 +95,8 @@ def run_loop():
 
         if status == Status.CRITICAL:
             success_count = 0
+            with open(logfile, 'a') as log:
+                log.write("checking to make sure we are appending not overwriting \n")
 
         if success_count >= 30:
             return True
