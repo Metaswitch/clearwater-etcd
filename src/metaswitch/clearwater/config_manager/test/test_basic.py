@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+# coding=ASCII
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015 Metaswitch Networks Ltd
 #
@@ -51,9 +51,7 @@ class BasicTest(unittest.TestCase):
         # Write some initial data into the key
         e._client.write("/clearwater/local/configuration/test", "initial data")
 
-        thread = Thread(target=e.main)
-        thread.daemon=True
-        thread.start()
+        e.start_thread()
 
         sleep(1)
         # Write a new value into etcd, and check that the plugin is called with
@@ -63,5 +61,27 @@ class BasicTest(unittest.TestCase):
         p._on_config_changed.assert_called_with("hello world", None)
 
         # Allow the EtcdSynchronizer to exit
-        e._terminate_flag = True
+        e.terminate()
+        sleep(1)
+
+    # Tests that non-ASCII characters get safely logged without causing the
+    # config manager to crash
+    @patch("etcd.Client", new=EtcdFactory)
+    def test_character_encoding(self):
+        p = TestPlugin()
+        e = EtcdSynchronizer(p, "10.0.0.1", "local", None, "clearwater")
+        # Write some initial data into the key
+        e._client.write("/clearwater/local/configuration/test", "initial data")
+
+        e.start_thread()
+
+        sleep(1)
+        # Write a new value into etcd, and check that the plugin is called with
+        # it
+        e._client.write("/clearwater/local/configuration/test", u"\xc2\xa3hello")
+        sleep(1)
+        p._on_config_changed.assert_called_with(u"\xc2\xa3hello", None)
+
+        # Allow the EtcdSynchronizer to exit
+        e.terminate()
         sleep(1)

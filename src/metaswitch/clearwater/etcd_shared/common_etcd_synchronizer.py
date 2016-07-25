@@ -57,6 +57,7 @@ import etcd
 from threading import Thread
 from time import sleep
 import logging
+from metaswitch.common.logging_config import prepare_for_logging 
 
 _log = logging.getLogger(__name__)
 
@@ -171,11 +172,14 @@ class CommonEtcdSynchronizer(object):
             if wait:
                 # If the cluster view hasn't changed since we last saw it, then
                 # wait for it to change before doing anything else.
-                _log.info("Read value {} from etcd, "
-                          "comparing to last value {}".format(
-                              result.value,
-                              self._last_value))
-
+                if self._last_value:
+                    _log.info("Read value %s from etcd, comparing to last "
+                              "value %s", *prepare_for_logging(result.value,
+                                                           self._last_value))
+                else:
+                    _log.info("Read value %s from etcd, no previous value "
+                              "to compare to",
+                              *prepare_for_logging(result.value))
                 if result.value == self._last_value:
                     _log.info("Watching for changes with {}".format(wait_index))
 
