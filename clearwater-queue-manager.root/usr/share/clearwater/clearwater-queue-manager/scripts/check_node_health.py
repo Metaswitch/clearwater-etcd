@@ -48,8 +48,8 @@ class Status:
 def check_status():
     try:
         output = subprocess.check_output(['monit', 'summary'])
-    except subprocess.CalledProcessError, e:
-        _log.error ("subprocess.check_output hit CalledProcessError, output: %s", e.output)
+    except subprocess.CalledProcessError as e:
+        _log.error("Check_output of Monit summary failed: return code {}, printed output {!r}".format(e.returncode,e.output))
         return Status.CRITICAL
 
     result = Status.OK
