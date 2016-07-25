@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding=ASCII
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2015 Metaswitch Networks Ltd
 #
