@@ -172,6 +172,8 @@ class CommonEtcdSynchronizer(object):
             if wait:
                 # If the cluster view hasn't changed since we last saw it, then
                 # wait for it to change before doing anything else.
+                # We need to pass the config value to a function which can
+                # prepare it for logging by encoding it as utf-8.
                 if self._last_value:
                     _log.info("Read value %s from etcd, comparing to last "
                               "value %s", *prepare_for_logging(result.value,

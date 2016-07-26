@@ -63,6 +63,8 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
                     self._plugin.file(),
                     len(value),
                     md5(value.encode("utf-8", errors="replace")).hexdigest()))
+                # We need to pass the config value to a function which can
+                # prepare it for logging by encoding it as utf-8.
                 _log.debug("Got new config value from etcd:\n%s", 
                            *prepare_for_logging(value))
                 self._plugin.on_config_changed(value, self._alarm)
