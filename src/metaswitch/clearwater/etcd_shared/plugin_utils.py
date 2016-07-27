@@ -52,23 +52,28 @@ def run_command(command, namespace=None, log_error=True):
     if namespace:
         command = "ip netns exec {} ".format(namespace) + command
 
-    try:
-        # Pass the close_fds argument to avoid the pidfile lock being held by
-        # child processes
-        output = subprocess.check_output(command,
-                                         shell=True,
-                                         stderr=subprocess.STDOUT,
-                                         close_fds=True)
-        _log.debug("Command {} succeeded and printed output {!r}".
-                   format(command, output))
+    # Pass the close_fds argument to avoid the pidfile lock being held by
+    # child processes
+
+    p = subprocess.Popen(command,
+                         shell=True,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE,
+                         close_fds=True)
+    stdout, stderr = p.communicate()
+    if p.returncode != 0:
+        # it failed, log the return code and output 
+        _log.error("Command {} failed with return code {}"
+                   " and printed output {!r}".format(command,
+                                                     p.returncode,
+                                                     p.output))
+        return p.returncode
+    else:
+        # it succeeded, just log out stderr of the command run
+        _log.warning("Command {} succeeded, with stderr output {!r}".
+                      format(command, stderr))
         return 0
-    except subprocess.CalledProcessError as e:
-        if log_error:
-            _log.error("Command {} failed with return code {}"
-                       " and printed output {!r}".format(command,
-                                                         e.returncode,
-                                                         e.output))
-        return e.returncode
+
 
 def safely_write(filename, contents, permissions=0644):
     """Writes a file without race conditions, by writing to a temporary file and then atomically renaming it"""
