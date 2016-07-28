@@ -54,7 +54,6 @@ def run_command(command, namespace=None, log_error=True):
 
     # Pass the close_fds argument to avoid the pidfile lock being held by
     # child processes
-
     p = subprocess.Popen(command,
                          shell=True,
                          stdout=subprocess.PIPE,
@@ -62,7 +61,7 @@ def run_command(command, namespace=None, log_error=True):
                          close_fds=True)
     stdout, stderr = p.communicate()
     if p.returncode != 0:
-        # it failed, log the return code and output 
+        # it failed, log the return code and output
         _log.error("Command {} failed with return code {}"
                    " and printed output {!r}".format(command,
                                                      p.returncode,
@@ -71,12 +70,13 @@ def run_command(command, namespace=None, log_error=True):
     else:
         # it succeeded, just log out stderr of the command run
         _log.warning("Command {} succeeded, with stderr output {!r}".
-                      format(command, stderr))
+                     format(command, stderr))
         return 0
 
 
 def safely_write(filename, contents, permissions=0644):
-    """Writes a file without race conditions, by writing to a temporary file and then atomically renaming it"""
+    """Writes a file without race conditions, by writing to a temporary file
+    and then atomically renaming it"""
 
     # Create the temporary file in the same directory (to ensure it's on the
     # same filesystem and can be moved atomically), and don't automatically
