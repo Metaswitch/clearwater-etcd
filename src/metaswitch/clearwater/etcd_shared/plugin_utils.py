@@ -62,15 +62,21 @@ def run_command(command, namespace=None, log_error=True):
     stdout, stderr = p.communicate()
     if p.returncode != 0:
         # it failed, log the return code and output
-        _log.error("Command {} failed with return code {}"
-                   " and printed output {!r}".format(command,
-                                                     p.returncode,
-                                                     p.output))
-        return p.returncode
+        if log_error:
+            _log.error("Command {} failed with return code {}, "
+                       "stdout {!r}, and stderr {!r}".format(command,
+                                                             p.returncode,
+                                                             stdout,
+                                                             stderr))
+            return p.returncode
     else:
-        # it succeeded, just log out stderr of the command run
-        _log.warning("Command {} succeeded, with stderr output {!r}".
-                     format(command, stderr))
+        # it succeeded, log out stderr of the command run if present
+        if stderr:
+            _log.warning("Command {} succeeded, with stderr output {!r}".
+                         format(command, stderr))
+        else:
+            _log.debug("Command {} succeeded".format(command))
+
         return 0
 
 
