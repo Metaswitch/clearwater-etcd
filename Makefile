@@ -39,7 +39,7 @@ ${ENV_DIR}/bin/flake8: env
 	${ENV_DIR}/bin/pip install flake8
 
 ${ENV_DIR}/bin/coverage: env
-	${ENV_DIR}/bin/pip install coverage
+	${ENV_DIR}/bin/pip install coverage==4.1
 
 verify: ${ENV_DIR}/bin/flake8
 	${ENV_DIR}/bin/flake8 --select=E10,E11,E9,F src/
