@@ -40,13 +40,20 @@ import logging
 
 _log = logging.getLogger(__name__)
 
+
 class Status:
     OK = 0
     WARN = 1
     CRITICAL = 2
 
+
 def check_status():
-    output = subprocess.check_output(['monit', 'summary'])
+    try:
+        output = subprocess.check_output(['monit', 'summary'])
+    except subprocess.CalledProcessError as e:
+        _log.error("Check_output of Monit summary failed: return code {},"
+                   " printed output {!r}".format(e.returncode, e.output))
+        return Status.CRITICAL
 
     result = Status.OK
     critical_errors = [
@@ -73,6 +80,7 @@ def check_status():
                 result = max(result, Status.WARN)
     _log.debug("Current status is %s" % result)
     return result
+
 
 def run_loop():
     # Seconds after which we return an error

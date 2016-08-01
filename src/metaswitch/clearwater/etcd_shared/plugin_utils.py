@@ -52,26 +52,37 @@ def run_command(command, namespace=None, log_error=True):
     if namespace:
         command = "ip netns exec {} ".format(namespace) + command
 
-    try:
-        # Pass the close_fds argument to avoid the pidfile lock being held by
-        # child processes
-        output = subprocess.check_output(command,
-                                         shell=True,
-                                         stderr=subprocess.STDOUT,
-                                         close_fds=True)
-        _log.debug("Command {} succeeded and printed output {!r}".
-                   format(command, output))
-        return 0
-    except subprocess.CalledProcessError as e:
+    # Pass the close_fds argument to avoid the pidfile lock being held by
+    # child processes
+    p = subprocess.Popen(command,
+                         shell=True,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE,
+                         close_fds=True)
+    stdout, stderr = p.communicate()
+    if p.returncode != 0:
+        # it failed, log the return code and output
         if log_error:
-            _log.error("Command {} failed with return code {}"
-                       " and printed output {!r}".format(command,
-                                                         e.returncode,
-                                                         e.output))
-        return e.returncode
+            _log.error("Command {} failed with return code {}, "
+                       "stdout {!r}, and stderr {!r}".format(command,
+                                                             p.returncode,
+                                                             stdout,
+                                                             stderr))
+            return p.returncode
+    else:
+        # it succeeded, log out stderr of the command run if present
+        if stderr:
+            _log.warning("Command {} succeeded, with stderr output {!r}".
+                         format(command, stderr))
+        else:
+            _log.debug("Command {} succeeded".format(command))
+
+        return 0
+
 
 def safely_write(filename, contents, permissions=0644):
-    """Writes a file without race conditions, by writing to a temporary file and then atomically renaming it"""
+    """Writes a file without race conditions, by writing to a temporary file
+    and then atomically renaming it"""
 
     # Create the temporary file in the same directory (to ensure it's on the
     # same filesystem and can be moved atomically), and don't automatically
