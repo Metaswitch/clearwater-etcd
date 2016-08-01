@@ -67,7 +67,7 @@ env: cluster_mgr_setup.py queue_mgr_setup.py config_mgr_setup.py shared_setup.py
 $(ENV_DIR)/bin/python:
 	# Set up the virtual environment
 	virtualenv --setuptools --python=$(PYTHON_BIN) $(ENV_DIR)
-	$(ENV_DIR)/bin/easy_install "setuptools>0.7"
+	$(ENV_DIR)/bin/easy_install "setuptools==24"
 	$(ENV_DIR)/bin/easy_install distribute
 
 include build-infra/cw-deb.mk
