@@ -37,6 +37,7 @@ import unittest
 from metaswitch.clearwater.etcd_shared.test.mock_python_etcd import EtcdFactory
 from metaswitch.clearwater.config_manager.etcd_synchronizer import \
     EtcdSynchronizer
+from metaswitch.common.logging_config import prepare_for_logging
 from .plugin import TestPlugin
 from mock import patch
 from threading import Thread
@@ -85,3 +86,9 @@ class BasicTest(unittest.TestCase):
         # Allow the EtcdSynchronizer to exit
         e.terminate()
         sleep(1)
+    
+    @patch("etcd.Client", new=EtcdFactory)
+    def testEncodingFunction(self):
+        encoded_string = prepare_for_logging(u"\xc2\xa3hello")
+        self.assertEqual(encoded_string, ['\xc3\x82\xc2\xa3hello'], msg="Incorrect encoded string")
+
