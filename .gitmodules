@@ -4,3 +4,6 @@
 [submodule "common"]
 	path = common
 	url = git@github.com:Metaswitch/python-common.git
+[submodule "src/clearwater_etcd_plugins"]
+	path = src/clearwater_etcd_plugins
+	url = git@github.com:Metaswitch/clearwater-etcd-plugins.git
