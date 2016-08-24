@@ -36,54 +36,25 @@ import unittest
 import mock
 import logging
 import uuid
+from ConfigParser import RawConfigParser
+from StringIO import StringIO
+from collections import OrderedDict
 
 _log = logging.getLogger()
 
-from textwrap import dedent
-from metaswitch.clearwater.cluster_manager.plugin_utils import WARNING_HEADER
 from clearwater_etcd_plugins.chronos.chronos_plugin import ChronosPlugin
 from metaswitch.clearwater.cluster_manager.plugin_base import PluginParams
-from metaswitch.clearwater.cluster_manager import alarm_constants, constants
+from metaswitch.clearwater.cluster_manager import alarm_constants
 
 
-def calculate_contents(cluster_view, current_server, uuid):
-    joining = [constants.JOINING_ACKNOWLEDGED_CHANGE,
-               constants.JOINING_CONFIG_CHANGED]
-    staying = [constants.NORMAL_ACKNOWLEDGED_CHANGE,
-               constants.NORMAL_CONFIG_CHANGED,
-               constants.NORMAL]
-    leaving = [constants.LEAVING_ACKNOWLEDGED_CHANGE,
-               constants.LEAVING_CONFIG_CHANGED]
-
-    joining_servers = ([k for k, v in cluster_view.iteritems()
-                        if v in joining])
-    staying_servers = ([k for k, v in cluster_view.iteritems()
-                        if v in staying])
-    leaving_servers = ([k for k, v in cluster_view.iteritems()
-                        if v in leaving])
-
-    uuid_bytes = uuid.bytes
-    instance_id = ord(uuid_bytes[0]) & 0b0111111
-    deployment_id = ord(uuid_bytes[1]) & 0b00000111 
-
-    contents = dedent('''\
-        {}
-        [identity]
-        instance_id = {}
-        deployment_id = {}
-
-        [cluster]
-        localhost = {}
-        ''').format(WARNING_HEADER, instance_id, deployment_id, current_server)
-
-    for node in joining_servers:
-        contents += 'joining = {}\n'.format(node)
-    for node in staying_servers:
-        contents += 'node = {}\n'.format(node)
-    for node in leaving_servers:
-        contents += 'leaving = {}\n'.format(node)
-
-    return contents
+# Config Parser is not good at handling duplicate keys within sections
+# This class can be passed into RawConfigParser to gather multiple entries
+class MultiOrderedDict(OrderedDict):
+    def __setitem__(self, key, value):
+        if isinstance(value, list) and key in self:
+            self[key].extend(value)
+        else:
+            super(MultiOrderedDict, self).__setitem__(key, value)
 
 
 class TestChronosPlugin(unittest.TestCase):
@@ -93,30 +64,46 @@ class TestChronosPlugin(unittest.TestCase):
     def test_write_config(self, mock_get_alarm, mock_safely_write, mock_run_command):
         """Test the chronos_plugin writes chronos cluster settings correctly"""
 
-        """Create a plugin with dummy parameters"""
-        test_uuid = uuid.uuid4()
+        # Create a plugin with dummy parameters
         plugin = ChronosPlugin(PluginParams(ip='10.0.0.1',
                                             mgmt_ip='10.0.1.1',
                                             local_site='local_site',
                                             remote_site='remote_site',
                                             remote_cassandra_seeds='',
                                             signaling_namespace='',
-                                            uuid=test_uuid,
+                                            uuid=uuid.UUID('92a674aa-a64b-4549-b150-596fd466923f'),
                                             etcd_key='etcd_key',
                                             etcd_cluster_key='etcd_cluster_key'))
 
         # We expect this alarm to be called on creation of the plugin
         mock_get_alarm.assert_called_once_with('cluster-manager', alarm_constants.CHRONOS_NOT_YET_CLUSTERED)
 
-        """Have the plugin write chronos cluster settings"""
-        # First calculate the contents of the file that should be written
-        filename = '/etc/chronos/chronos_cluster.conf'
-        cluster_view =  {"10.0.0.1": "normal", "10.0.0.2": "joining, config changed", "10.0.0.3": "joining, acknowledged change", "10.0.0.4": "leaving, config changed", "10.0.0.5": "leaving, acknowledged change"}
-        current_server='10.0.0.1'
-        contents = calculate_contents(cluster_view, current_server, test_uuid)
+        # Build a cluster_view that includes all possible node states
+        cluster_view = {"10.0.0.1": "waiting to join", "10.0.0.2": "joining", "10.0.0.3": "joining, acknowledged change", "10.0.0.4": "joining, config changed", "10.0.0.5": "normal", "10.0.0.6": "normal, acknowledged change", "10.0.0.7": "normal, config changed", "10.0.0.8": "waiting to leave", "10.0.0.9": "leaving", "10.0.0.10": "leaving, acknowledged change", "10.0.0.11": "leaving, config changed", "10.0.0.12": "finished", "10.0.0.13": "error"}
 
         # Call the plugin to write the settings itself, and catch and compare the file contents
         plugin.write_cluster_settings(cluster_view)
-        mock_safely_write.assert_called_once_with(filename, contents)
+        mock_safely_write.assert_called_once()
+        # Save off the arguments the plugin called our mock with
+        args = mock_safely_write.call_args
+
         # Catch the call to reload chronos
         mock_run_command.assert_called_once_with('service chronos reload')
+
+        # Check the plugin is attempting to write to the correct location
+        self.assertEqual("/etc/chronos/chronos_cluster.conf", args[0][0])
+
+        # ConfigParser can't parse plain strings in python 2.7
+        # Load the config into a buffer and pass it in as a string like object
+        buf = StringIO(args[0][1])
+        config = RawConfigParser(dict_type=MultiOrderedDict)
+        config.readfp(buf)
+
+        # Check identity section
+        self.assertEqual(config.get('identity', 'instance_id'), '18')
+        self.assertEqual(config.get('identity', 'deployment_id'), '6')
+        # Check cluster section
+        self.assertEqual(config.get('cluster', 'localhost'), '10.0.0.1')
+        self.assertTrue(all(ip in config.get('cluster', 'joining') for ip in ("10.0.0.3", "10.0.0.4")))
+        self.assertTrue(all(ip in config.get('cluster', 'node') for ip in ("10.0.0.5", "10.0.0.6", "10.0.0.7")))
+        self.assertTrue(all(ip in config.get('cluster', 'leaving') for ip in ("10.0.0.10", "10.0.0.11")))
