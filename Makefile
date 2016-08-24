@@ -45,8 +45,9 @@ ${ENV_DIR}/bin/flake8: env
 ${ENV_DIR}/bin/coverage: env
 	${ENV_DIR}/bin/pip install coverage==4.1
 
+# TODO Add etcd-plugins to the verify step, once full UT is in place
 verify: ${ENV_DIR}/bin/flake8
-	${ENV_DIR}/bin/flake8 --select=E10,E11,E9,F src/
+	${ENV_DIR}/bin/flake8 --select=E10,E11,E9,F src/ --exclude src/clearwater_etcd_plugins/
 
 style: ${ENV_DIR}/bin/flake8
 	${ENV_DIR}/bin/flake8 --select=E,W,C,N --max-line-length=100 src/
@@ -54,6 +55,7 @@ style: ${ENV_DIR}/bin/flake8
 explain-style: ${ENV_DIR}/bin/flake8
 	${ENV_DIR}/bin/flake8 --select=E,W,C,N --show-pep8 --first --max-line-length=100 src/
 
+# TODO Remove plugin exclusions from .coveragerc, and ensure full coverage of all plugins
 .PHONY: coverage
 coverage: ${ENV_DIR}/bin/coverage cluster_mgr_setup.py queue_mgr_setup.py config_mgr_setup.py plugins_setup.py
 	rm -rf htmlcov/
