@@ -57,20 +57,20 @@ cluster_state()
     # cluster error).
     local out=`nice -n 19 etcdctl cluster-health 2> /dev/null`
     if [ "$?" = 0 ] ; then
-      local unhealthy_cluster_state_regex="^cluster is unhealthy$"
-      if [[ $out =~ $cluster_state_regex ]]
+      local unhealthy_cluster_state_regex="cluster is unhealthy"
+      if [[ $out =~ $unhealthy_cluster_state_regex ]]
       then
         return 2
       fi
 
-      local maybe_unhealthy_cluster_state_regex="^cluster may be unhealthy.*"
-      if [[ $out =~ $cluster_state_regex ]]
+      local maybe_unhealthy_cluster_state_regex="cluster may be unhealthy"
+      if [[ $out =~ $maybe_unhealthy_cluster_state_regex ]]
       then
         return 2
       fi
 
       IFS=$'\n'
-      local node_state_regex="^member [a-zA-Z0-9]* is unhealthy$"
+      local node_state_regex="member [a-zA-Z0-9]* is unhealthy"
       for line in $out
       do
         if [[ $line =~ $node_state_regex ]]
