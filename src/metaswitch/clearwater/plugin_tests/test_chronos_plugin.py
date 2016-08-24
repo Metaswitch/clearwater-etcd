@@ -76,12 +76,25 @@ class TestChronosPlugin(unittest.TestCase):
                                             etcd_cluster_key='etcd_cluster_key'))
 
         # We expect this alarm to be called on creation of the plugin
-        mock_get_alarm.assert_called_once_with('cluster-manager', alarm_constants.CHRONOS_NOT_YET_CLUSTERED)
+        mock_get_alarm.assert_called_once_with('cluster-manager',
+                                               alarm_constants.CHRONOS_NOT_YET_CLUSTERED)
 
         # Build a cluster_view that includes all possible node states
-        cluster_view = {"10.0.0.1": "waiting to join", "10.0.0.2": "joining", "10.0.0.3": "joining, acknowledged change", "10.0.0.4": "joining, config changed", "10.0.0.5": "normal", "10.0.0.6": "normal, acknowledged change", "10.0.0.7": "normal, config changed", "10.0.0.8": "waiting to leave", "10.0.0.9": "leaving", "10.0.0.10": "leaving, acknowledged change", "10.0.0.11": "leaving, config changed", "10.0.0.12": "finished", "10.0.0.13": "error"}
+        cluster_view = {"10.0.0.1": "waiting to join",
+                        "10.0.0.2": "joining",
+                        "10.0.0.3": "joining, acknowledged change",
+                        "10.0.0.4": "joining, config changed",
+                        "10.0.0.5": "normal",
+                        "10.0.0.6": "normal, acknowledged change",
+                        "10.0.0.7": "normal, config changed",
+                        "10.0.0.8": "waiting to leave",
+                        "10.0.0.9": "leaving",
+                        "10.0.0.10": "leaving, acknowledged change",
+                        "10.0.0.11": "leaving, config changed",
+                        "10.0.0.12": "finished",
+                        "10.0.0.13": "error"}
 
-        # Call the plugin to write the settings itself, and catch and compare the file contents
+        # Call the plugin to write the settings itself
         plugin.write_cluster_settings(cluster_view)
         mock_safely_write.assert_called_once()
         # Save off the arguments the plugin called our mock with
@@ -104,6 +117,9 @@ class TestChronosPlugin(unittest.TestCase):
         self.assertEqual(config.get('identity', 'deployment_id'), '6')
         # Check cluster section
         self.assertEqual(config.get('cluster', 'localhost'), '10.0.0.1')
-        self.assertTrue(all(ip in config.get('cluster', 'joining') for ip in ("10.0.0.3", "10.0.0.4")))
-        self.assertTrue(all(ip in config.get('cluster', 'node') for ip in ("10.0.0.5", "10.0.0.6", "10.0.0.7")))
-        self.assertTrue(all(ip in config.get('cluster', 'leaving') for ip in ("10.0.0.10", "10.0.0.11")))
+        self.assertTrue(all(ip in config.get('cluster', 'joining')
+                            for ip in ("10.0.0.3", "10.0.0.4")))
+        self.assertTrue(all(ip in config.get('cluster', 'node')
+                            for ip in ("10.0.0.5", "10.0.0.6", "10.0.0.7")))
+        self.assertTrue(all(ip in config.get('cluster', 'leaving')
+                            for ip in ("10.0.0.10", "10.0.0.11")))

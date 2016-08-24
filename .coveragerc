@@ -7,6 +7,11 @@ omit =
   **/plugin_utils.py
   src/metaswitch/clearwater/queue_manager/pdlogs.py
   src/metaswitch/clearwater/queue_manager/null_plugin.py
+  src/clearwater_etcd_plugins/clearwater-cassandra/**
+  src/clearwater_etcd_plugins/clearwater-config-manager/**
+  src/clearwater_etcd_plugins/clearwater-memcached/**
+  src/clearwater_etcd_plugins/clearwater-queue-manager/**
+  src/clearwater_etcd_plugins/sprout/**
 parallel = False
 
 [report]

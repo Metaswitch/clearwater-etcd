@@ -55,7 +55,7 @@ explain-style: ${ENV_DIR}/bin/flake8
 	${ENV_DIR}/bin/flake8 --select=E,W,C,N --show-pep8 --first --max-line-length=100 src/
 
 .PHONY: coverage
-coverage: ${ENV_DIR}/bin/coverage cluster_mgr_setup.py queue_mgr_setup.py config_mgr_setup.py
+coverage: ${ENV_DIR}/bin/coverage cluster_mgr_setup.py queue_mgr_setup.py config_mgr_setup.py plugins_setup.py
 	rm -rf htmlcov/
 	${ENV_DIR}/bin/coverage erase
 	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run cluster_mgr_setup.py test
