@@ -31,9 +31,13 @@ test_queue_mgr: queue_mgr_setup.py env
 test_config_mgr: config_mgr_setup.py env
 	PYTHONPATH=src:common ${ENV_PYTHON} config_mgr_setup.py test -v
 
+.PHONY: test_plugins
+test_plugins: plugins_setup.py env
+	PYTHONPATH=src:common ${ENV_PYTHON} plugins_setup.py test -v
+
 .PHONY: run_test
 run_test: queue_mgr_setup.py config_mgr_setup.py cluster_mgr_setup.py env
-	PYTHONPATH=src:common ${ENV_PYTHON} cluster_mgr_setup.py test -v && PYTHONPATH=src:common ${ENV_PYTHON} queue_mgr_setup.py test -v && PYTHONPATH=src:common ${ENV_PYTHON} config_mgr_setup.py test -v
+	PYTHONPATH=src:common ${ENV_PYTHON} cluster_mgr_setup.py test -v && PYTHONPATH=src:common ${ENV_PYTHON} queue_mgr_setup.py test -v && PYTHONPATH=src:common ${ENV_PYTHON} config_mgr_setup.py test -v && PYTHONPATH=src:common ${ENV_PYTHON} plugins_setup.py test -v
 
 ${ENV_DIR}/bin/flake8: env
 	${ENV_DIR}/bin/pip install flake8
@@ -41,8 +45,9 @@ ${ENV_DIR}/bin/flake8: env
 ${ENV_DIR}/bin/coverage: env
 	${ENV_DIR}/bin/pip install coverage==4.1
 
+# TODO Add etcd-plugins to the verify step, once full UT is in place
 verify: ${ENV_DIR}/bin/flake8
-	${ENV_DIR}/bin/flake8 --select=E10,E11,E9,F src/
+	${ENV_DIR}/bin/flake8 --select=E10,E11,E9,F src/ --exclude src/clearwater_etcd_plugins/
 
 style: ${ENV_DIR}/bin/flake8
 	${ENV_DIR}/bin/flake8 --select=E,W,C,N --max-line-length=100 src/
@@ -50,19 +55,21 @@ style: ${ENV_DIR}/bin/flake8
 explain-style: ${ENV_DIR}/bin/flake8
 	${ENV_DIR}/bin/flake8 --select=E,W,C,N --show-pep8 --first --max-line-length=100 src/
 
+# TODO Remove plugin exclusions from .coveragerc, and ensure full coverage of all plugins
 .PHONY: coverage
-coverage: ${ENV_DIR}/bin/coverage cluster_mgr_setup.py queue_mgr_setup.py config_mgr_setup.py
+coverage: ${ENV_DIR}/bin/coverage cluster_mgr_setup.py queue_mgr_setup.py config_mgr_setup.py plugins_setup.py
 	rm -rf htmlcov/
 	${ENV_DIR}/bin/coverage erase
 	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run cluster_mgr_setup.py test
 	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run -a queue_mgr_setup.py test
 	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run -a config_mgr_setup.py test
+	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run -a plugins_setup.py test
 	${ENV_DIR}/bin/coverage combine
 	${ENV_DIR}/bin/coverage report -m --fail-under 100
 	${ENV_DIR}/bin/coverage xml
 
 .PHONY: env
-env: cluster_mgr_setup.py queue_mgr_setup.py config_mgr_setup.py shared_setup.py $(ENV_DIR)/bin/python build-eggs
+env: cluster_mgr_setup.py queue_mgr_setup.py config_mgr_setup.py shared_setup.py plugins_setup.py $(ENV_DIR)/bin/python build-eggs
 
 $(ENV_DIR)/bin/python:
 	# Set up the virtual environment

@@ -1,2 +1,5 @@
 config_mgr_eggs/* usr/share/clearwater/clearwater-config-manager/eggs/
 clearwater-config-manager.root/* /
+
+# Install the etcd plugin
+src/clearwater_etcd_plugins/clearwater-config-manager/shared_config_plugin.py /usr/share/clearwater/clearwater-config-manager/plugins/
