@@ -86,9 +86,3 @@ class BasicTest(unittest.TestCase):
         # Allow the EtcdSynchronizer to exit
         e.terminate()
         sleep(1)
-    
-    @patch("etcd.Client", new=EtcdFactory)
-    def testEncodingFunction(self):
-        encoded_string = prepare_for_logging(u"\xc2\xa3hello")
-        self.assertEqual(encoded_string, ['\xc3\x82\xc2\xa3hello'], msg="Incorrect encoded string")
-
