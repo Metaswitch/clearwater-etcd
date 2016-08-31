@@ -2,4 +2,4 @@ queue_mgr_eggs/* usr/share/clearwater/clearwater-queue-manager/eggs/
 clearwater-queue-manager.root/* /
 
 # Install the etcd plugin
-src/clearwater_etcd_plugins/clearwater-queue-manager/apply_config_plugin.py /usr/share/clearwater/clearwater-queue-manager/plugins/
+src/clearwater_etcd_plugins/clearwater_queue_manager/apply_config_plugin.py /usr/share/clearwater/clearwater-queue-manager/plugins/
