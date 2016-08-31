@@ -42,7 +42,7 @@ setup(
     name='clearwater-etcd-plugin-tests',
     version='1.0',
     namespace_packages = ['metaswitch'],
-    packages=['metaswitch', 'metaswitch.clearwater', 'metaswitch.clearwater.plugin_tests','clearwater_etcd_plugins','clearwater_etcd_plugins.chronos'],
+    packages=['metaswitch', 'metaswitch.clearwater', 'metaswitch.clearwater.plugin_tests','clearwater_etcd_plugins','clearwater_etcd_plugins.chronos', 'clearwater_etcd_plugins.clearwater_memcached'],
     package_dir={'':'src'},  
     package_data={
         '': ['*.eml'],
