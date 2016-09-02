@@ -37,17 +37,19 @@
 Usage:
   main.py --local-ip=IP --local-site=SITE --etcd-key=KEY --node-type=TYPE
           [--foreground] [--log-level=LVL] [--log-directory=DIR] [--pidfile=FILE]
+          [--ignore-plugin-responses=RESP]
 
 Options:
-  -h --help                   Show this screen.
-  --local-ip=IP               IP address
-  --local-site=NAME           Local site name
-  --etcd-key=KEY              Etcd key (top level)
-  --node-type=TYPE            Node type (e.g. Sprout, AIO, ...)
-  --foreground                Don't daemonise
-  --log-level=LVL             Level to log at, 0-4 [default: 3]
-  --log-directory=DIR         Directory to log to [default: ./]
-  --pidfile=FILE              Pidfile to write [default: ./config-manager.pid]
+  -h --help                      Show this screen.
+  --local-ip=IP                  IP address
+  --local-site=NAME              Local site name
+  --etcd-key=KEY                 Etcd key (top level)
+  --node-type=TYPE               Node type (e.g. Sprout, AIO, ...)
+  --foreground                   Don't daemonise
+  --log-level=LVL                Level to log at, 0-4 [default: 3]
+  --log-directory=DIR            Directory to log to [default: ./]
+  --pidfile=FILE                 Pidfile to write [default: ./config-manager.pid]
+  --ignore-plugin-responses=RESP Don't wait for plugin responses
 
 """
 
@@ -55,6 +57,7 @@ from docopt import docopt, DocoptExit
 
 from metaswitch.common import logging_config, utils
 from metaswitch.clearwater.etcd_shared.plugin_loader import load_plugins_in_dir
+from metaswitch.clearwater.queue_manager.plugin_base import PluginParams
 from metaswitch.clearwater.queue_manager.etcd_synchronizer \
     import EtcdSynchronizer
 from metaswitch.clearwater.queue_manager import pdlogs
@@ -89,6 +92,7 @@ def main(args):
     node_type = arguments['--node-type']
     log_dir = arguments['--log-directory']
     log_level = LOG_LEVELS.get(arguments['--log-level'], logging.DEBUG)
+    ignore_plugin_responses = arguments['--ignore-plugin-responses']
 
     stdout_err_log = os.path.join(log_dir, "queue-manager.output.log")
 
@@ -119,7 +123,8 @@ def main(args):
         exit(1)
 
     plugins_dir = "/usr/share/clearwater/clearwater-queue-manager/plugins/"
-    plugins = load_plugins_in_dir(plugins_dir)
+    plugins = load_plugins_in_dir(plugins_dir,
+                                  PluginParams(ignore_plugin_responses=ignore_plugin_responses))
     plugins.sort(key=lambda x: x.key())
     threads = []
 

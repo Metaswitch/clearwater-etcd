@@ -31,6 +31,11 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 from abc import ABCMeta, abstractmethod
 import alarm_constants
+import collections
+
+PluginParams = collections.namedtuple(
+                 'PluginParams',
+                 ['ignore_plugin_responses'])
 
 class QueuePluginBase(object): # pragma : no cover
     __metaclass__ = ABCMeta
