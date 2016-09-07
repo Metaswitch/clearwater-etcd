@@ -229,6 +229,39 @@ wait_for_etcd()
         done
 }
 
+verify_etcd_health()
+{
+        # If we're already in the member list but are 'unstarted', remove our data dir, which
+        # contains stale data from a previous unsuccessful startup attempt. This copes with a race
+        # condition where member add succeeds but etcd doesn't then come up.
+        #
+        # The output of member list looks like:
+        # <id>[unstarted]: name=xx-xx-xx-xx peerURLs=http://xx.xx.xx.xx:2380 clientURLs=http://xx.xx.xx.xx:4000
+        # The [unstarted] is only present while the member hasn't fully joined the etcd cluster
+        setup_etcdctl_peers
+        member_list=$(/usr/bin/etcdctl member list)
+        local_member_id=$(echo $member_list | grep -F -w "http://$local_ip:2380" | grep -o -E "^[^:]*" | grep -o "^[^[]\+")
+        unstarted_member_id=$(echo $member_list | grep -F -w "http://$local_ip:2380" | grep "unstarted")
+        if [[ $unstarted_member != '' ]]
+        then
+          /usr/bin/etcdctl member remove $local_member_id
+          rm -rf $DATA_DIR/$advertisement_ip
+        fi
+
+        # Check we can read our write-ahead log and snapshot files. If not, our
+        # data directory is irrecoverably corrupt (perhaps because we ran out
+        # of disk space and the files were half-written), so we should clean it
+        # out and rejoin the cluster from scratch.
+        timeout 5 /usr/bin/etcd-dump-logs --data-dir $DATA_DIR/$advertisement_ip > /dev/null 2>&1
+        rc=$?
+
+        if [[ $rc != 0 ]]
+        then
+          /usr/bin/etcdctl member remove $local_member_id
+          rm -rf $DATA_DIR/$advertisement_ip
+        fi
+}
+
 #
 # Function that starts the daemon/service
 #
@@ -244,21 +277,7 @@ do_start()
         ETCD_NAME=${advertisement_ip//./-}
         CLUSTER_ARGS=
 
-        # If we're already in the member list but are 'unstarted', remove our data dir, which
-        # contains stale data from a previous unsuccessful startup attempt. This copes with a race
-        # condition where member add succeeds but etcd doesn't then come up.
-        #
-        # The output of member list looks like:
-        # <id>[unstarted]: name=xx-xx-xx-xx peerURLs=http://xx.xx.xx.xx:2380 clientURLs=http://xx.xx.xx.xx:4000
-        # The [unstarted] is only present while the member hasn't fully joined the etcd cluster
-        setup_etcdctl_peers
-        member=$(/usr/bin/etcdctl member list | grep "unstarted" | grep -F -w $listen_ip )
-        if [[ $member != '' ]]
-        then
-          member_id=$(echo $member | grep -o "^[^[]\+")
-          /usr/bin/etcdctl member remove $member_id
-          rm -rf $DATA_DIR/$advertisement_ip
-        fi
+        verify_etcd_health
 
         if [ -n "$etcd_cluster" ] && [ -n "$etcd_proxy" ]
         then
