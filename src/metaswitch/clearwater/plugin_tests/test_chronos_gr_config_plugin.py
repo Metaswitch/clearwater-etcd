@@ -1,4 +1,4 @@
-# @file test_config_manager_plugin.py
+# @file test_chronos_gr_config_plugin.py
 #
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2016 Metaswitch Networks Ltd

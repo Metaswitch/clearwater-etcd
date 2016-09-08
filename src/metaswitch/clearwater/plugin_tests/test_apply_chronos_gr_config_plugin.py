@@ -1,4 +1,4 @@
-# @file test_chronos_gr_restart_plugin.py
+# @file test_apply_chronos_gr_config_plugin.py
 #
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2016 Metaswitch Networks Ltd
@@ -47,10 +47,6 @@ class TestApplyChronosGRConfigPlugin(unittest.TestCase):
 
         # Create the plugin
         plugin = ApplyChronosGRConfigPlugin({})
-
-        # Set up the mock environment and expectations
-        #mock_os_path_exists.return_value = True
-        #mock_os_listdir.return_value = ["test_restart_script"]
 
         expected_command_call_list = \
             [mock.call("service chronos stop"),
