@@ -51,8 +51,7 @@ class TestMemcachedPlugin(unittest.TestCase):
     @mock.patch('clearwater_etcd_plugins.clearwater_memcached.memcached_utils.safely_write')
     @mock.patch('metaswitch.common.alarms.alarm_manager.get_alarm')
     def test_write_config_all_node_states(self, mock_get_alarm, mock_safely_write, mock_run_command):
-        """Test the memcached_plugin writes memcached cluster settings
-           correctly when given all possible server states"""
+        """Test memcached_plugin writes settings correctly when given all possible server states"""
 
         # Create a plugin with dummy parameters
         plugin = MemcachedPlugin(PluginParams(ip='10.0.0.1',
@@ -126,7 +125,7 @@ class TestMemcachedPlugin(unittest.TestCase):
     @mock.patch('clearwater_etcd_plugins.clearwater_memcached.memcached_utils.safely_write')
     @mock.patch('metaswitch.common.alarms.alarm_manager.get_alarm')
     def test_write_config_no_server_changes(self, mock_get_alarm, mock_safely_write, mock_run_command):
-        """Test the memcached_plugin writes memcached cluster settings correctly"""
+        """Test memcached_plugin writes settings correctly when servers aren't changing state"""
 
         # Create a plugin with dummy parameters
         plugin = MemcachedPlugin(PluginParams(ip='10.0.0.1',
@@ -191,7 +190,7 @@ class TestMemcachedPlugin(unittest.TestCase):
     @mock.patch('clearwater_etcd_plugins.clearwater_memcached.memcached_remote_plugin.run_command')
     @mock.patch('clearwater_etcd_plugins.clearwater_memcached.memcached_utils.safely_write')
     def test_remote_plugin_write_config(self, mock_safely_write, mock_run_command):
-        """Test the memcached_plugin writes memcached cluster settings correctly"""
+        """Test remote_memcached_plugin writes settings correctly"""
 
         # Create a plugin with dummy parameters
         plugin = RemoteMemcachedPlugin(PluginParams(ip='10.0.0.1',

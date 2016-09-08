@@ -65,13 +65,15 @@ class TestConfigManagerPlugin(unittest.TestCase):
         new_config_string = "This is a different config string. \n Replace with replica real config soon"
 
         # Call 'on_config_changed' with file.open mocked out
-        with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.open', mock.mock_open(read_data=old_config_string), create=True) as mock_open:
+        with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.open',\
+                        mock.mock_open(read_data=old_config_string), create=True) as mock_open:
             plugin.on_config_changed(new_config_string, None)
 
         # Test assertions
         mock_open.assert_called_once_with(plugin.file(), "r")
         mock_safely_write.assert_called_once_with(plugin.file(), new_config_string)
-        mock_run_command.assert_called_once_with("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config")
+        mock_run_command.assert_called_once_with\
+            ("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config")
 
 
     @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.safely_write')
@@ -95,11 +97,11 @@ class TestConfigManagerPlugin(unittest.TestCase):
         new_config_string = old_config_string
 
         # Call 'on_config_changed' with file.open mocked out
-        with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.open', mock.mock_open(read_data=old_config_string), create=True) as mock_open:
+        with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.open',\
+                        mock.mock_open(read_data=old_config_string), create=True) as mock_open:
             plugin.on_config_changed(new_config_string, None)
 
         # Test assertions
         mock_open.assert_called_once_with(plugin.file(), "r")
         mock_safely_write.assert_not_called()
         mock_run_command.assert_not_called()
-
