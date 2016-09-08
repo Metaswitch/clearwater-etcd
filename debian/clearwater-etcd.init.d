@@ -242,23 +242,26 @@ verify_etcd_health()
         member_list=$(/usr/bin/etcdctl member list)
         local_member_id=$(echo $member_list | grep -F -w "http://$local_ip:2380" | grep -o -E "^[^:]*" | grep -o "^[^[]\+")
         unstarted_member_id=$(echo $member_list | grep -F -w "http://$local_ip:2380" | grep "unstarted")
-        if [[ $unstarted_member != '' ]]
+        if [[ $unstarted_member_id != '' ]]
         then
           /usr/bin/etcdctl member remove $local_member_id
           rm -rf $DATA_DIR/$advertisement_ip
         fi
 
-        # Check we can read our write-ahead log and snapshot files. If not, our
-        # data directory is irrecoverably corrupt (perhaps because we ran out
-        # of disk space and the files were half-written), so we should clean it
-        # out and rejoin the cluster from scratch.
-        timeout 5 /usr/bin/etcd-dump-logs --data-dir $DATA_DIR/$advertisement_ip > /dev/null 2>&1
-        rc=$?
-
-        if [[ $rc != 0 ]]
+        if [[ -e $DATA_DIR/$advertisement_ip ]]
         then
-          /usr/bin/etcdctl member remove $local_member_id
-          rm -rf $DATA_DIR/$advertisement_ip
+          # Check we can read our write-ahead log and snapshot files. If not, our
+          # data directory is irrecoverably corrupt (perhaps because we ran out
+          # of disk space and the files were half-written), so we should clean it
+          # out and rejoin the cluster from scratch.
+          timeout 5 /usr/bin/etcd-dump-logs --data-dir $DATA_DIR/$advertisement_ip > /dev/null 2>&1
+          rc=$?
+
+          if [[ $rc != 0 ]]
+          then
+            /usr/bin/etcdctl member remove $local_member_id
+            rm -rf $DATA_DIR/$advertisement_ip
+          fi
         fi
 }
 
