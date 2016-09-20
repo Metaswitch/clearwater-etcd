@@ -125,7 +125,7 @@ def main(args):
 
     for plugin in plugins:
         syncer = EtcdSynchronizer(plugin, local_ip, local_site, etcd_key, node_type)
-        thread = Thread(target=syncer.main, name=plugin.__class__.__name__)
+        thread = Thread(target=syncer.main_wrapper, name=plugin.__class__.__name__)
         thread.start()
 
         threads.append(thread)
