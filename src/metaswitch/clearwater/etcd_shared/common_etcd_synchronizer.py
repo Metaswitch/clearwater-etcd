@@ -161,6 +161,9 @@ class CommonEtcdSynchronizer(object):
         try:
             self.main()
         except Exception:
+            # Log the exception and send a SIGTERM to this process. If the
+            # process needs to do anything before shutting down, it will have a
+            # handler for catching the SIGTERM.
             _log.error(traceback.format_exc())
             os.kill(os.getpid(), signal.SIGTERM)
 
