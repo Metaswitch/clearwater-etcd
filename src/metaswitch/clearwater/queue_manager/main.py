@@ -62,7 +62,6 @@ import syslog
 import logging
 import os
 import prctl
-from threading import Thread
 
 _log = logging.getLogger("queue_manager.main")
 

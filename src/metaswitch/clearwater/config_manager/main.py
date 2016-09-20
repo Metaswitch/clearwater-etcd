@@ -64,7 +64,6 @@ import syslog
 import logging
 import os
 import prctl
-from threading import Thread
 
 _log = logging.getLogger("config_manager.main")
 
