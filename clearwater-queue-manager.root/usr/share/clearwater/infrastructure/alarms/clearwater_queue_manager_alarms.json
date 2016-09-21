@@ -111,7 +111,7 @@
                     "description": "etcd: A Chronos node has failed to resync successfully after receiving new Chronos GR configuration.",
                     "details": "A Chronos node has failed to resync successfully after receiving new Chronos GR configuration. Check that the Chronos GR configuration is valid, and the node is alive.",
                     "cause": "A change has been made to Chronos GR configuration which has led to the Chronos node not being able to successfully resync.",
-                    "effect": "Timer redundancy may have been lost",
+                    "effect": "Timer redundancy has been lost",
                     "action": "Check that the Chronos GR configuration is valid. If it isn't, correct it and re-upload it. If the alarm still doesn't clear, contact your support representative."
                 }
             ]
@@ -142,7 +142,7 @@
                     "description": "etcd: This node has failed to resync successfully after receiving new Chronos GR configuration.",
                     "details": "This node has failed to resync successfully after receiving new Chronos GR configuration. Check that the Chronos GR configuration is valid, and this node is alive.",
                     "cause": "A change has been made to Chronos GR configuration which has led to the Chronos node not being able to successfully resync.",
-                    "effect": "Timer redundancy may have been lost.",
+                    "effect": "Timer redundancy has been lost.",
                     "action": "Check that the Chronos GR configuration is valid. If it isn't, correct it and re-upload it. If the alarm still doesn't clear, contact your support representative."
                 }
             ]

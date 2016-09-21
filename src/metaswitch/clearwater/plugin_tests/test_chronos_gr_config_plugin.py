@@ -54,7 +54,8 @@ class TestConfigManagerPlugin(unittest.TestCase):
         new_config_string = "New Chronos GR config"
 
         # Call 'on_config_changed' with file.open mocked out
-        with mock.patch('clearwater_etcd_plugins.chronos.chronos_gr_config_plugin.open', mock.mock_open(read_data=old_config_string), create=True) as mock_open:
+        with mock.patch('clearwater_etcd_plugins.chronos.chronos_gr_config_plugin.open', \
+             mock.mock_open(read_data=old_config_string), create=True) as mock_open:
             plugin.on_config_changed(new_config_string, None)
 
         # Test assertions

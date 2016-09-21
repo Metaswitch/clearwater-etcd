@@ -50,10 +50,12 @@ class TestApplyChronosGRConfigPlugin(unittest.TestCase):
 
         expected_command_call_list = \
             [mock.call("service chronos stop"),
+             mock.call().__nonzero__(),
              mock.call("service chronos wait-sync"),
+             mock.call().__nonzero__(),
              mock.call("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue"\
-                       " remove_success apply_chronos_gr_config")]
-
+                       " remove_success apply_chronos_gr_config"),
+             mock.call().__nonzero__()]
         # Call the plugin hook
         plugin.at_front_of_queue()
 
