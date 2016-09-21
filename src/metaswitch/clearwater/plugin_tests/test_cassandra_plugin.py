@@ -37,21 +37,34 @@ import mock
 import logging
 import uuid
 from collections import Counter
+import yaml
 
 _log = logging.getLogger()
 
 from clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin import CassandraPlugin
 from metaswitch.clearwater.cluster_manager.plugin_base import PluginParams
 from metaswitch.clearwater.cluster_manager import alarm_constants
-
+from metaswitch.clearwater.cluster_manager.plugin_utils import WARNING_HEADER
 
 class TestCassandraPlugin(unittest.TestCase):
-#    @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.run_command')
-#    @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.safely_write')
+    # run_command returns 0 if a command completes successfully, but python mocks
+    # return 'True', i.e. 1. Force return value of 0 to simulate successes.
+    @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.run_command',\
+                return_value=0)
+    @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.safely_write')
     @mock.patch('metaswitch.common.alarms.alarm_manager.get_alarm')
     @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.os.path.exists')
-#    def test_cassandra_startup(self, mock_os_path, mock_get_alarm, mock_safely_write, mock_run_command):
-    def test_cassandra_startup(self, mock_os_path, mock_get_alarm):
+    @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.os.remove')
+    # The plugin uses check_output to get the latency value, so we return 100000.
+    @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.subprocess.check_output',\
+                return_value=100000)
+    def test_cassandra_startup(self,\
+                               mock_check_output,\
+                               mock_os_remove,\
+                               mock_os_path,\
+                               mock_get_alarm,\
+                               mock_safely_write,\
+                               mock_run_command):
         """Test the cassandra_plugin startup and joining process"""
 
         # Create a plugin with dummy parameters
@@ -84,52 +97,58 @@ class TestCassandraPlugin(unittest.TestCase):
                         "10.0.0.12": "finished",
                         "10.0.0.13": "error"}
 
-        # Set up conditions
+        # Set up conditions and test data
         mock_os_path.return_value = True
 
-        template = "test"
+        yaml_template = """\
+listen_address: testing\n\
+seed_provider:\n\
+    - class_name: org.apache.cassandra.locator.SimpleSeedProvider\n\
+      parameters:\n\
+          - seeds: "127.0.0.1"\n\
+"""
 
-        # Call startup actions, as the FSM would
-        with mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.open', mock.mock_open(read_data=template), create=True) as mock_open:
+        # Call startup actions, as the FSM would, assuming 'force_cassandra_yaml_refresh'
+        # is in place, as is the case on upgrade, to test the full 'on_startup' flow
+        with mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.open', mock.mock_open(read_data=yaml_template), create=True) as mock_open:
             plugin.on_startup(cluster_view)
 
-        mock_os_path.assert_called_once_with("/etc/clearwater/force_cassandra_yaml_refresh")
+        # Set expected calls for the mock commands
+        path_exists_call_list = \
+            [mock.call("/etc/clearwater/force_cassandra_yaml_refresh"),
+             mock.call("/etc/cassandra/cassandra.yaml"),
+             mock.call("/etc/clearwater/force_cassandra_yaml_refresh")]
 
-"""        
-        # Call the plugin to write the settings itself
-        plugin.write_cluster_settings(cluster_view)
-        mock_safely_write.assert_called_once()
-        # Save off the arguments the plugin called our mock with
-        args = mock_safely_write.call_args
+        run_command_call_list = \
+            [mock.call("start-stop-daemon -K -p /var/run/cassandra/cassandra.pid -R TERM/30/KILL/5")]
 
-        # Catch the call to reload memcached
-        mock_run_command.assert_called_once_with("/usr/share/clearwater/bin/reload_memcached_users")
+        mock_os_path.assert_has_calls(path_exists_call_list)
+        mock_run_command.assert_has_calls(run_command_call_list)
 
-        # Check the plugin is attempting to write to the correct location
-        self.assertEqual("/etc/clearwater/cluster_settings", args[0][0])
 
-        # Save off the file contents sent to the mock safely_write call
-        # The file is not a proper config file structure, so we do string
-        # based parsing, rather than using python ConfigParser
-        config_string = args[0][1]
-        config_lines = config_string.splitlines()
+        # Pull out the call for writing the topology file
+        topology_write_args = mock_safely_write.call_args_list[0]
+        # Check the write location matches the plugin files location
+        self.assertEqual("/etc/cassandra/cassandra-rackdc.properties", topology_write_args[0][0])
+        # Check write was formatted correctly
+        exp_topology = WARNING_HEADER + "\ndc=local_site\nrack=RAC1\n"
+        self.assertEqual(exp_topology, topology_write_args[0][1])
 
-        # Assert there is only one 'servers' line, and parse out the ips.
-        server_list = [s for s in config_lines if s.startswith('servers')]
-        self.assertTrue(len(server_list) == 1)
-        server_ips_with_ports = [s for s in (str(server_list[0]).strip('servers=')).split(',')]
-        server_ips = Counter([ip.split(':')[0] for ip in server_ips_with_ports])
 
-        # Assert there is only one 'new_servers' line, and parse out the ips.
-        new_server_list = [s for s in config_lines if s.startswith('new_servers')]
-        self.assertTrue(len(new_server_list) == 1)
-        new_server_ips_with_ports = [s for s in (str(new_server_list[0]).strip('new_servers=')).split(',')]
-        new_server_ips = Counter([ip.split(':')[0] for ip in new_server_ips_with_ports])
+        # Pull out the call for writing the yaml file
+        yaml_write_args = mock_safely_write.call_args_list[1]
+        # Check the write location matches the plugin files location
+        self.assertEqual(plugin.files()[0], yaml_write_args[0][0])
 
-        # Set expectations, and assert that the correct ips made it into each list
-        expected_server_ips = Counter(['10.0.0.5', '10.0.0.6', '10.0.0.7', '10.0.0.10', '10.0.0.11'])
-        expected_new_server_ips = Counter(['10.0.0.3', '10.0.0.4', '10.0.0.5', '10.0.0.6', '10.0.0.7'])
+        # Parse config, and test we are writing correct values
+        yaml_string = yaml_write_args[0][1]
+        test_doc = yaml.load(yaml_string)
 
-        self.assertTrue(server_ips == expected_server_ips)
-        self.assertTrue(new_server_ips == expected_new_server_ips)
-"""
+        self.assertEqual(test_doc["listen_address"], '10.0.0.1')
+        self.assertEqual(test_doc["broadcast_rpc_address"], '10.0.0.1')
+        self.assertEqual(test_doc["endpoint_snitch"], "GossipingPropertyFileSnitch")
+
+        expected_seeds = ['10.0.0.5', '10.0.0.6', '10.0.0.7']
+        seed_string = test_doc["seed_provider"][0]["parameters"][0]["seeds"]
+        for seed in expected_seeds:
+            self.assertTrue(seed in seed_string)
