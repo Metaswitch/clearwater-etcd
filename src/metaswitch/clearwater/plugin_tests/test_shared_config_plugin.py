@@ -1,4 +1,4 @@
-# @file test_config_manager_plugin.py
+# @file test_shared_config_plugin.py
 #
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2016 Metaswitch Networks Ltd
@@ -40,29 +40,31 @@ import uuid
 _log = logging.getLogger()
 
 from clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin import SharedConfigPlugin
-from metaswitch.clearwater.cluster_manager.plugin_base import PluginParams
 
 
-class TestConfigManagerPlugin(unittest.TestCase):
+class TestSharedConfigPlugin(unittest.TestCase):
     @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.safely_write')
     @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.run_command')
     def test_config_changed(self, mock_run_command, mock_safely_write):
         """Test Config Manager writes new config when config has changed"""
 
+        # Setup Plugin parameters
+        Params = ('10.0.0.1',  # ip
+                  '10.0.1.1',  # mgmt_ip
+                  'local_site',  # local_site
+                  'remote_site',  # remote_site
+                  '',  # remote_cassandra_seeds
+                  '',  # signaling_namespace
+                  uuid.UUID('92a674aa-a64b-4549-b150-596fd466923f'),  # uuid
+                  'etcd_key',  # etcd_key
+                  'etcd_cluster_key')  # etcd_cluster_key
+
         # Create the plugin
-        plugin = SharedConfigPlugin(PluginParams(ip='10.0.0.1',
-                                                 mgmt_ip='10.0.1.1',
-                                                 local_site='local_site',
-                                                 remote_site='remote_site',
-                                                 remote_cassandra_seeds='',
-                                                 signaling_namespace='',
-                                                 uuid=uuid.UUID('92a674aa-a64b-4549-b150-596fd466923f'),
-                                                 etcd_key='etcd_key',
-                                                 etcd_cluster_key='etcd_cluster_key'))
+        plugin = SharedConfigPlugin(Params)
 
         # Set up the config strings to be tested
-        old_config_string = "Test config string here. \n Replace with replica real config soon"
-        new_config_string = "This is a different config string. \n Replace with replica real config soon"
+        old_config_string = "Test config string here. \n More test config string."
+        new_config_string = "This is a different config string. \n Like, totally different."
 
         # Call 'on_config_changed' with file.open mocked out
         with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.open',\
@@ -81,19 +83,22 @@ class TestConfigManagerPlugin(unittest.TestCase):
     def test_config_not_changed(self, mock_run_command, mock_safely_write):
         """Test Config Manager does nothing if called with identical config"""
 
+        # Setup Plugin parameters
+        Params = ('10.0.0.1',  # ip
+                  '10.0.1.1',  # mgmt_ip
+                  'local_site',  # local_site
+                  'remote_site',  # remote_site
+                  '',  # remote_cassandra_seeds
+                  '',  # signaling_namespace
+                  uuid.UUID('92a674aa-a64b-4549-b150-596fd466923f'),  # uuid
+                  'etcd_key',  # etcd_key
+                  'etcd_cluster_key')  # etcd_cluster_key
+
         # Create the plugin
-        plugin = SharedConfigPlugin(PluginParams(ip='10.0.0.1',
-                                                 mgmt_ip='10.0.1.1',
-                                                 local_site='local_site',
-                                                 remote_site='remote_site',
-                                                 remote_cassandra_seeds='',
-                                                 signaling_namespace='',
-                                                 uuid=uuid.UUID('92a674aa-a64b-4549-b150-596fd466923f'),
-                                                 etcd_key='etcd_key',
-                                                 etcd_cluster_key='etcd_cluster_key'))
+        plugin = SharedConfigPlugin(Params)
 
         # Set up the config strings to be tested
-        old_config_string = "Test config string here. \n Replace with replica real config soon"
+        old_config_string = "This is more test config. \n It won't change."
         new_config_string = old_config_string
 
         # Call 'on_config_changed' with file.open mocked out
