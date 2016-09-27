@@ -36,7 +36,6 @@ import unittest
 import mock
 import logging
 import uuid
-from collections import Counter
 import yaml
 
 _log = logging.getLogger()
