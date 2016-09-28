@@ -51,7 +51,7 @@ class BasicTest(unittest.TestCase):
         # Write some initial data into the key
         e._client.write("/clearwater/local/configuration/test", "initial data")
 
-        thread = Thread(target=e.main)
+        thread = Thread(target=e.main_wrapper)
         thread.daemon=True
         thread.start()
 

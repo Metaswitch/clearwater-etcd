@@ -62,7 +62,7 @@ class TestChronosPlugin(unittest.TestCase):
     @mock.patch('clearwater_etcd_plugins.chronos.chronos_plugin.safely_write')
     @mock.patch('metaswitch.common.alarms.alarm_manager.get_alarm')
     def test_write_config(self, mock_get_alarm, mock_safely_write, mock_run_command):
-        """Test the chronos_plugin writes chronos cluster settings correctly"""
+        """Test chronos_plugin writes settings correctly with all possible server states"""
 
         # Create a plugin with dummy parameters
         plugin = ChronosPlugin(PluginParams(ip='10.0.0.1',

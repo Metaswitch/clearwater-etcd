@@ -33,4 +33,3 @@
 from metaswitch.common.logging_config import configure_test_logging
 
 configure_test_logging()
-
