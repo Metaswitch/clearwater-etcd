@@ -104,3 +104,11 @@ DO_NOT_CLUSTER = PDLog(
     effect="This node will not join data store clusters.",
     action="If this is unexpected, change the etcd_cluster_key in /etc/clearwater/local_config.",
     priority=PDLog.LOG_NOTICE)
+DO_NOT_START = PDLog(
+    number=PDLog.CL_CLUSTER_MGR_ID+10,
+    desc="clearwater-cluster-manager isn't starting any plugins due to the configuration.",
+    cause="clearwater-cluster-manager was started with the cluster_manager_enabled value not set to 'Y', "+\
+      "so this node will not join any data store clusters.",
+    effect="This node will not join data store clusters.",
+    action="If this is unexpected, change the cluster_manager_enabled value in /etc/clearwater/shared_config.",
+    priority=PDLog.LOG_NOTICE)
