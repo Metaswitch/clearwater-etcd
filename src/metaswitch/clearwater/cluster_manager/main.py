@@ -54,7 +54,7 @@ Options:
   --log-level=LVL                Level to log at, 0-4 [default: 3]
   --log-directory=DIR            Directory to log to [default: ./]
   --pidfile=FILE                 Pidfile to write [default: ./cluster-manager.pid]
-  --cluster-manager-enabled=BOOL Whether the cluster manager should start any threads [default: Yes]
+  --cluster-manager-enabled=Y/N  Whether the cluster manager should start any threads [default: Yes]
 
 """
 
