@@ -37,7 +37,7 @@
 Usage:
   main.py --mgmt-local-ip=IP --sig-local-ip=IP --local-site=NAME --remote-site=NAME --remote-cassandra-seeds=IPs --uuid=UUID --etcd-key=KEY --etcd-cluster-key=CLUSTER_KEY
           [--signaling-namespace=NAME] [--foreground] [--log-level=LVL]
-          [--log-directory=DIR] [--pidfile=FILE] [--cluster-manager-enabled=BOOL]
+          [--log-directory=DIR] [--pidfile=FILE] [--cluster-manager-enabled=Y/N]
 
 Options:
   -h --help                      Show this screen.
