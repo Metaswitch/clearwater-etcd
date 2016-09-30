@@ -34,19 +34,15 @@
 
 set -ue
 
-local_site_name=site1
-
 . /etc/clearwater/config
 
-if [ $# -ne 3 ]
+# Check we can contact `etcd`
+if ! nc -z ${management_local_ip:-$local_ip} 4000
 then
-  echo "Usage: recreate_cluster [old_node_type] [new_node_type] [storage_type]"
+  echo "The Clearwater Configuration store (etcd) is not running"
+  echo "Please start it before uploading configuration"
   exit 1
 fi
 
-old_node_type=$1
-new_node_type=$2
-storage_type=$3
-
-/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-cluster-manager/scripts/recreate_cluster.py "$old_node_type" "$new_node_type" "$storage_type"
+/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-cluster-manager/scripts/recreate_cluster.py homestead vellum cassandra
 

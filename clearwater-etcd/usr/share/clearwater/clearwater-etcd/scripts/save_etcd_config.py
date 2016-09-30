@@ -30,6 +30,7 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
+import datetime
 import json
 import re
 import subprocess
@@ -43,8 +44,8 @@ def get_value(key):
 
 
 # Save the config
-def save_to_disk(data):
-    with open("/tmp/saved_etcd_config", "w+") as saved_config_file:
+def save_to_disk(data, filename):
+    with open(filename, "w+") as saved_config_file:
         json.dump(data, saved_config_file)
 
 
@@ -89,33 +90,47 @@ def get_local_cassandra_nodes(site_name):
 
 local_site_name = sys.argv[1]
 
-print("Saving etcd cluster info to disk...")
+# Allow the user to specify the save location
+save_dir = raw_input("Enter the directory to save the config. Leave blank for default (/home/clearwater/ftp/) ")
 
-# List all keys stored in etcd
-# -p appends a "/" to all directories to help distinguish them from keys
-process = subprocess.Popen("clearwater-etcdctl ls -p --recursive", stdout=subprocess.PIPE, shell=True)
+if save_dir == "":
+    save_dir = "/home/clearwater/ftp/"
 
-# Dictionary that will contain all the key-value pairs that we want to save
-data_to_save = {}
+if not save_dir.endswith("/"):
+    save_dir = save_dir + "/"
 
-# First, save all keys that contain the local site name
-for line in process.stdout:
+filename = save_dir + "saved-etcd-config-" + datetime.datetime.now().strftime('%y-%m-%d')
 
-    line = line.strip()
+print("Saving etcd cluster info to {0}\n".format(filename))
 
-    # Save any keys that contain the local site name
-    if (not line.endswith("/")) and ("/{0}/".format(local_site_name) in line):
+try:
+    # List all keys stored in etcd
+    # -p appends a "/" to all directories to help distinguish them from keys
+    output_str = subprocess.check_output(["clearwater-etcdctl", "ls", "-p", "--recursive"])
 
-        value = get_value(line)
-        data_to_save[line] = value
+    # Dictionary that will contain all the key-value pairs that we want to save
+    data_to_save = {}
 
-# Now we need to add the homestead cassandra clustering info, but we only
-# want to add the nodes for the local site, so we build this manually
-nodes = get_local_cassandra_nodes(local_site_name)
-data_to_save["/clearwater/vellum/clustering/cassandra"] = json.dumps(nodes)
+    # First, save all keys that contain the local site name
+    for line in output_str.splitlines():
+        line = line.strip()
 
-# Now save the dictionary of keys we want to preserve
-save_to_disk(data_to_save)
+        # Save any keys that contain the local site name
+        if (not line.endswith("/")) and ("/{0}/".format(local_site_name) in line):
+            value = get_value(line)
+            data_to_save[line] = value
 
-print("\nSaved etcd cluster info to disk")
+    # Now we need to add the homestead cassandra clustering info, but we only
+    # want to add the nodes for the local site, so we build this manually
+    nodes = get_local_cassandra_nodes(local_site_name)
+    data_to_save["/clearwater/vellum/clustering/cassandra"] = json.dumps(nodes)
+
+    # Now save the dictionary of keys we want to preserve
+    save_to_disk(data_to_save, filename)
+
+    print("Saved etcd cluster info to disk")
+
+except subprocess.CalledProcessError, e:
+    print("ERROR: Unable to contact etcd.")
+    print("ERROR: Confirm etcd is running and try again.")
 

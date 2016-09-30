@@ -34,4 +34,22 @@
 
 set -ue
 
-/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-etcd/scripts/load_etcd_config.py
+if [ $# -ne 1 ]
+then
+  echo "Usage: load_etcd_config [filename]"
+  exit 1
+fi
+
+. /etc/clearwater/config
+
+# Check we can contact `etcd`
+if ! nc -z ${management_local_ip:-$local_ip} 4000
+then
+  echo "The Clearwater Configuration store (etcd) is not running"
+  echo "Please start it before uploading configuration"
+  exit 2
+fi
+
+filename=$1
+
+/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-etcd/scripts/load_etcd_config.py "$filename"

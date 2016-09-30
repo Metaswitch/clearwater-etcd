@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2016 Metaswitch Networks Ltd
 #
@@ -30,23 +32,21 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-import json
-import subprocess
-import sys
+set -ue
 
-filename = sys.argv[1]
+. /etc/clearwater/config
 
-print("Loading etcd cluster info from {0}\n".format(filename))
+# Check we can contact `etcd`
+if ! nc -z ${management_local_ip:-$local_ip} 4000
+then
+  echo "The Clearwater Configuration store (etcd) is not running"
+  echo "Please start it before uploading configuration"
+  exit 1
+fi
 
-data = {}
+# Run the recreate_cluster.py script twice, once for each of Chronos and Memcached
 
-# Load saved data from the temp file
-with open(filename, "r") as loaded_file:
-    data = json.load(loaded_file)
+/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-cluster-manager/scripts/recreate_cluster.py sprout vellum memcached
 
-# Add to etcd
-for key, value in data.iteritems():
-    subprocess.check_output(["clearwater-etcdctl", "set", key, value])
-
-print("Loaded etcd cluster info from disk")
+/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-cluster-manager/scripts/recreate_cluster.py sprout vellum chronos
 
