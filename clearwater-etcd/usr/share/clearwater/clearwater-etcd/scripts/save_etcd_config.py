@@ -52,7 +52,9 @@ def save_to_disk(data, filename):
 # Produces a dictionary like {"[node_ip]": "normal"} containing every cassandra
 # node in the local site
 def get_local_cassandra_nodes(site_name):
-    nodetool_process = subprocess.Popen("nodetool status", stdout=subprocess.PIPE, shell=True)
+    nodetool_process = subprocess.Popen("/usr/share/clearwater/bin/run-in-signaling-namespace nodetool status",
+                                        stdout=subprocess.PIPE,
+                                        shell=True)
     nodes = {}
 
     # regex which matches from the beginning of the string, expecting U or D,
@@ -73,7 +75,6 @@ def get_local_cassandra_nodes(site_name):
             # indicating that the following nodes are part of the local site
             if "Datacenter: {0}".format(site_name) in line:
                 found_local_section = True
-
         else:
             # Now, loop until we hit the next Datacenter line, looking for nodes
             if "Datacenter: " in line:

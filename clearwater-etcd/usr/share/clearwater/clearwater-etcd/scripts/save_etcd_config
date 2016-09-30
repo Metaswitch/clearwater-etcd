@@ -42,9 +42,9 @@ local_site_name=site1
 if ! nc -z ${management_local_ip:-$local_ip} 4000
 then
   echo "The Clearwater Configuration store (etcd) is not running"
-  echo "Please start it before uploading configuration"
+  echo "Start it and then try again"
   exit 2
 fi
 
-/usr/share/clearwater/bin/run-in-signaling-namespace /usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-etcd/scripts/save_etcd_config.py "$local_site_name"
+/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-etcd/scripts/save_etcd_config.py "$local_site_name"
 

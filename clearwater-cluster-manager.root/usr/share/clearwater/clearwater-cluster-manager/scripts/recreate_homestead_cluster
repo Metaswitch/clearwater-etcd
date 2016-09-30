@@ -40,7 +40,7 @@ set -ue
 if ! nc -z ${management_local_ip:-$local_ip} 4000
 then
   echo "The Clearwater Configuration store (etcd) is not running"
-  echo "Please start it before uploading configuration"
+  echo "Start it and then try again"
   exit 1
 fi
 
