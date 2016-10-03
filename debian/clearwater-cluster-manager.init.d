@@ -98,13 +98,13 @@ do_start()
   # Make sure to pull in the node_type files before local_config
   local_site_name=site1
   remote_site_name=""
-  remote_cassandra_seeds="" # Not currently used
+  remote_cassandra_seeds=""
   signaling_namespace=""
   etcd_key=clearwater
   etcd_cluster_key=""
   log_level=3
   log_directory=/var/log/clearwater-cluster-manager
-  
+
   # This sets up $uuid - it's created by /usr/share/clearwater/infrastructure/scripts/node_identity
   . /etc/clearwater/node_identity
 
@@ -124,7 +124,7 @@ do_start()
                --sig-local-ip=$local_ip
                --local-site=$local_site_name
                --remote-site=$remote_site_name
-               --remote-cassandra-seeds=""
+               --remote-cassandra-seeds=$remote_cassandra_seeds
                --signaling-namespace=$signaling_namespace
                --uuid=$uuid
                --etcd-key=$etcd_key
