@@ -153,15 +153,7 @@ join_cluster()
         # We need a temp file to deal with the environment variables.
         TEMP_FILE=$(mktemp)
 
-        # Build the client list based on $etcd_cluster, each entry is simply
-        # <IP>:<port> using the client port. Replace commas with whitespace,
-        # then split on whitespace (to cope with etcd_cluster values that have
-        # spaces)
-        export ETCDCTL_PEERS=
-        for server in ${etcd_cluster//,/ }
-        do
-            ETCDCTL_PEERS="$server:4000,$ETCDCTL_PEERS"
-        done
+        setup_etcdctl_peers
 
         # Check to make sure the cluster we want to join is healthy.
         # If it's not, don't even try joining (it won't work, and may
@@ -245,7 +237,10 @@ verify_etcd_health()
         if [[ $unstarted_member_id != '' ]]
         then
           /usr/bin/etcdctl member remove $local_member_id
-          rm -rf $DATA_DIR/$advertisement_ip
+          if [[ $? == 0 ]]
+          then
+            rm -rf $DATA_DIR/$advertisement_ip
+          fi
         fi
 
         if [[ -e $DATA_DIR/$advertisement_ip ]]
@@ -260,7 +255,10 @@ verify_etcd_health()
           if [[ $rc != 0 ]]
           then
             /usr/bin/etcdctl member remove $local_member_id
-            rm -rf $DATA_DIR/$advertisement_ip
+            if [[ $? == 0 ]]
+            then
+              rm -rf $DATA_DIR/$advertisement_ip
+            fi
           fi
         fi
 }
