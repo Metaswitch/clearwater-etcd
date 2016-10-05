@@ -35,6 +35,21 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 import json
+from textwrap import dedent
+
+# Expected format for the ENUM file
+EXPECTED_FORMAT = dedent("""The expected format is:\n\
+{
+\"number_blocks\" :
+ [
+   {
+     \"name\" : \"<name>\",
+     \"prefix\" : \"<prefix>\",
+     \"regex\" : \"<regex>\"
+   },
+   ...
+ ]
+}""")
 
 # This does some basic validation of the ENUM configuration file, and
 # prints the contents
@@ -42,20 +57,6 @@ try:
     with open("/etc/clearwater/enum.json") as enum_file:
         try:
             enum_data = json.load(enum_file)
-
-            # The expected format is:
-            #
-            # {
-            #   "number_blocks" :
-            #   [
-            #     {
-            #       "name" : "<name>",
-            #       "prefix" : <prefix>,
-            #       "regex" : <regex>,
-            #     },
-            #     ...
-            #   ]
-            # }
             blocks = enum_data["number_blocks"]
 
             try:
@@ -64,16 +65,18 @@ try:
                     prefix = block["prefix"]
                     regex = block["regex"]
 
-                    print "  Nname: {}".format(name)
+                    print "  Name: {}".format(name)
                     print "  Prefix: {}".format(prefix)
                     print "  Regex: {}".format(regex)
                     print ""
 
             except KeyError as e:
-                print "Invalid ENUM entry detected in file"
+                print "Invalid ENUM entry detected in file.\n"
+                print EXPECTED_FORMAT
 
         except ValueError, KeyError:
             print "\nInvalid ENUM file at /etc/clearwater/enum.json\n"
+            print EXPECTED_FORMAT
 
 except IOError:
     print "\nNo ENUM file at /etc/clearwater/enum.json\n"

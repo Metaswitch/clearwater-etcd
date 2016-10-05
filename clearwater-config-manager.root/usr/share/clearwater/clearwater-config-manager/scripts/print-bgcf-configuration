@@ -35,6 +35,21 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 import json
+from textwrap import dedent
+
+# Expected format for the BGCF file
+EXPECTED_FORMAT = dedent("""The expected format is:\n\
+{
+\"routes\" :
+ [
+   {
+     \"name\" : \"<route 1 descriptive name>\",
+     \"<domain|number>\" : \"<SIP trunk IP address, domain name or routing number>\",
+     \"route\" : [<\"IBCF SIP URI\">, <\"IBCF SIP URI\">,...]
+   },
+   ...
+ ]
+}""")
 
 # This does some basic validation of the BGCF configuration file, and
 # prints the contents
@@ -42,20 +57,6 @@ try:
     with open("/etc/clearwater/bgcf.json") as bgcf_file:
         try:
             bgcf_data = json.load(bgcf_file)
-
-            # The expected format is:
-            #
-            # {
-            #   "routes" :
-            #   [
-            #     {
-            #       "name" : "<route 1 descriptive name>",
-            #       "<domain|number>" : "<SIP trunk IP address, domain name or routing number>",
-            #       "route" : [<"IBCF SIP URI">, <"IBCF SIP URI">,...]
-            #     },
-            #     ...
-            #   ]
-            # }
             routes = bgcf_data["routes"]
 
             try:
@@ -63,20 +64,23 @@ try:
                     name = bgcf_route["name"]
                     route = bgcf_route["route"]
                     value = ""
+                    value_count = 0
 
                     try:
                         domain = bgcf_route["domain"]
                         value = "Domain: " + domain
+                        value_count += 1
                     except KeyError as e:
                         pass
 
                     try:
                         number = bgcf_route["number"]
                         value = "Number: " + number
+                        value_count += 1
                     except KeyError as e:
                         pass
 
-                    if value == "":
+                    if value_count != 1:
                         raise KeyError
 
                     print "  Name: {}".format(name)
@@ -87,10 +91,12 @@ try:
                     print ""
 
             except KeyError as e:
-                print "Invalid BGCF entry detected in file"
+                print "Invalid BGCF entry detected in file.\n"
+                print EXPECTED_FORMAT
 
         except ValueError, KeyError:
             print "\nInvalid BGCF file at /etc/clearwater/bgcf.json\n"
+            print EXPECTED_FORMAT
 
 except IOError:
     print "\nNo BGCF file at /etc/clearwater/bgcf.json\n"

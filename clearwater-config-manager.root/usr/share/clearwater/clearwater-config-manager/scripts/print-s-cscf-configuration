@@ -35,6 +35,22 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 import json
+from textwrap import dedent
+
+# Expected format for the S-CSCF file
+EXPECTED_FORMAT = dedent("""The expected format is:\n\
+{
+\"s-cscfs\" :
+ [
+   {
+     \"server\" : \"<S-CSCF URI>\",
+     \"priority\" : \"<priority>\",
+     \"weight\" : \"<weight>\",
+     \"capabilities\" : \"[<comma separated capabilities>]\",
+   },
+   ...
+ ]
+}""")
 
 # This does some basic validation of the S-CSCF configuration file, and
 # prints the contents
@@ -42,21 +58,6 @@ try:
     with open("/etc/clearwater/s-cscf.json") as scscf_file:
         try:
             scscf_data = json.load(scscf_file)
-
-            # The expected format is:
-            #
-            # {
-            #   "s-cscfs" :
-            #   [
-            #     {
-            #       "server" : "<S-CSCF URI>",
-            #       "priority" : <priority>,
-            #       "weight" : <weight>,
-            #       "capabilities" : [<comma separated capabilities>]
-            #     },
-            #     ...
-            #   ]
-            # }
             scscfs = scscf_data["s-cscfs"]
 
             try:
@@ -73,10 +74,12 @@ try:
                     print ""
 
             except KeyError as e:
-                print "Invalid S-CSCF entry detected in file"
+                print "Invalid S-CSCF entry detected in file.\n"
+                print EXPECTED_FORMAT
 
         except ValueError, KeyError:
             print "\nInvalid S-CSCF file at /etc/clearwater/s-cscf.json\n"
+            print EXPECTED_FORMAT
 
 except IOError:
     print "\nNo S-CSCF file at /etc/clearwater/s-cscf.json\n"
