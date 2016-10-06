@@ -104,6 +104,7 @@ do_start()
   etcd_cluster_key=""
   log_level=3
   log_directory=/var/log/clearwater-cluster-manager
+  cluster_manager_enabled="Y"
 
   # This sets up $uuid - it's created by /usr/share/clearwater/infrastructure/scripts/node_identity
   . /etc/clearwater/node_identity
@@ -129,6 +130,7 @@ do_start()
                --uuid=$uuid
                --etcd-key=$etcd_key
                --etcd-cluster-key=$etcd_cluster_key
+               --cluster-manager-enabled=$cluster_manager_enabled
                --log-level=$log_level
                --log-directory=$log_directory
                --pidfile=$PIDFILE"
