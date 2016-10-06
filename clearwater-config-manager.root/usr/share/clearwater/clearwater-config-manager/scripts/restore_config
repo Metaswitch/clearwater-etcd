@@ -86,5 +86,5 @@ done
 # Add this node to the list of nodes to restart
 /usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config
 
-/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue force_true apply_config
+/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue force_false apply_config
 
