@@ -39,5 +39,5 @@ fi
 
 local_site_name=site1
 etcd_key=clearwater
-. /etc/clearwater/local_config
+. /etc/clearwater/config
 /usr/share/clearwater/clearwater-config-manager/scripts/check_config_sync.py "${management_local_ip:-$local_ip}" "$local_site_name" "$etcd_key"

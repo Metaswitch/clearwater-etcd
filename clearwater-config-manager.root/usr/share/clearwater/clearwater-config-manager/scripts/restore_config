@@ -1,7 +1,7 @@
 #!/bin/bash -x
 
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015 Metaswitch Networks Ltd
+# Copyright (C) 2016 Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -33,7 +33,7 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 if [ -z $1 ]
 then
-  echo "You must provide a location to backup the configuration to" >&2
+  echo "You must provide a location to restore the configuration from" >&2
   echo >&2
   echo "Usage: $0 backup_directory" >&2
   exit 1
@@ -47,7 +47,7 @@ fi
 
 local_site_name=site1
 etcd_key=clearwater
-. /etc/clearwater/local_config
+. /etc/clearwater/config
 
 backup_directory="$1"
 
@@ -56,12 +56,15 @@ top_key=${etcd_key}/${local_site_name}/configuration
 # Check we can contact `etcd`
 if ! nc -z ${management_local_ip:-$local_ip} 4000
 then
+  echo "Unable to contact etcd at ${management_local_ip:-$local_ip} on port 4000" >&2
   exit 2
 fi
 
-FILES="${backup_directory}/*"
-
+# Set null globbing so thatif there are no files in the directory,
+# we don't attempt to upload a file named *.
 shopt -s nullglob
+
+FILES="${backup_directory}/*"
 
 for f in $FILES
 do
@@ -74,6 +77,7 @@ do
 
     # Check the return code and log if appropriate.
     if [ $rc != 0 ] ; then
+      echo "Failed to upload $f to etcd with return code $rc" >&2
       cat ${tmp_file}.stderr.$$              >&2
       cat ${tmp_file}.stdout.$$              >&2
       exit 3
@@ -82,9 +86,4 @@ do
     rm -f ${tmp_file}.stderr.$$ ${tmp_file}.stdout.$$
   fi
 done
-
-# Add this node to the list of nodes to restart
-/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config
-
-/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue force_false apply_config
 
