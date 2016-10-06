@@ -1,0 +1,90 @@
+#!/bin/bash -x
+
+# Project Clearwater - IMS in the Cloud
+# Copyright (C) 2015 Metaswitch Networks Ltd
+#
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version, along with the "Special Exception" for use of
+# the program along with SSL, set forth below. This program is distributed
+# in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more
+# details. You should have received a copy of the GNU General Public
+# License along with this program.  If not, see
+# <http://www.gnu.org/licenses/>.
+#
+# The author can be reached by email at clearwater@metaswitch.com or by
+# post at Metaswitch Networks Ltd, 100 Church St, Enfield EN2 6BQ, UK
+#
+# Special Exception
+# Metaswitch Networks Ltd  grants you permission to copy, modify,
+# propagate, and distribute a work formed by combining OpenSSL with The
+# Software, or a work derivative of such a combination, even if such
+# copying, modification, propagation, or distribution would otherwise
+# violate the terms of the GPL. You must comply with the GPL in all
+# respects for all of the code used other than OpenSSL.
+# "OpenSSL" means OpenSSL toolkit software distributed by the OpenSSL
+# Project and licensed under the OpenSSL Licenses, or a work based on such
+# software and licensed under the OpenSSL Licenses.
+# "OpenSSL Licenses" means the OpenSSL License and Original SSLeay License
+# under which the OpenSSL Project distributes the OpenSSL toolkit software,
+# as those licenses appear in the file LICENSE-OPENSSL.
+if [ -z $1 ]
+then
+  echo "You must provide a location to backup the configuration to" >&2
+  echo >&2
+  echo "Usage: $0 backup_directory" >&2
+  exit 1
+fi
+
+if [[ $EUID -ne 0 ]]
+then
+  echo "You must run this script with root permissions" >&2
+  exit 1
+fi
+
+local_site_name=site1
+etcd_key=clearwater
+. /etc/clearwater/local_config
+
+backup_directory="$1"
+
+top_key=${etcd_key}/${local_site_name}/configuration
+
+# Check we can contact `etcd`
+if ! nc -z ${management_local_ip:-$local_ip} 4000
+then
+  exit 2
+fi
+
+FILES="${backup_directory}/*"
+
+shopt -s nullglob
+
+for f in $FILES
+do
+  if [ $(basename $f) != "apply_config" ]; then
+    # Upload the file to etcd
+    keypath=http://${management_local_ip:-$local_ip}:4000/v2/keys/${top_key}/$(basename $f)
+    tmp_file=/tmp/restore-config.$(basename $f)
+    curl -X PUT $keypath --data-urlencode value@${f} 2> ${tmp_file}.stderr.$$ | tee ${tmp_file}.stdout.$$ | egrep -q "\"action\":\"set\""
+    rc=$?
+
+    # Check the return code and log if appropriate.
+    if [ $rc != 0 ] ; then
+      cat ${tmp_file}.stderr.$$              >&2
+      cat ${tmp_file}.stdout.$$              >&2
+      exit 3
+    fi
+
+    rm -f ${tmp_file}.stderr.$$ ${tmp_file}.stdout.$$
+  fi
+done
+
+# Add this node to the list of nodes to restart
+/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config
+
+/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue force_true apply_config
+
