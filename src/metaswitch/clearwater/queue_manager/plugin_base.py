@@ -35,7 +35,7 @@ import collections
 
 PluginParams = collections.namedtuple(
                  'PluginParams',
-                 ['ignore_plugin_responses'])
+                 ['wait_plugin_complete'])
 
 class QueuePluginBase(object): # pragma : no cover
     __metaclass__ = ABCMeta

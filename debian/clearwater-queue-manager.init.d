@@ -88,7 +88,7 @@ do_start()
   etcd_cluster_key=unknown
   log_level=3
   log_directory=/var/log/clearwater-queue-manager
-  ignore_plugin_responses=N
+  wait_plugin_complete=Y
   if [ -d /usr/share/clearwater/node_type.d ]
   then
     . /usr/share/clearwater/node_type.d/$(ls /usr/share/clearwater/node_type.d | head -n 1)
@@ -101,7 +101,7 @@ do_start()
     return 3
   fi
 
-  DAEMON_ARGS="--local-ip=${management_local_ip:-$local_ip} --local-site=$local_site_name --log-level=$log_level --log-directory=$log_directory --pidfile=$PIDFILE --etcd-key=$etcd_key --node-type=$etcd_cluster_key --ignore-plugin-responses=$ignore_plugin_responses"
+  DAEMON_ARGS="--local-ip=${management_local_ip:-$local_ip} --local-site=$local_site_name --log-level=$log_level --log-directory=$log_directory --pidfile=$PIDFILE --etcd-key=$etcd_key --node-type=$etcd_cluster_key --wait-plugin-complete=$wait_plugin_complete"
 
   # Check if the process is already running - we use ACTUAL_EXEC here, as that's what will be in the
   # process tree (not DAEMON).

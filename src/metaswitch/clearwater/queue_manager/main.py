@@ -37,7 +37,7 @@
 Usage:
   main.py --local-ip=IP --local-site=SITE --etcd-key=KEY --node-type=TYPE
           [--foreground] [--log-level=LVL] [--log-directory=DIR] [--pidfile=FILE]
-          [--ignore-plugin-responses=RESP]
+          [--wait-plugin-complete=RESP]
 
 Options:
   -h --help                      Show this screen.
@@ -49,7 +49,7 @@ Options:
   --log-level=LVL                Level to log at, 0-4 [default: 3]
   --log-directory=DIR            Directory to log to [default: ./]
   --pidfile=FILE                 Pidfile to write [default: ./config-manager.pid]
-  --ignore-plugin-responses=RESP Don't wait for plugin responses
+  --wait-plugin-complete=RESP    Whether to wait for plugin responses
 
 """
 
@@ -91,7 +91,7 @@ def main(args):
     node_type = arguments['--node-type']
     log_dir = arguments['--log-directory']
     log_level = LOG_LEVELS.get(arguments['--log-level'], logging.DEBUG)
-    ignore_plugin_responses = arguments['--ignore-plugin-responses']
+    wait_plugin_complete = arguments['--wait-plugin-complete']
 
     stdout_err_log = os.path.join(log_dir, "queue-manager.output.log")
 
@@ -123,7 +123,7 @@ def main(args):
 
     plugins_dir = "/usr/share/clearwater/clearwater-queue-manager/plugins/"
     plugins = load_plugins_in_dir(plugins_dir,
-                                  PluginParams(ignore_plugin_responses=ignore_plugin_responses))
+                                  PluginParams(wait_plugin_complete=wait_plugin_complete))
     plugins.sort(key=lambda x: x.key())
     threads = []
 
