@@ -35,7 +35,6 @@
 import unittest
 import mock
 import logging
-import uuid
 
 _log = logging.getLogger()
 
