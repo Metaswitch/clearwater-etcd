@@ -34,7 +34,7 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-import json
+import json, sys
 from textwrap import dedent
 
 # Expected format for the S-CSCF file
@@ -52,10 +52,12 @@ EXPECTED_FORMAT = dedent("""The expected format is:\n\
  ]
 }""")
 
+source = sys.argv[1] if len(sys.argv) > 1 else "/etc/clearwater/s-cscf.json"
+
 # This does some basic validation of the S-CSCF configuration file, and
 # prints the contents
 try:
-    with open("/etc/clearwater/s-cscf.json") as scscf_file:
+    with open(source) as scscf_file:
         try:
             scscf_data = json.load(scscf_file)
             scscfs = scscf_data["s-cscfs"]
@@ -78,8 +80,8 @@ try:
                 print EXPECTED_FORMAT
 
         except ValueError, KeyError:
-            print "\nInvalid S-CSCF file at /etc/clearwater/s-cscf.json\n"
+            print "\nInvalid S-CSCF file at %s\n" % source
             print EXPECTED_FORMAT
 
 except IOError:
-    print "\nNo S-CSCF file at /etc/clearwater/s-cscf.json\n"
+    print "\nNo S-CSCF file at %s\n" % source

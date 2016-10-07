@@ -47,6 +47,8 @@ client = etcd.Client(etcd_ip, 4000)
 plugins_dir = "/usr/share/clearwater/clearwater-config-manager/plugins/"
 plugins = load_plugins_in_dir(plugins_dir)
 
+rc = 0
+
 for plugin in plugins:
     try:
         result = client.get("/" + etcd_key + "/" + site + "/configuration/" + plugin.key())
@@ -60,5 +62,9 @@ for plugin in plugins:
         print " - {} is up to date".format(plugin.file())
     elif state == FileStatus.OUT_OF_SYNC:
         print " - {} is present but is out of sync".format(plugin.file())
+        rc = 1
     else:
         print " - {} is missing".format(plugin.file())
+        rc = 1
+
+sys.exit(rc)

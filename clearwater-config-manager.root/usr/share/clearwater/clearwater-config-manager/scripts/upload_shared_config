@@ -39,6 +39,12 @@ etcd_key=clearwater
 
 [ $# -le 1 ] || { echo "Usage: upload_shared_config [--force]" >&2 ; exit 2 ; }
 
+if [[ $EUID -ne 0 ]]
+then
+  echo "You must run this script with root permissions"
+  exit 1
+fi
+
 force=false
 if [ -n "$1" ];
 then
