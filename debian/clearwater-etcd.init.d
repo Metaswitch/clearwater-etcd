@@ -54,6 +54,7 @@
 DESC="etcd"
 NAME=clearwater-etcd
 DATA_DIR=/var/lib/$NAME
+JOINED_CLUSTER_SUCCESSFULLY=$DATA_DIR/clustered_successfully
 PIDFILE=/var/run/$NAME/$NAME.pid
 DAEMON=/usr/bin/etcd
 DAEMONWRAPPER=/usr/bin/etcdwrapper
@@ -194,7 +195,8 @@ join_cluster()
 #
 join_or_create_cluster()
 {
-        if [[ $etcd_cluster =~ (^|,)$advertisement_ip(,|$) ]]
+        if [[ $etcd_cluster =~ (^|,)$advertisement_ip(,|$) ]] &&
+           [[ ! -f $JOINED_CLUSTER_SUCCESSFULLY ]]
         then
           create_cluster
         else
@@ -208,6 +210,7 @@ wait_for_etcd()
         start_time=$(date +%s)
         while true; do
           if nc -z $listen_ip 4000; then
+            touch $JOINED_CLUSTER_SUCCESSFULLY
             break;
           else
             current_time=$(date +%s)
@@ -231,9 +234,8 @@ verify_etcd_health()
         # <id>[unstarted]: name=xx-xx-xx-xx peerURLs=http://xx.xx.xx.xx:2380 clientURLs=http://xx.xx.xx.xx:4000
         # The [unstarted] is only present while the member hasn't fully joined the etcd cluster
         setup_etcdctl_peers
-        member_list=$(/usr/bin/etcdctl member list)
-        local_member_id=$(echo $member_list | grep -F -w "http://$local_ip:2380" | grep -o -E "^[^:]*" | grep -o "^[^[]\+")
-        unstarted_member_id=$(echo $member_list | grep -F -w "http://$local_ip:2380" | grep "unstarted")
+        local_member_id=$(/usr/bin/etcdctl member list | grep -F -w "http://$local_ip:2380" | grep -o -E "^[^:]*" | grep -o "^[^[]\+")
+        unstarted_member_id=$(/usr/bin/etcdctl member list | grep -F -w "http://$local_ip:2380" | grep "unstarted")
         if [[ $unstarted_member_id != '' ]]
         then
           /usr/bin/etcdctl member remove $local_member_id
@@ -329,6 +331,8 @@ do_start()
 
 do_rebuild()
 {
+        rm -f $JOINED_CLUSTER_SUCCESSFULLY
+
         # Return
         #   0 if daemon has been started
         #   1 if daemon was already running
