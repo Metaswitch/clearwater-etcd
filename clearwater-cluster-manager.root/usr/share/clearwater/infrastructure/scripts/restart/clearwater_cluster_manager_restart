@@ -1,5 +1,9 @@
+#!/bin/bash
+
+# @file clearwater_cluster_manager_restart
+#
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015 Metaswitch Networks Ltd
+# Copyright (C) 2016  Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -29,38 +33,5 @@
 # "OpenSSL Licenses" means the OpenSSL License and Original SSLeay License
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
-from abc import ABCMeta, abstractmethod
-import alarm_constants
-import collections
 
-PluginParams = collections.namedtuple(
-                 'PluginParams',
-                 ['wait_plugin_complete'])
-
-class QueuePluginBase(object): # pragma : no cover
-    __metaclass__ = ABCMeta
-
-    # How long to wait for a node to do whatever it does while it's
-    # at the front of the queue.
-    WAIT_FOR_THIS_NODE = 480
-    WAIT_FOR_OTHER_NODE = 480
-
-    def local_alarm(self):
-        return (alarm_constants.LOCAL_CONFIG_RESYNCHING,
-                "local")
-
-    def global_alarm(self):
-        return (alarm_constants.GLOBAL_CONFIG_RESYNCHING,
-                "global")
-
-    @abstractmethod
-    def key(self):
-        """This should return the etcd key that holds the value managed by
-        this plugin"""
-        pass
-
-    @abstractmethod
-    def at_front_of_queue(self):
-        """This hook is called when the node is at the front of the
-        queue."""
-        pass
+service clearwater-cluster-manager stop

@@ -1,5 +1,9 @@
+#! /usr/bin/python
+
+# @file print-enum-configuration
+#
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2015 Metaswitch Networks Ltd
+# Copyright (C) 2016  Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -29,38 +33,52 @@
 # "OpenSSL Licenses" means the OpenSSL License and Original SSLeay License
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
-from abc import ABCMeta, abstractmethod
-import alarm_constants
-import collections
 
-PluginParams = collections.namedtuple(
-                 'PluginParams',
-                 ['wait_plugin_complete'])
+import json, sys
+from textwrap import dedent
 
-class QueuePluginBase(object): # pragma : no cover
-    __metaclass__ = ABCMeta
+# Expected format for the ENUM file
+EXPECTED_FORMAT = dedent("""The expected format is:\n\
+{
+\"number_blocks\" :
+ [
+   {
+     \"name\" : \"<name>\",
+     \"prefix\" : \"<prefix>\",
+     \"regex\" : \"<regex>\"
+   },
+   ...
+ ]
+}""")
 
-    # How long to wait for a node to do whatever it does while it's
-    # at the front of the queue.
-    WAIT_FOR_THIS_NODE = 480
-    WAIT_FOR_OTHER_NODE = 480
+source = sys.argv[1] if len(sys.argv) > 1 else "/etc/clearwater/enum.json"
 
-    def local_alarm(self):
-        return (alarm_constants.LOCAL_CONFIG_RESYNCHING,
-                "local")
+# This does some basic validation of the ENUM configuration file, and
+# prints the contents
+try:
+    with open(source) as enum_file:
+        try:
+            enum_data = json.load(enum_file)
+            blocks = enum_data["number_blocks"]
 
-    def global_alarm(self):
-        return (alarm_constants.GLOBAL_CONFIG_RESYNCHING,
-                "global")
+            try:
+                for block in blocks:
+                    name = block["name"]
+                    prefix = block["prefix"]
+                    regex = block["regex"]
 
-    @abstractmethod
-    def key(self):
-        """This should return the etcd key that holds the value managed by
-        this plugin"""
-        pass
+                    print "  Name: {}".format(name)
+                    print "  Prefix: {}".format(prefix)
+                    print "  Regex: {}".format(regex)
+                    print ""
 
-    @abstractmethod
-    def at_front_of_queue(self):
-        """This hook is called when the node is at the front of the
-        queue."""
-        pass
+            except KeyError as e:
+                print "Invalid ENUM entry detected in file.\n"
+                print EXPECTED_FORMAT
+
+        except ValueError, KeyError:
+            print "\nInvalid ENUM file at %s\n" % source
+            print EXPECTED_FORMAT
+
+except IOError:
+    print "\nNo ENUM file at %s\n" % source

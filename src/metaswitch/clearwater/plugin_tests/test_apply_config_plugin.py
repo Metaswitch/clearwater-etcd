@@ -35,11 +35,11 @@
 import unittest
 import mock
 import logging
-import uuid
 
 _log = logging.getLogger()
 
 from clearwater_etcd_plugins.clearwater_queue_manager.apply_config_plugin import ApplyConfigPlugin
+from metaswitch.clearwater.queue_manager.plugin_base import PluginParams
 
 # run_command returns 0 if the shell command provided succeeds, and the return
 # code if it fails. This pair of functions are used as mock side-effects to
@@ -64,19 +64,8 @@ class TestApplyConfigPlugin(unittest.TestCase):
     def test_front_of_queue(self, mock_os_listdir, mock_os_path_exists, mock_run_command):
         """Test Queue Manager front_of_queue function"""
 
-        # Setup Plugin parameters
-        Params = ('10.0.0.1',  # ip
-                  '10.0.1.1',  # mgmt_ip
-                  'local_site',  # local_site
-                  'remote_site',  # remote_site
-                  '',  # remote_cassandra_seeds
-                  '',  # signaling_namespace
-                  uuid.UUID('92a674aa-a64b-4549-b150-596fd466923f'),  # uuid
-                  'etcd_key',  # etcd_key
-                  'etcd_cluster_key')  # etcd_cluster_key
-
         # Create the plugin
-        plugin = ApplyConfigPlugin(Params)
+        plugin = ApplyConfigPlugin(PluginParams(wait_plugin_complete='Y'))
 
         # Set up the mock environment and expectations
         mock_os_path_exists.return_value = True
@@ -108,19 +97,8 @@ class TestApplyConfigPlugin(unittest.TestCase):
                                              mock_os_path_exists, mock_run_command):
         """Test Queue Manager when check_node_health fails"""
 
-        # Setup Plugin parameters
-        Params = ('10.0.0.1',  # ip
-                  '10.0.1.1',  # mgmt_ip
-                  'local_site',  # local_site
-                  'remote_site',  # remote_site
-                  '',  # remote_cassandra_seeds
-                  '',  # signaling_namespace
-                  uuid.UUID('92a674aa-a64b-4549-b150-596fd466923f'),  # uuid
-                  'etcd_key',  # etcd_key
-                  'etcd_cluster_key')  # etcd_cluster_key
-
         # Create the plugin
-        plugin = ApplyConfigPlugin(Params)
+        plugin = ApplyConfigPlugin(PluginParams(wait_plugin_complete='Y'))
 
         # Set up the mock environment and expectations
         mock_os_path_exists.return_value = True
@@ -132,6 +110,37 @@ class TestApplyConfigPlugin(unittest.TestCase):
              mock.call("/usr/share/clearwater/clearwater-queue-manager/scripts/check_node_health.py"),
              mock.call("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue"\
                        " remove_failure apply_config")]
+
+        # Call the plugin hook
+        plugin.at_front_of_queue()
+
+        # Test our assertions
+        mock_os_path_exists.assert_called_once_with\
+                            ("/usr/share/clearwater/infrastructure/scripts/restart")
+        mock_os_listdir.assert_called_once_with\
+                            ("/usr/share/clearwater/infrastructure/scripts/restart")
+        mock_run_command.assert_has_calls(expected_command_call_list)
+
+    @mock.patch('clearwater_etcd_plugins.clearwater_queue_manager.apply_config_plugin.run_command',\
+                side_effect=run_command_all_succeed)
+    @mock.patch('clearwater_etcd_plugins.clearwater_queue_manager.apply_config_plugin.os.path.exists')
+    @mock.patch('clearwater_etcd_plugins.clearwater_queue_manager.apply_config_plugin.os.listdir')
+    def test_front_of_queue_no_health_check(self, mock_os_listdir,\
+                                            mock_os_path_exists, mock_run_command):
+        """Test Queue Manager when we're not checking node health"""
+
+        # Create the plugin
+        plugin = ApplyConfigPlugin(PluginParams(wait_plugin_complete='N'))
+
+        # Set up the mock environment and expectations
+        mock_os_path_exists.return_value = True
+        mock_os_listdir.return_value = ["test_restart_script"]
+
+        expected_command_call_list = \
+            [mock.call("service clearwater-infrastructure restart"),
+             mock.call("/usr/share/clearwater/infrastructure/scripts/restart/test_restart_script"),
+             mock.call("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue"\
+                       " remove_success apply_config")]
 
         # Call the plugin hook
         plugin.at_front_of_queue()
