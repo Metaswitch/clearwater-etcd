@@ -44,7 +44,7 @@ class BaseQueueTest(unittest.TestCase):
     def set_initial_val(self, queue_config):
         # Write some initial data into the key and start the synchronizer
         self._e._client.write("/clearwater/local/configuration/queue_test", queue_config)
-        thread = Thread(target=self._e.main)
+        thread = Thread(target=self._e.main_wrapper)
         thread.daemon=True
         thread.start()
 
