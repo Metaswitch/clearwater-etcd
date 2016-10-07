@@ -64,19 +64,8 @@ class TestApplyConfigPlugin(unittest.TestCase):
     def test_front_of_queue(self, mock_os_listdir, mock_os_path_exists, mock_run_command):
         """Test Queue Manager front_of_queue function"""
 
-        # Setup Plugin parameters
-        Params = ('10.0.0.1',  # ip
-                  '10.0.1.1',  # mgmt_ip
-                  'local_site',  # local_site
-                  'remote_site',  # remote_site
-                  '',  # remote_cassandra_seeds
-                  '',  # signaling_namespace
-                  uuid.UUID('92a674aa-a64b-4549-b150-596fd466923f'),  # uuid
-                  'etcd_key',  # etcd_key
-                  'etcd_cluster_key')  # etcd_cluster_key
-
         # Create the plugin
-        plugin = ApplyConfigPlugin(Params)
+        plugin = ApplyConfigPlugin(None)
 
         # Set up the mock environment and expectations
         mock_os_path_exists.return_value = True
@@ -108,19 +97,8 @@ class TestApplyConfigPlugin(unittest.TestCase):
                                              mock_os_path_exists, mock_run_command):
         """Test Queue Manager when check_node_health fails"""
 
-        # Setup Plugin parameters
-        Params = ('10.0.0.1',  # ip
-                  '10.0.1.1',  # mgmt_ip
-                  'local_site',  # local_site
-                  'remote_site',  # remote_site
-                  '',  # remote_cassandra_seeds
-                  '',  # signaling_namespace
-                  uuid.UUID('92a674aa-a64b-4549-b150-596fd466923f'),  # uuid
-                  'etcd_key',  # etcd_key
-                  'etcd_cluster_key')  # etcd_cluster_key
-
         # Create the plugin
-        plugin = ApplyConfigPlugin(Params)
+        plugin = ApplyConfigPlugin(None)
 
         # Set up the mock environment and expectations
         mock_os_path_exists.return_value = True

@@ -48,19 +48,8 @@ class TestSharedConfigPlugin(unittest.TestCase):
     def test_config_changed(self, mock_run_command, mock_safely_write):
         """Test Config Manager writes new config when config has changed"""
 
-        # Setup Plugin parameters
-        Params = ('10.0.0.1',  # ip
-                  '10.0.1.1',  # mgmt_ip
-                  'local_site',  # local_site
-                  'remote_site',  # remote_site
-                  '',  # remote_cassandra_seeds
-                  '',  # signaling_namespace
-                  uuid.UUID('92a674aa-a64b-4549-b150-596fd466923f'),  # uuid
-                  'etcd_key',  # etcd_key
-                  'etcd_cluster_key')  # etcd_cluster_key
-
         # Create the plugin
-        plugin = SharedConfigPlugin(Params)
+        plugin = SharedConfigPlugin(None)
 
         # Set up the config strings to be tested
         old_config_string = "Test config string here. \n More test config string."
@@ -83,19 +72,8 @@ class TestSharedConfigPlugin(unittest.TestCase):
     def test_config_not_changed(self, mock_run_command, mock_safely_write):
         """Test Config Manager does nothing if called with identical config"""
 
-        # Setup Plugin parameters
-        Params = ('10.0.0.1',  # ip
-                  '10.0.1.1',  # mgmt_ip
-                  'local_site',  # local_site
-                  'remote_site',  # remote_site
-                  '',  # remote_cassandra_seeds
-                  '',  # signaling_namespace
-                  uuid.UUID('92a674aa-a64b-4549-b150-596fd466923f'),  # uuid
-                  'etcd_key',  # etcd_key
-                  'etcd_cluster_key')  # etcd_cluster_key
-
         # Create the plugin
-        plugin = SharedConfigPlugin(Params)
+        plugin = SharedConfigPlugin(None)
 
         # Set up the config strings to be tested
         old_config_string = "This is more test config. \n It won't change."
