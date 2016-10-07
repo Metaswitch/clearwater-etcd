@@ -57,17 +57,18 @@ if [ $rc != 0 ] ; then
 fi
 
 
-while read -r key; do
+while read -r full_key; do
+  key=${full_key/$top_key/}
   if [ "$key" != "apply_config" ]; then
-    backup_file=${backup_directory}/${key/$top_key/}
+    backup_file=${backup_directory}/$key
 
-    clearwater-etcdctl get $key > "${backup_file}" 2> /tmp/backup_config.$key.$$
+    clearwater-etcdctl get $full_key > "${backup_file}" 2> /tmp/backup_config.$key.$$
 
     rc=$?
 
     # Check the return code and log if appropriate.
     if [ $rc != 0 ] ; then
-      echo "Failed to get $key from etcd config with return code $rc" >&2
+      echo "Failed to get $full_key from etcd config with return code $rc" >&2
       cat /tmp/backup_config.$key.$$              >&2
       exit 3
     fi

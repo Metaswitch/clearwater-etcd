@@ -68,16 +68,17 @@ FILES="${backup_directory}/*"
 
 for f in $FILES
 do
-  if [ $(basename $f) != "apply_config" ]; then
+  key=$(basename $f)
+  if [ $key != "apply_config" ]; then
     # Upload the file to etcd
-    keypath=http://${management_local_ip:-$local_ip}:4000/v2/keys/${top_key}/$(basename $f)
-    tmp_file=/tmp/restore-config.$(basename $f)
+    keypath=http://${management_local_ip:-$local_ip}:4000/v2/keys/${top_key}/$key
+    tmp_file=/tmp/restore-config.$key
     curl -X PUT $keypath --data-urlencode value@${f} 2> ${tmp_file}.stderr.$$ | tee ${tmp_file}.stdout.$$ | egrep -q "\"action\":\"set\""
     rc=$?
 
     # Check the return code and log if appropriate.
     if [ $rc != 0 ] ; then
-      echo "Failed to upload $f to etcd with return code $rc" >&2
+      echo "Failed to upload key $key to etcd with return code $rc" >&2
       cat ${tmp_file}.stderr.$$              >&2
       cat ${tmp_file}.stdout.$$              >&2
       exit 3
