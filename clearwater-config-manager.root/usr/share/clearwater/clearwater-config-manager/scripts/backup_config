@@ -47,8 +47,7 @@ backup_directory=$1
 
 top_key=/${etcd_key}/${local_site_name}/configuration/
 
-clearwater-etcdctl ls ${top_key} > /tmp/backup_config.$$.stdout 2>
-/tmp/backup_config.$$.stderr
+clearwater-etcdctl ls ${top_key} > /tmp/backup_config.$$.stdout 2> /tmp/backup_config.$$.stderr
 
 if [ $rc != 0 ] ; then
   echo "Failed to list keys from etcd config with return code $rc" >&2
