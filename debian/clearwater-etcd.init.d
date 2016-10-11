@@ -321,7 +321,7 @@ do_start()
         install -m 755 -o $NAME -g root -d /var/run/$NAME && chown -R $NAME /var/run/$NAME
 
         # Common arguments
-        DAEMON_ARGS="--listen-client-urls http://$listen_ip:4000
+        DAEMON_ARGS="--listen-client-urls http://0.0.0.0:4000
                      --advertise-client-urls http://$advertisement_ip:4000
                      --data-dir $DATA_DIR/$advertisement_ip
                      --name $ETCD_NAME
@@ -348,7 +348,7 @@ do_rebuild()
         create_cluster
 
         # Standard ports
-        DAEMON_ARGS="--listen-client-urls http://$listen_ip:4000
+        DAEMON_ARGS="--listen-client-urls http://0.0.0.0:4000
                      --advertise-client-urls http://$advertisement_ip:4000
                      --listen-peer-urls http://$listen_ip:2380
                      --initial-advertise-peer-urls http://$advertisement_ip:2380
