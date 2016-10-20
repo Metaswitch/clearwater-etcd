@@ -34,7 +34,7 @@ import os
 import sys
 import json
 import difflib
-import subprocess
+import requests
 import syslog
 
 def main():
@@ -46,10 +46,9 @@ def main():
     # URL of shared_config etcd key
     url = sys.argv[1]
 
-    # Get the old shared_config stored on etcd
-    # If this fails, this script is the least of our worries and we ignore, because
-    # upload_shared_config, which called this script, will print an error instead
-    jsonstr = subprocess.check_output(["curl", "-s", "-X", "GET", url])
+    # Get the old shared_config stored on etcd. No error checking here, as if
+    # something is wrong with etcd, upload_shared_config will worry about it for us
+    jsonstr = requests.get(url).text
 
     new_config_lines = open("/etc/clearwater/shared_config").read().splitlines()
     # etcd returns JSON; the shared_config is in node.value
@@ -61,12 +60,13 @@ def main():
     old_config_lines.sort()
     difflines = list(difflib.ndiff(old_config_lines, new_config_lines))
 
-    # (i) Pull out diff lines prefixed by "+ " / "- "; (ii) separate with quotes and commas;
-    # (iii) ignore empty lines; (iv) concatenate; (v) delete trailing comma
-    additions = ''.join(("\"" + line[2:] + "\", ") for line in difflines \
-        if line[2:] and line.startswith("+ ")).rstrip(", ")
-    deletions = ''.join(("\"" + line[2:] + "\", ") for line in difflines \
-        if line[2:] and line.startswith("- ")).rstrip(", ")
+    # Pull out nonempty diff lines prefixed by "- "
+    deletions = [line[2:] for line in difflines if line.startswith("- ") and len(line) > 2]
+    # "Concatenate", "like", "this"
+    deletions_str = ", ".join(['"' + line + '"' for line in deletions])
+
+    additions = [line[2:] for line in difflines if line.startswith("+ ") and len(line) > 2]
+    additions_str = ", ".join(['"' + line + '"' for line in additions])
 
     # We'll be running as root, but SUDO_USER pulls out the user who invoked sudo
     username = os.environ['SUDO_USER']
@@ -74,12 +74,13 @@ def main():
     if additions or deletions:
         logstr = "Configuration file change: shared_config was modified by user {}. ".format(username)
         if deletions:
-            logstr += "LINES REMOVED: "
-            logstr += deletions + ". "
+            logstr += "Lines removed: "
+            logstr += deletions_str + ". "
         if additions:
-            logstr += "LINES ADDED: "
-            logstr += additions + "."
+            logstr += "Lines added: "
+            logstr += additions_str + "."
 
+        # Print changes to console so the user can do a sanity check
         print logstr
 
         # Log the changes
