@@ -38,6 +38,11 @@ import subprocess
 import syslog
 
 def main():
+    '''
+    Print a readable diff of changes between etcd's shared_config and a newer
+    local copy, and log to syslog.
+    '''
+
     # URL of shared_config etcd key
     url = sys.argv[1]
 
@@ -56,18 +61,18 @@ def main():
     old_config_lines.sort()
     difflines = list(difflib.ndiff(old_config_lines, new_config_lines))
 
-    # Pull out lines prefixed by "+ " / "- ", wrap in quotes, concatenate, and
-    # delete trailing comma
+    # (i) Pull out diff lines prefixed by "+ " / "- "; (ii) separate with quotes and commas;
+    # (iii) ignore empty lines; (iv) concatenate; (v) delete trailing comma
     additions = ''.join(("\"" + line[2:] + "\", ") for line in difflines \
-        if line.startswith("+ ")).rstrip(", ")
+        if line[2:] and line.startswith("+ ")).rstrip(", ")
     deletions = ''.join(("\"" + line[2:] + "\", ") for line in difflines \
-        if line.startswith("- ")).rstrip(", ")
+        if line[2:] and line.startswith("- ")).rstrip(", ")
 
     # We'll be running as root, but SUDO_USER pulls out the user who invoked sudo
     username = os.environ['SUDO_USER']
 
     if additions or deletions:
-        logstr = "Configuration file change: the file shared_config was modified by user {}. ".format(username)
+        logstr = "Configuration file change: shared_config was modified by user {}. ".format(username)
         if deletions:
             logstr += "LINES REMOVED: "
             logstr += deletions + ". "
@@ -78,7 +83,7 @@ def main():
         print logstr
 
         # Log the changes
-        syslog.openlog("Audit", syslog.LOG_PID)
+        syslog.openlog("audit-log", syslog.LOG_PID)
         syslog.syslog(syslog.LOG_NOTICE, logstr)
         syslog.closelog()
 
