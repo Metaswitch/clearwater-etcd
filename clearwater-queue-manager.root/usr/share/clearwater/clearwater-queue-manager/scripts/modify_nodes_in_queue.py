@@ -38,10 +38,9 @@ from metaswitch.clearwater.queue_manager.null_plugin import NullPlugin
 from time import sleep
 
 def make_key(site, clearwater_key, queue_key):
-        return "/{}/{}/configuration/{}".format(clearwater_key, site, queue_key)
+    return "/{}/{}/configuration/{}".format(clearwater_key, site, queue_key)
 
 logfile = "/var/log/clearwater-queue-manager/queue_operation.log"
-print "Detailed output being sent to %s" % logfile
 logging.basicConfig(filename=logfile,
                     format='%(asctime)s.%(msecs)03d UTC %(levelname)s %(filename)s:%(lineno)d: %(message)s',
                     level=logging.DEBUG)
@@ -59,39 +58,34 @@ queue_syncer = EtcdSynchronizer(NullPlugin(queue_key), local_ip, site, clearwate
 
 if operation == "add":
     logging.debug("Adding %s to queue to restart" % (local_ip + "-" + node_type))
-
     while queue_syncer.add_to_queue() != WriteToEtcdStatus.SUCCESS:
         sleep(2)
-
     logging.debug("Node successfully added to restart queue")
+
 elif operation == "remove_success":
     logging.debug("Removing %s from front of queue" % (local_ip + "-" + node_type))
-
     while queue_syncer.remove_from_queue(True) != WriteToEtcdStatus.SUCCESS:
         sleep(2)
-
     logging.debug("Node successfully removed")
+
 elif operation == "remove_failure":
     logging.debug("Removing %s from front of queue and marking as errored" % (local_ip + "-" + node_type))
-
     while queue_syncer.remove_from_queue(False) != WriteToEtcdStatus.SUCCESS:
         sleep(2)
-
     logging.debug("Node successfully removed")
+
 elif operation == "force_true":
     logging.debug("Setting the force value to true")
-
     while queue_syncer.set_force(True) != WriteToEtcdStatus.SUCCESS:
         sleep(2)
-
     logging.debug("Force value successfully set")
+
 elif operation == "force_false":
     logging.debug("Setting the force value to false")
-
     while queue_syncer.set_force(False) != WriteToEtcdStatus.SUCCESS:
         sleep(2)
-
     logging.debug("Force value successfully set")
+
 else:
     logging.debug("Invalid operation requested")
 
