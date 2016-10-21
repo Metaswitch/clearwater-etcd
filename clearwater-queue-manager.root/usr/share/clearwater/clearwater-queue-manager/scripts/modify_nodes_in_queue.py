@@ -42,7 +42,8 @@ def make_key(site, clearwater_key, queue_key):
 
 logfile = "/var/log/clearwater-queue-manager/queue_operation.log"
 logging.basicConfig(filename=logfile,
-                    format='%(asctime)s.%(msecs)03d UTC %(levelname)s %(filename)s:%(lineno)d: %(message)s',
+                    format="%(asctime)s.%(msecs)03d UTC %(levelname)s %(filename)s:%(lineno)d: %(message)s",
+                    datefmt="%d-%m-%Y %H:%M:%S",
                     level=logging.DEBUG)
 
 operation = sys.argv[1]
