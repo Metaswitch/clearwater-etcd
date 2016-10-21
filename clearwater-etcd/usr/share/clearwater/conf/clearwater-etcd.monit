@@ -47,7 +47,7 @@ check process etcd_process with pidfile /var/run/clearwater-etcd/clearwater-etcd
   if memory > 80% for 6 cycles then exec "/bin/bash -c '/usr/share/clearwater/bin/issue-alarm monit 6500.3; /etc/init.d/clearwater-etcd stop'"
 
 # Clear any alarms if the process has been running long enough.
-check program etcd_uptime with path /usr/share/clearwater/infrastructure/scripts/check-etcd-uptime
+check program etcd_uptime with path /usr/share/clearwater/infrastructure/monit_uptime/check-etcd-uptime
   group etcd
   depends on etcd_process
   every 3 cycles
