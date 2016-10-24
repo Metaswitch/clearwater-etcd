@@ -38,12 +38,12 @@ from metaswitch.clearwater.queue_manager.null_plugin import NullPlugin
 from time import sleep
 
 def make_key(site, clearwater_key, queue_key):
-        return "/{}/{}/configuration/{}".format(clearwater_key, site, queue_key)
+    return "/{}/{}/configuration/{}".format(clearwater_key, site, queue_key)
 
 logfile = "/var/log/clearwater-queue-manager/queue_operation.log"
-print "Detailed output being sent to %s" % logfile
 logging.basicConfig(filename=logfile,
-                    format='%(asctime)s.%(msecs)03d UTC %(levelname)s %(filename)s:%(lineno)d: %(message)s',
+                    format="%(asctime)s.%(msecs)03d UTC %(levelname)s %(filename)s:%(lineno)d: %(message)s",
+                    datefmt="%d-%m-%Y %H:%M:%S",
                     level=logging.DEBUG)
 
 operation = sys.argv[1]
