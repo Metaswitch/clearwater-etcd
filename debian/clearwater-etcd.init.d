@@ -437,16 +437,15 @@ do_decommission()
           return 2
         fi
 
+        # etcdctl will stop the daemon automatically once it has removed the
+        # local id (see https://coreos.com/etcd/docs/latest/runtime-configuration.html
+        # "Remove a Member")
         /usr/bin/etcdctl member remove $id
         if [[ $? != 0 ]]
         then
           echo Failed to remove instance from cluster
           return 2
         fi
-
-        start-stop-daemon --stop --retry=USR2/60/KILL/5 --pidfile $PIDFILE --startas $DAEMONWRAPPER
-        RETVAL=$?
-        [[ $RETVAL == 2 ]] && return 2
 
         rm -f $PIDFILE
 
