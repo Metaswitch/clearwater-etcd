@@ -13,7 +13,7 @@ check process clearwater_queue_manager_process with pidfile /var/run/clearwater-
   if memory > 80% for 6 cycles then exec "/bin/bash -c '/usr/share/clearwater/bin/issue-alarm monit 9000.3; /etc/init.d/clearwater-queue-manager abort'"
 
 # Clear any alarms if the process has been running long enough.
-check program clearwater_queue_manager_uptime with path /usr/share/clearwater/infrastructure/scripts/check-queue-manager-uptime
+check program clearwater_queue_manager_uptime with path /usr/share/clearwater/infrastructure/monit_uptime/check-queue-manager-uptime
   group clearwater_queue_manager
   depends on clearwater_queue_manager_process
   every 3 cycles
