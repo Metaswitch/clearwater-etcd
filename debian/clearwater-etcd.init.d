@@ -172,6 +172,10 @@ join_cluster()
         then
           local_member_id=$(/usr/bin/etcdctl member list | grep -F -w "http://$advertisement_ip:2380" | grep -o -E "^[^:]*" | grep -o "^[^[]\+")
           /usr/bin/etcdctl member remove $local_member_id
+          if [[ $? == 0 ]]
+          then
+            rm -rf $DATA_DIR/$advertisement_ip
+          fi
           echo "Failed to add local node to cluster"
           exit 2
         fi
