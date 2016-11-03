@@ -271,6 +271,17 @@ verify_etcd_health()
             fi
           fi
         fi
+
+        # If we only have one of local member id and data directory, remove it.
+        # This is because it is a bad state to only have one and not the other.
+        if [[ $local_member_id == '' ]] && [[ -e $DATA_DIR/$advertisement_ip ]]
+        then
+          rm -rf $DATA_DIR/$advertisement_ip
+        fi
+        if [[ $local_member_id != '' ]] && [[ ! -e $DATA_DIR/$advertisement_ip ]]
+        then
+          /usr/bin/etcdctl member remove $local_member_id
+        fi
 }
 
 #
