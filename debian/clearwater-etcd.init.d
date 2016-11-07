@@ -172,6 +172,7 @@ join_cluster()
         then
           local_member_id=$(/usr/bin/etcdctl member list | grep -F -w "http://$advertisement_ip:2380" | grep -o -E "^[^:]*" | grep -o "^[^[]\+")
           /usr/bin/etcdctl member remove $local_member_id
+          rm -rf $DATA_DIR/$advertisement_ip
           echo "Failed to add local node to cluster"
           exit 2
         fi
@@ -243,10 +244,7 @@ verify_etcd_health()
         if [[ $unstarted_member_id != '' ]]
         then
           /usr/bin/etcdctl member remove $local_member_id
-          if [[ $? == 0 ]]
-          then
-            rm -rf $DATA_DIR/$advertisement_ip
-          fi
+          rm -rf $DATA_DIR/$advertisement_ip
         fi
 
         if [[ -e $DATA_DIR/$advertisement_ip ]]
@@ -261,11 +259,21 @@ verify_etcd_health()
           if [[ $rc != 0 ]]
           then
             /usr/bin/etcdctl member remove $local_member_id
-            if [[ $? == 0 ]]
-            then
-              rm -rf $DATA_DIR/$advertisement_ip
-            fi
+            rm -rf $DATA_DIR/$advertisement_ip
           fi
+        fi
+
+        # We could be in a bad state at this point:
+        #  - We think we are a member of a cluster, but have not got any data
+        #  - We aren't a member, but have data, and so will not attempt to rejoin.
+        # To resolve this, we remove ourselves, or delete the data, if we only have
+        # and not the other.
+        if [[ $local_member_id == '' ]] && [[ -e $DATA_DIR/$advertisement_ip ]]
+        then
+          rm -rf $DATA_DIR/$advertisement_ip
+        elif [[ $local_member_id != '' ]] && [[ ! -e $DATA_DIR/$advertisement_ip ]]
+        then
+          /usr/bin/etcdctl member remove $local_member_id
         fi
 }
 
