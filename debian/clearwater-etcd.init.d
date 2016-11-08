@@ -199,8 +199,8 @@ join_cluster()
 #
 join_or_create_cluster()
 {
-        if [[ $etcd_cluster =~ (^|,)$advertisement_ip(,|$) ]] &&
-           [[ ! -f $JOINED_CLUSTER_SUCCESSFULLY ]]
+        if [[ $etcd_cluster == $advertisement_ip ]] ||
+           [[ $etcd_cluster =~ (^|,)$advertisement_ip(,|$) && ! -f $JOINED_CLUSTER_SUCCESSFULLY ]] ||
         then
           create_cluster
         else
