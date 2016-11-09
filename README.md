@@ -37,3 +37,8 @@ Joining an existing cluster requires determining the list of nodes that are curr
 ### Decommissioning
 
 To decommission a node run `sudo service clearwater-etcd decommission` which will gracefully remove the local node, stop the local `etcd` service and destroy the node's state.  At this point, the `etcd` service can be re-attached to that (or another) `etcd` cluster by updating `etcd_cluster` and starting the `clearwater-etcd` service.
+
+## etcd sources
+
+* `etcd` and `etcdctl` are the versions downloaded from <https://github.com/coreos/etcd/releases/download/v2.2.5/etcd-v2.2.5-linux-amd64.tar.gz>
+* `etcd-dump-logs` is built from <https://github.com/coreos/etcd/blob/v2.2.5/tools/etcd-dump-logs/main.go>

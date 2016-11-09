@@ -37,7 +37,7 @@
 Usage:
   main.py --mgmt-local-ip=IP --sig-local-ip=IP --local-site=NAME --remote-site=NAME --remote-cassandra-seeds=IPs --uuid=UUID --etcd-key=KEY --etcd-cluster-key=CLUSTER_KEY
           [--signaling-namespace=NAME] [--foreground] [--log-level=LVL]
-          [--log-directory=DIR] [--pidfile=FILE]
+          [--log-directory=DIR] [--pidfile=FILE] [--cluster-manager-enabled=Y/N]
 
 Options:
   -h --help                      Show this screen.
@@ -54,6 +54,7 @@ Options:
   --log-level=LVL                Level to log at, 0-4 [default: 3]
   --log-directory=DIR            Directory to log to [default: ./]
   --pidfile=FILE                 Pidfile to write [default: ./cluster-manager.pid]
+  --cluster-manager-enabled=Y/N  Whether the cluster manager should start any threads [default: Yes]
 
 """
 
@@ -128,6 +129,7 @@ def main(args):
     local_uuid = UUID(arguments['--uuid'])
     etcd_key = arguments.get('--etcd-key')
     etcd_cluster_key = arguments.get('--etcd-cluster-key')
+    cluster_manager_enabled = arguments['--cluster-manager-enabled']
     log_dir = arguments['--log-directory']
     log_level = LOG_LEVELS.get(arguments['--log-level'], logging.DEBUG)
 
@@ -197,7 +199,10 @@ def main(args):
     synchronizers = []
     threads = []
 
-    if etcd_cluster_key == "DO_NOT_CLUSTER":
+    if cluster_manager_enabled == "N":
+        # Don't start any threads as we don't want the cluster manager to run
+        pdlogs.DO_NOT_START.log()
+    elif etcd_cluster_key == "DO_NOT_CLUSTER":
         # Don't start any threads as we don't want this box to cluster
         pdlogs.DO_NOT_CLUSTER.log()
     else:

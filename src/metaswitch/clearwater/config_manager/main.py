@@ -64,7 +64,6 @@ import syslog
 import logging
 import os
 import prctl
-from threading import Thread
 
 _log = logging.getLogger("config_manager.main")
 
@@ -129,10 +128,9 @@ def main(args):
 
     for plugin in plugins:
         syncer = EtcdSynchronizer(plugin, local_ip, local_site, alarm, etcd_key)
-        thread = Thread(target=syncer.main, name=plugin.__class__.__name__)
-        thread.start()
+        syncer.start_thread()
 
-        threads.append(thread)
+        threads.append(syncer.thread)
         _log.info("Loaded plugin %s" % plugin)
 
     while any([thr.isAlive() for thr in threads]):
