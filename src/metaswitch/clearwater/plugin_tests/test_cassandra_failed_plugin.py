@@ -1,4 +1,4 @@
-# @file test_failed_cassandra_plugin.py
+# @file test_cassandra_failed_plugin.py
 #
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2016 Metaswitch Networks Ltd
