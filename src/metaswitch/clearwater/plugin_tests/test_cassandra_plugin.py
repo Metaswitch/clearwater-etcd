@@ -296,7 +296,8 @@ seed_provider:\n\
           - seeds: "127.0.0.1"\n\
 """
         # Call leave cluster as the FSM would
-        with mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.open', mock.mock_open(read_data=yaml_template), create=True) as mock_open:
+        with mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.open',
+                        mock.mock_open(read_data=yaml_template), create=True) as mock_open:
             plugin.on_leaving_cluster(cluster_view)
 
         mock_get_alarm.assert_called_with('cluster-manager',

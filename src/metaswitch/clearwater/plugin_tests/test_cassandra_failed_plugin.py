@@ -49,7 +49,7 @@ class TestCassandraFailedPlugin(unittest.TestCase):
     @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_failed_plugin.run_command',\
                 return_value=0)
     @mock.patch('metaswitch.common.alarms.alarm_manager.get_alarm')
-    # The plugin uses check_output to get the latency value, so we return 100000.
+    # The plugin uses check_output to get the node ID from nodetool status, so mock up a response.
     @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_failed_plugin.subprocess.check_output',\
                 return_value="UN  10.0.0.1   177.36 KB  256     100.0%            92a674aa-a64b-4549-b150-596fd466923f  RAC1")
     def test_cassandra_failed_leaving_cluster(self,\
@@ -63,23 +63,11 @@ class TestCassandraFailedPlugin(unittest.TestCase):
                                        ip='10.0.0.1')
 
         # Build a cluster_view that includes all possible node states
-        cluster_view = {"10.0.0.1": "waiting to join",
-                        "10.0.0.2": "joining",
-                        "10.0.0.3": "joining, acknowledged change",
-                        "10.0.0.4": "joining, config changed",
-                        "10.0.0.5": "normal",
-                        "10.0.0.6": "normal, acknowledged change",
-                        "10.0.0.7": "normal, config changed",
-                        "10.0.0.8": "waiting to leave",
-                        "10.0.0.9": "leaving",
-                        "10.0.0.10": "leaving, acknowledged change",
-                        "10.0.0.11": "leaving, config changed",
-                        "10.0.0.12": "finished",
-                        "10.0.0.13": "error"}
+        cluster_view = {"10.0.0.1": "normal"}
 
         plugin.on_leaving_cluster(cluster_view)
 
-        # Check that we reomve the corect UUID
+        # Check that we remove the corect node ID
         run_command_call_list = \
              [mock.call("/usr/share/clearwater/bin/run-in-signaling-namespace nodetool removenode 92a674aa-a64b-4549-b150-596fd466923f")]
 
