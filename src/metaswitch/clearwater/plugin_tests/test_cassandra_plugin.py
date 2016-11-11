@@ -112,7 +112,7 @@ seed_provider:\n\
         with mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.open', mock.mock_open(read_data=yaml_template), create=True) as mock_open:
             plugin.on_startup(cluster_view)
 
-        mock_open.assert_called_once_with(plugin.files(), "r")
+        mock_open.assert_called_once_with("/usr/share/clearwater/cassandra/cassandra.yaml.template")
 
         # Set expected calls for the mock commands
         path_exists_call_list = \
@@ -131,7 +131,6 @@ seed_provider:\n\
         mock_os_remove.assert_has_calls(path_remove_call_list)
         mock_run_command.assert_has_calls(run_command_call_list)
 
-
         # Pull out the call for writing the topology file
         topology_write_args = mock_safely_write.call_args_list[0]
         # Check the write location matches the plugin files location
@@ -139,7 +138,6 @@ seed_provider:\n\
         # Check write was formatted correctly
         exp_topology = WARNING_HEADER + "\ndc=local_site\nrack=RAC1\n"
         self.assertEqual(exp_topology, topology_write_args[0][1])
-
 
         # Pull out the call for writing the yaml file
         yaml_write_args = mock_safely_write.call_args_list[1]
@@ -224,7 +222,7 @@ seed_provider:\n\
         with mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.open', mock.mock_open(read_data=yaml_template), create=True) as mock_open:
             plugin.on_joining_cluster(cluster_view)
 
-        mock_open.assert_called_once_with(plugin.files(), "r")
+        mock_open.assert_called_once_with("/usr/share/clearwater/cassandra/cassandra.yaml.template")
 
         # Check the additional calls that we should make when destructive_restart = True actually happen,
         # and that we run the cassandra schema at the end
@@ -292,19 +290,8 @@ seed_provider:\n\
         # Set up conditions and test data
         mock_os_path.return_value = True
 
-        yaml_template = """\
-listen_address: testing\n\
-seed_provider:\n\
-    - class_name: org.apache.cassandra.locator.SimpleSeedProvider\n\
-      parameters:\n\
-          - seeds: "127.0.0.1"\n\
-"""
         # Call leave cluster as the FSM would
-        with mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.open',
-                        mock.mock_open(read_data=yaml_template), create=True) as mock_open:
-            plugin.on_leaving_cluster(cluster_view)
-
-        mock_open.assert_called_once_with(plugin.files(), "r")
+        plugin.on_leaving_cluster(cluster_view)
 
         mock_get_alarm.assert_called_with('cluster-manager',
                                           alarm_constants.CASSANDRA_NOT_YET_DECOMMISSIONED)
