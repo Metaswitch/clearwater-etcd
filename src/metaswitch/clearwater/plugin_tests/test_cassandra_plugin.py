@@ -112,6 +112,8 @@ seed_provider:\n\
         with mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.open', mock.mock_open(read_data=yaml_template), create=True) as mock_open:
             plugin.on_startup(cluster_view)
 
+        mock_open.assert_called_once_with(plugin.files(), "r")
+
         # Set expected calls for the mock commands
         path_exists_call_list = \
             [mock.call("/etc/clearwater/force_cassandra_yaml_refresh"),
@@ -222,6 +224,8 @@ seed_provider:\n\
         with mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.open', mock.mock_open(read_data=yaml_template), create=True) as mock_open:
             plugin.on_joining_cluster(cluster_view)
 
+        mock_open.assert_called_once_with(plugin.files(), "r")
+
         # Check the additional calls that we should make when destructive_restart = True actually happen,
         # and that we run the cassandra schema at the end
         run_command_call_list = \
@@ -299,6 +303,8 @@ seed_provider:\n\
         with mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.open',
                         mock.mock_open(read_data=yaml_template), create=True) as mock_open:
             plugin.on_leaving_cluster(cluster_view)
+
+        mock_open.assert_called_once_with(plugin.files(), "r")
 
         mock_get_alarm.assert_called_with('cluster-manager',
                                           alarm_constants.CASSANDRA_NOT_YET_DECOMMISSIONED)

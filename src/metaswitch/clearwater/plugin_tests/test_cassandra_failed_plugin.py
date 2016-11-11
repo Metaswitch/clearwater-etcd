@@ -39,9 +39,6 @@ import logging
 _log = logging.getLogger()
 
 from clearwater_etcd_plugins.clearwater_cassandra.cassandra_failed_plugin import CassandraFailedPlugin
-from metaswitch.clearwater.cluster_manager.plugin_base import PluginParams
-from metaswitch.clearwater.cluster_manager import alarm_constants
-from metaswitch.clearwater.cluster_manager.plugin_utils import WARNING_HEADER
 
 class TestCassandraFailedPlugin(unittest.TestCase):
     # run_command returns 0 if a command completes successfully, but python mocks
