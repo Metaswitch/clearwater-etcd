@@ -68,14 +68,6 @@ def main():
     except Exception:
         return
 
-    # Get the old shared_config stored on etcd. No error checking here, as if
-    # something is wrong with etcd, upload_shared_config will worry about it for us
-    jsonstr = requests.get(url).text
-
-    new_config_lines = open("/etc/clearwater/shared_config").read().splitlines()
-    # etcd returns JSON; the shared_config is in node.value
-    old_config_lines = json.loads(jsonstr)["node"]["value"].splitlines()
-
     # We're looking to log meaningful configuration changes, so sort the lines to
     # ignore changes in line ordering
     new_config_lines.sort()
