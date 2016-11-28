@@ -52,6 +52,12 @@ class ConfigPluginBase(object): # pragma : no cover
         pass
 
     @abstractmethod
+    def default_value(self):
+        """This should return the default empty value for the file on disk
+        that is managed by this plugin."""
+        pass
+
+    @abstractmethod
     def status(self, value):
         """This should report the status of the file using the FileStatus enum
         values."""
