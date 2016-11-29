@@ -224,7 +224,21 @@ class CommonEtcdSynchronizer(object):
             _log.info("Key {} doesn't exist in etcd yet".format(self.key()))
             # Sleep briefly to avoid hammering a non-existent key.
             sleep(self.PAUSE_BEFORE_RETRY_ON_MISSING_KEY)
-            return (self.default_value(), None)
+            # Use any value on disk first, but the default value if not found
+            try:
+                f = open(self._plugin.file(), 'r')
+                value = f.read()
+            except:
+                value = self.default_value()
+            # Attempt to create new key in etcd.
+            try:
+                self._client.write(self.key(), value, prevExist=False)
+                self._plugin.on_creating_etcd_key(value)
+            except:
+                _log.debug("Hit exception attempting to create key. Another \
+                           node may have created it while we slept""")
+
+            return (value, None)
         except Exception as e:
             # Catch-all error handler (for invalid requests, timeouts, etc -
             # start over.

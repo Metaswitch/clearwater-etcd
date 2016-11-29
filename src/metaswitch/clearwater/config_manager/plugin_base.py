@@ -71,3 +71,11 @@ class ConfigPluginBase(object): # pragma : no cover
         should also report the status of the controlled file to the alarm
         manager."""
         pass
+
+    @abstractmethod
+    def on_creating_etcd_key(self, value):
+        """This hook is called when we have created a key in etcd that did not
+        previously exist. This should be used for plugins to add nodes to the
+        appropriate restart queues etc. if they have uploaded anything other
+        than the empty default_value."""
+        pass
