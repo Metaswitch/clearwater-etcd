@@ -65,3 +65,21 @@ class BasicTest(unittest.TestCase):
         # Allow the EtcdSynchronizer to exit
         e._terminate_flag = True
         sleep(1)
+
+    @patch("etcd.Client", new=EtcdFactory)
+    def test_key_not_present(self):
+        p = TestPlugin()
+        e = EtcdSynchronizer(p, "10.0.0.1", "local", None, "clearwater")
+
+        thread = Thread(target=e.main_wrapper)
+        thread.daemon=True
+        thread.start()
+
+        # Sleep long enough for PAUSE_BEFORE_RETRY_ON_MISSING_KEY to pass
+        sleep(6)
+
+        p._on_creating_etcd_key.assert_called_with("default_value")
+
+        # Allow the EtcdSynchronizer to exit
+        e._terminate_flag = True
+        sleep(1)

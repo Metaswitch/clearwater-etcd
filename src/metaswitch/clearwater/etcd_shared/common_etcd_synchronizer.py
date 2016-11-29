@@ -227,7 +227,7 @@ class CommonEtcdSynchronizer(object):
             # Use any value on disk first, but the default value if not found
             try:
                 f = open(self._plugin.file(), 'r')
-                value = f.read()
+                value = f.read()  # pragma: no cover
             except:
                 value = self.default_value()
             # Attempt to create new key in etcd.

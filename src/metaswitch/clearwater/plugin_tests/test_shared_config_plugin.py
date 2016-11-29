@@ -87,3 +87,33 @@ class TestSharedConfigPlugin(unittest.TestCase):
         mock_open.assert_called_once_with(plugin.file(), "r")
         mock_safely_write.assert_not_called()
         mock_run_command.assert_not_called()
+
+    @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.run_command')
+    def test_non_default_key_created(self, mock_run_command):
+        """Test Config Manager when a new non-default value is set as etcd key"""
+
+        # Create the plugin
+        plugin = SharedConfigPlugin(None)
+
+        new_config_string = "This string is not the default template"
+
+        # Call 'on_creating_etcd_key'
+        plugin.on_creating_etcd_key(new_config_string)
+
+        # Test assertions
+        mock_run_command.assert_called_with("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config")
+
+    @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.run_command')
+    def test_default_key_created(self, mock_run_command):
+        """Test Config Manager when a new default value is set as etcd key"""
+
+        # Create the plugin
+        plugin = SharedConfigPlugin(None)
+
+        new_config_string = plugin.default_value()
+
+        # Call 'on_creating_etcd_key'
+        plugin.on_creating_etcd_key(new_config_string)
+
+        # Test assertions
+        mock_run_command.assert_not_called()
