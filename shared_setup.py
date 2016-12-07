@@ -46,6 +46,8 @@ setup(
     package_data={
         '': ['*.eml'],
         },
+    # Note - if you are updating the version of python-etcd, check if you should
+    # remove the monkeypatch in the common_etcd_synchronizer
     install_requires=["docopt", "urllib3==1.17", "python-etcd==0.4.3", "pyzmq==15.2", "pyyaml==3.11"],
     tests_require=["Mock"],
     )
