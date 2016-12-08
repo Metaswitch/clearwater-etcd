@@ -3,7 +3,7 @@ ENV_PYTHON := ${ENV_DIR}/bin/python
 PYTHON_BIN := $(shell which python)
 
 DEB_COMPONENT := clearwater-etcd
-DEB_MAJOR_VERSION := 1.0${DEB_VERSION_QUALIFIER}
+DEB_MAJOR_VERSION ?= 1.0${DEB_VERSION_QUALIFIER}
 DEB_NAMES := clearwater-etcd clearwater-cluster-manager clearwater-queue-manager clearwater-config-manager clearwater-management
 DEB_ARCH := all
 
