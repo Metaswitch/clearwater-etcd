@@ -126,7 +126,12 @@ urllib3.HTTPResponse._error_catcher = _error_catcher
 # Monkeypatch python-etcd to catch MaxRetryErrors. This is a hacky fix to cover
 # https://github.com/jplana/python-etcd/issues/160 (it doesn't cover why
 # urllib3 is hitting a MaxRetryError in the first place). We should remove this
-# if we update the python-etcd version
+# if we update the python-etcd version.
+# The change in this code (see the PATCHED section below) is to catch
+# MaxRetryErrors and convert them to EtcdWatchTimedOut errors - this stops a
+# worrying error log evey 5 seconds. No other code has been changed (the
+# api* functions are only included in this patch so that they can be decorated
+# with our patched decorator).
 def _patched_wrap_request(payload): # pragma: no cover
     @wraps(payload)
     def wrapper(self, path, method, params=None, timeout=None):
@@ -157,6 +162,7 @@ def _patched_wrap_request(payload): # pragma: no cover
                 # urllib3 doesn't wrap all httplib exceptions and earlier versions
                 # don't wrap socket errors either.
             except (HTTPError, MaxRetryError, HTTPException, SocketError) as e:
+                # PATCHED
                 if (isinstance(params, dict) and
                     params.get("wait") == "true" and
                     (isinstance(e,
