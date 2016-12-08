@@ -210,7 +210,7 @@ def _patched_wrap_request(payload): # pragma: no cover
     return wrapper
 
 @_patched_wrap_request
-def api_execute_json_with_patched_decorator(self, path, method, params=None, timeout=None):
+def api_execute_json_with_patched_decorator(self, path, method, params=None, timeout=None): # pragma: no cover
     url = self._base_uri + path
     json_payload = json.dumps(params)
     headers = self._get_headers()
@@ -225,7 +225,7 @@ def api_execute_json_with_patched_decorator(self, path, method, params=None, tim
 etcd.Client.api_execute_json = api_execute_json_with_patched_decorator
 
 @_patched_wrap_request
-def api_execute_with_patched_decorator(self, path, method, params=None, timeout=None):
+def api_execute_with_patched_decorator(self, path, method, params=None, timeout=None): # pragma: no cover
     """ Executes the query. """
     url = self._base_uri + path
     if (method == self._MGET) or (method == self._MDELETE):
