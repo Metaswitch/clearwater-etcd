@@ -48,5 +48,5 @@ setup(
         '': ['*.eml'],
         },
     test_suite='metaswitch.clearwater.plugin_tests',
-    tests_require=["pyzmq==15.2", "metaswitchcommon", "py2-ipaddress==3.4.1", "pbr==1.6", "Mock", "pyyaml==3.11"],
+    tests_require=["pyzmq==16.0.2", "metaswitchcommon", "py2-ipaddress==3.4.1", "pbr==1.6", "Mock", "pyyaml==3.11"],
     )

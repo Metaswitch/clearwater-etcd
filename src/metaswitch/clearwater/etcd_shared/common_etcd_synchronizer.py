@@ -61,6 +61,7 @@ import logging
 import traceback
 import os
 import signal
+from metaswitch.common import utils
 
 _log = logging.getLogger(__name__)
 
@@ -315,8 +316,8 @@ class CommonEtcdSynchronizer(object):
                 # wait for it to change before doing anything else.
                 _log.info("Read value {} from etcd, "
                           "comparing to last value {}".format(
-                              result.value,
-                              self._last_value))
+                              utils.safely_encode(result.value),
+                              utils.safely_encode(self._last_value)))
 
                 if result.value == self._last_value:
                     _log.info("Watching for changes with {}".format(wait_index))
