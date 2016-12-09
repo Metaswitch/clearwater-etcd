@@ -158,7 +158,7 @@ def _patched_wrap_request(payload): # pragma: no cover
                 # Now force the data to be preloaded in order to trigger any
                 # IO-related errors in this method rather than when we try to
                 # access it later.
-                _ = response.data
+                _ = response.data # noqa
                 # urllib3 doesn't wrap all httplib exceptions and earlier versions
                 # don't wrap socket errors either.
             except (HTTPError, MaxRetryError, HTTPException, SocketError) as e:
@@ -212,7 +212,7 @@ def _patched_wrap_request(payload): # pragma: no cover
 @_patched_wrap_request
 def api_execute_json_with_patched_decorator(self, path, method, params=None, timeout=None): # pragma: no cover
     url = self._base_uri + path
-    json_payload = json.dumps(params)
+    json_payload = json.dumps(params) # noqa
     headers = self._get_headers()
     headers['Content-Type'] = 'application/json'
     return self.http.urlopen(method,
