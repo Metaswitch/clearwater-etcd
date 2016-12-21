@@ -1,7 +1,8 @@
 # Check the clearwater-config-manager process.
 
 # Monitor the service's PID file and memory use.
-check process clearwater_config_manager with pidfile /var/run/clearwater-config-manager.pid
+check process clearwater_config_manager_process with pidfile /var/run/clearwater-config-manager.pid
+  group clearwater_config_manager
 
   start program = "/bin/bash -c '/etc/init.d/clearwater-config-manager start'"
   stop program = "/bin/bash -c '/etc/init.d/clearwater-config-manager stop'"
