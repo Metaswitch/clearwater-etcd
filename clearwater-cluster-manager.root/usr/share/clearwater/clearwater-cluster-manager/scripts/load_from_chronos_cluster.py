@@ -49,15 +49,20 @@ assert os.path.exists("/etc/init.d/chronos"), \
 etcd_key = "/{}/{}/{}/clustering/chronos".format(etcd_key, site_name, node_type)
 
 with open('/etc/chronos/chronos_cluster.conf') as f:
-    nodes = []
+    nodes = {}
+
     for line in f.readlines():
         line = line.strip().replace(' ','')
         if '=' in line:
             key, value = line.split("=")
-            assert key != "leaving", "Must not have any leaving entries when running this script"
             if key == "node":
-                nodes.append(value)
-    data = json.dumps({node: "normal" for node in nodes})
+                nodes[value] = "normal"
+            elif key == "leaving":
+                nodes[value] = "leaving"
+            elif key == "joining":
+                nodes[value] = "joining"
+
+    data = json.dumps(nodes)
 
 print "Inserting data %s into etcd key %s" % (data, etcd_key)
 
