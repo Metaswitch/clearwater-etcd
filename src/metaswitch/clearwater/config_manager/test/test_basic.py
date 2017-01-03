@@ -75,10 +75,8 @@ class BasicTest(unittest.TestCase):
         thread.daemon=True
         thread.start()
 
-        # Sleep long enough for PAUSE_BEFORE_RETRY_ON_MISSING_KEY to pass
-        sleep(6)
-
-        p._on_creating_etcd_key.assert_called_with("default_value")
+        sleep(1)
+        p._on_config_changed.assert_called_with("default_value", None)
 
         # Allow the EtcdSynchronizer to exit
         e._terminate_flag = True

@@ -35,7 +35,6 @@ from mock import MagicMock
 class TestPlugin(ConfigPluginBase):
     def __init__(self):
         self._on_config_changed = MagicMock()
-        self._on_creating_etcd_key = MagicMock()
 
     def key(self):
         return "test"
@@ -51,6 +50,3 @@ class TestPlugin(ConfigPluginBase):
 
     def on_config_changed(self, value, alarm):
         return self._on_config_changed(value, alarm)
-
-    def on_creating_etcd_key(self, value):
-        return self._on_creating_etcd_key(value)
