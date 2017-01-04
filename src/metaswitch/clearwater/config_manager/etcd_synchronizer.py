@@ -70,3 +70,6 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
 
     def key(self):
         return "/" + self._key + "/" + self._site + "/configuration/" + self._plugin.key()
+
+    def default_value(self):
+        return self._plugin.default_value()

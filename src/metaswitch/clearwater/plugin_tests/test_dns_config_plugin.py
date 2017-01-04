@@ -86,3 +86,25 @@ class TestDnsConfigPlugin(unittest.TestCase):
         mock_open.assert_called_once_with(plugin.file(), "r")
         mock_safely_write.assert_not_called()
         mock_run_command.assert_not_called()
+
+    @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.dns_config_plugin.safely_write')
+    @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.dns_config_plugin.run_command')
+    def test_default_config_created(self, mock_run_command, mock_safely_write):
+        """Test Config Manager when a new default value is set as etcd key"""
+
+        # Create the plugin
+        plugin = DnsConfigPlugin(None)
+
+        # Set up the config strings to be tested
+        old_config_string = "This is clearly not the default config value."
+        new_config_string = plugin.default_value()
+
+        # Call 'on_config_changed' with file.open mocked out
+        with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.dns_config_plugin.open',\
+                        mock.mock_open(read_data=old_config_string), create=True) as mock_open:
+            plugin.on_config_changed(new_config_string, None)
+
+        # Test assertions
+        mock_open.assert_called_once_with(plugin.file(), "r")
+        mock_safely_write.assert_called_once_with(plugin.file(), plugin.default_value())
+        mock_run_command.assert_called_once_with("/usr/share/clearwater/bin/reload_dns_config")

@@ -67,6 +67,22 @@ class BasicTest(unittest.TestCase):
         sleep(1)
 
     @patch("etcd.Client", new=EtcdFactory)
+    def test_key_not_present(self):
+        p = TestPlugin()
+        e = EtcdSynchronizer(p, "10.0.0.1", "local", None, "clearwater")
+
+        thread = Thread(target=e.main_wrapper)
+        thread.daemon=True
+        thread.start()
+
+        sleep(1)
+        p._on_config_changed.assert_called_with("default_value", None)
+
+        # Allow the EtcdSynchronizer to exit
+        e._terminate_flag = True
+        sleep(1)
+
+    @patch("etcd.Client", new=EtcdFactory)
     def test_non_ascii(self):
         p = TestPlugin()
         e = EtcdSynchronizer(p, "10.0.0.1", "local", None, "clearwater")
@@ -87,4 +103,3 @@ class BasicTest(unittest.TestCase):
         # Allow the EtcdSynchronizer to exit
         e._terminate_flag = True
         sleep(1)
-

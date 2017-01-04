@@ -45,5 +45,8 @@ class TestPlugin(ConfigPluginBase):
     def status(self, value):
         pass
 
+    def default_value(self):
+        return "default_value"
+
     def on_config_changed(self, value, alarm):
         return self._on_config_changed(value, alarm)

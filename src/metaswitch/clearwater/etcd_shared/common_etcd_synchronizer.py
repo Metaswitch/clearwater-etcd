@@ -354,9 +354,28 @@ class CommonEtcdSynchronizer(object):
 
         except etcd.EtcdKeyError:
             _log.info("Key {} doesn't exist in etcd yet".format(self.key()))
-            # Sleep briefly to avoid hammering a non-existent key.
-            sleep(self.PAUSE_BEFORE_RETRY_ON_MISSING_KEY)
-            return (self.default_value(), None)
+            # Use any value on disk first, but the default value if not found
+            try:
+                f = open(self._plugin.file(), 'r')
+                value = f.read()  # pragma: no cover
+            except:
+                value = self.default_value()
+
+            # Attempt to create new key in etcd.
+            try:
+                # The prevExist set to False will fail the write if it finds a
+                # key already in etcd. This stops us overwriting a manually
+                # uploaded file with the default template.
+                self._client.write(self.key(), value, prevExist=False)
+                return (value, None)
+            except:  # pragma: no cover
+                _log.debug("Failed to create new key in the etcd store")
+                # Sleep briefly to avoid hammering a non-existent key
+                sleep(self.PAUSE_BEFORE_RETRY_ON_MISSING_KEY)
+                # Return 'None' so that plugins do not write config to disk
+                # that does not exist in the etcd store, leaving us out of sync
+                return (None, None)
+
         except Exception as e:
             # Catch-all error handler (for invalid requests, timeouts, etc -
             # start over.
