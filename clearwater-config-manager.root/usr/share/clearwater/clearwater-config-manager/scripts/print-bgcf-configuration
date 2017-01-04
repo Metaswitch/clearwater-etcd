@@ -61,39 +61,44 @@ try:
             bgcf_data = json.load(bgcf_file)
             routes = bgcf_data["routes"]
 
-            try:
-                for bgcf_route in routes:
-                    name = bgcf_route["name"]
-                    route = bgcf_route["route"]
-                    value = ""
-                    value_count = 0
+            if routes:
+                try:
+                    for bgcf_route in routes:
+                        name = bgcf_route["name"]
+                        route = bgcf_route["route"]
+                        value = ""
+                        value_count = 0
 
-                    try:
-                        domain = bgcf_route["domain"]
-                        value = "Domain: " + domain
-                        value_count += 1
-                    except KeyError as e:
-                        pass
+                        try:
+                            domain = bgcf_route["domain"]
+                            value = "Domain: " + domain
+                            value_count += 1
+                        except KeyError as e:
+                            pass
 
-                    try:
-                        number = bgcf_route["number"]
-                        value = "Number: " + number
-                        value_count += 1
-                    except KeyError as e:
-                        pass
+                        try:
+                            number = bgcf_route["number"]
+                            value = "Number: " + number
+                            value_count += 1
+                        except KeyError as e:
+                            pass
 
-                    if value_count != 1:
-                        raise KeyError
+                        if value_count != 1:
+                            raise KeyError
 
-                    print "  Name: {}".format(name)
-                    print "  {}".format(value)
-                    print "  Route: "
-                    for route_part in route:
-                        print "    {}".format(route_part)
-                    print ""
+                        print "  Name: {}".format(name)
+                        print "  {}".format(value)
+                        print "  Route: "
+                        for route_part in route:
+                            print "    {}".format(route_part)
+                        print ""
 
-            except KeyError as e:
-                print "Invalid BGCF entry detected in file.\n"
+                except KeyError as e:
+                    print "Invalid BGCF entry detected in file.\n"
+                    print EXPECTED_FORMAT
+
+            else:
+                print "Configuration file is present, but contains no entries.\n"
                 print EXPECTED_FORMAT
 
         except ValueError, KeyError:
