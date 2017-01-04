@@ -64,22 +64,27 @@ try:
             dns_data = json.load(dns_file)
             hostnames = dns_data["hostnames"]
 
-            try:
-                for hostname in hostnames:
-                    name = hostname["name"]
-                    records = hostname["records"]
+            if hostnames:
+                try:
+                    for hostname in hostnames:
+                        name = hostname["name"]
+                        records = hostname["records"]
 
-                    print "  Name: {}".format(name)
-                    print "  Records:"
-                    for record in records:
-                        if record["rrtype"] != "CNAME":
-                            print "Only CNAME records are supported"
-                            raise KeyError
-                        print "    rrtype: {}, target: {}".format(record["rrtype"], record["target"])
-                    print ""
+                        print "  Name: {}".format(name)
+                        print "  Records:"
+                        for record in records:
+                            if record["rrtype"] != "CNAME":
+                                print "Only CNAME records are supported"
+                                raise KeyError
+                            print "    rrtype: {}, target: {}".format(record["rrtype"], record["target"])
+                        print ""
 
-            except KeyError as e:
-                print "Invalid DNS entry detected in file.\n"
+                except KeyError as e:
+                    print "Invalid DNS entry detected in file.\n"
+                    print EXPECTED_FORMAT
+
+            else:
+                print "Configuration file is present, but contains no entries.\n"
                 print EXPECTED_FORMAT
 
         except ValueError, KeyError:

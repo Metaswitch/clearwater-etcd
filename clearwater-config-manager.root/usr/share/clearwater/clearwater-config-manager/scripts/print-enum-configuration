@@ -61,19 +61,24 @@ try:
             enum_data = json.load(enum_file)
             blocks = enum_data["number_blocks"]
 
-            try:
-                for block in blocks:
-                    name = block["name"]
-                    prefix = block["prefix"]
-                    regex = block["regex"]
+            if blocks:
+                try:
+                    for block in blocks:
+                        name = block["name"]
+                        prefix = block["prefix"]
+                        regex = block["regex"]
 
-                    print "  Name: {}".format(name)
-                    print "  Prefix: {}".format(prefix)
-                    print "  Regex: {}".format(regex)
-                    print ""
+                        print "  Name: {}".format(name)
+                        print "  Prefix: {}".format(prefix)
+                        print "  Regex: {}".format(regex)
+                        print ""
 
-            except KeyError as e:
-                print "Invalid ENUM entry detected in file.\n"
+                except KeyError as e:
+                    print "Invalid ENUM entry detected in file.\n"
+                    print EXPECTED_FORMAT
+
+            else:
+                print "Configuration file is present, but contains no entries.\n"
                 print EXPECTED_FORMAT
 
         except ValueError, KeyError:
