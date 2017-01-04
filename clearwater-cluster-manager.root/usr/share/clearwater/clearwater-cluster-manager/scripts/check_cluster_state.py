@@ -53,7 +53,7 @@ def describe_clusters():
 
     cluster_values = {subkey.key: subkey.value for subkey in result.leaves}
 
-    for (key, value) in cluster_values.items():
+    for (key, value) in sorted(cluster_values.items()):
         # Check if the key relates to clustering. The clustering key has the format
         # /clearwater*[</optional site name>]/<node type>/clustering/<store type>
         key_parts = key.split('/')

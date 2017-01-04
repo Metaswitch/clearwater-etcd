@@ -46,13 +46,27 @@ def main():
     # URL of shared_config etcd key
     url = sys.argv[1]
 
-    # Get the old shared_config stored on etcd. No error checking here, as if
-    # something is wrong with etcd, upload_shared_config will worry about it for us
-    jsonstr = requests.get(url).text
+    old_config_lines = []
+    new_config_lines = []
 
-    new_config_lines = open("/etc/clearwater/shared_config").read().splitlines()
-    # etcd returns JSON; the shared_config is in node.value
-    old_config_lines = json.loads(jsonstr)["node"]["value"].splitlines()
+    try:
+        # Get the new version of shared config from file, and the old version
+        # from etcd. If either of these fail, bail out of trying to log the
+        # the changes, and let upload_shared_config handle the errors. The
+        # exception to this is when the returned data from etcd doesn't have the
+        # right format; this is likely because the shared config key doesn't
+        # exist yet (and if it's something more complicated then again
+        # upload_shared_config can handle it).
+        new_config_lines = open("/etc/clearwater/shared_config").read().splitlines()
+        jsonstr = requests.get(url).text
+
+        try:
+            # etcd returns JSON; the shared_config is in node.value.
+            old_config_lines = json.loads(jsonstr)["node"]["value"].splitlines()
+        except KeyError:
+            pass
+    except Exception:
+        return
 
     # We're looking to log meaningful configuration changes, so sort the lines to
     # ignore changes in line ordering
