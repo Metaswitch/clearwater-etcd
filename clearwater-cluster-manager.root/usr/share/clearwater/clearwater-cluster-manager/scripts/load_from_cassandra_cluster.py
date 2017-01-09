@@ -39,8 +39,7 @@ import json
 
 local_ip = sys.argv[1]
 node_type = sys.argv[2]
-sig_namespace = sys.argv[3]
-etcd_key = sys.argv[4]
+etcd_key = sys.argv[3]
 
 assert os.path.exists("/etc/init.d/cassandra"), \
     "This script should be run on a node that's running Cassandra"
@@ -53,10 +52,7 @@ try:
     # output as valid yaml, we need to use tr to replace tabs with spaces.
     # We remove any xss=.., as this can be printed out by 
     # cassandra-env.sh
-    command = "nodetool describecluster | grep -v \"^xss = \" | tr \"\t\" \" \""
-    if sig_namespace:
-        command = "ip netns exec {} ".format(sig_namespace) + command
-
+    command = "/usr/share/clearwater/bin/run-in-signaling-namespace nodetool describecluster | grep -v \"^xss = \" | tr \"\t\" \" \""
     desc_cluster_output = subprocess.check_output(command, shell=True)
     doc = yaml.load(desc_cluster_output)
     servers = doc["Cluster Information"]["Schema versions"].values()[0]

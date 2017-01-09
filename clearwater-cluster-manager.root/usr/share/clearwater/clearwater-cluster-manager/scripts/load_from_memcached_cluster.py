@@ -59,14 +59,19 @@ c = etcd.Client(local_ip, 4000)
 
 def load_file_into_etcd(filename, etcd_key):
     with open(filename) as f:
+    nodes = {}
+
         for line in f.readlines():
             if '=' in line:
                 key, value = line.split("=")
-                assert key != "new_servers", \
-                    "Must not have a new_servers line when running this script"
                 if key == "servers":
-                    data = json.dumps({strip_port(server): "normal"
-                                    for server in value.split(",")})
+                    for server in value.split(","):
+                        nodes[strip_port(server)] = "normal"
+                elif key == "new_servers":
+                    for server in value.split(","):
+                        nodes[strip_port(server)] = "joining"
+
+         data = json.dumps(nodes)
 
     print "Inserting data %s into etcd key %s" % (data, etcd_key)
 
@@ -77,10 +82,7 @@ def load_file_into_etcd(filename, etcd_key):
     else:
         print "Update failed"
 
-if node_type == 'memento' and os.path.isfile('/etc/clearwater/memento_cluster_settings'):
-    load_file_into_etcd('/etc/clearwater/memento_cluster_settings', local_etcd_key)
-else:
-    load_file_into_etcd('/etc/clearwater/cluster_settings', local_etcd_key)
+load_file_into_etcd('/etc/clearwater/cluster_settings', local_etcd_key)
 
 if remote_site != "":
     load_file_into_etcd('/etc/clearwater/remote_cluster_settings', remote_etcd_key)
