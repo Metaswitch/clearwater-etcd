@@ -56,6 +56,7 @@ class TestApplyChronosGRConfigPlugin(unittest.TestCase):
              mock.call("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue"\
                        " remove_success apply_chronos_gr_config"),
              mock.call().__nonzero__()]
+
         # Call the plugin hook
         plugin.at_front_of_queue()
 

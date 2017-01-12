@@ -172,6 +172,7 @@ join_cluster()
         then
           local_member_id=$(/usr/bin/etcdctl member list | grep -F -w "http://$advertisement_ip:2380" | grep -o -E "^[^:]*" | grep -o "^[^[]\+")
           /usr/bin/etcdctl member remove $local_member_id
+          rm -rf $DATA_DIR/$advertisement_ip
           echo "Failed to add local node to cluster"
           exit 2
         fi
@@ -198,8 +199,8 @@ join_cluster()
 #
 join_or_create_cluster()
 {
-        if [[ $etcd_cluster =~ (^|,)$advertisement_ip(,|$) ]] &&
-           [[ ! -f $JOINED_CLUSTER_SUCCESSFULLY ]]
+        if [[ $etcd_cluster == $advertisement_ip ]] ||
+           [[ $etcd_cluster =~ (^|,)$advertisement_ip(,|$) && ! -f $JOINED_CLUSTER_SUCCESSFULLY ]]
         then
           create_cluster
         else
@@ -207,9 +208,24 @@ join_or_create_cluster()
         fi
 }
 
-wait_for_etcd()
+verify_etcd_health_after_startup()
 {
-        # Wait for etcd to come up.
+        # We could be in a bad state at this point - parse the etcd logs for
+        # known error conditions. We do this from the logs as they're the most
+        # reliable way of detecting that something is wrong.
+
+        # We could have a data directory already, but not actually be a member of
+        # the etcd cluster. Remove the data directory.
+        tail -10 /var/log/clearwater-etcd/clearwater-etcd.log | grep -q "etcdserver: the member has been permanently removed from the cluster"
+        if [[ $? == 0 ]]
+        then
+          echo "Etcd is in an inconsistent state - removing the data directory"
+          rm -rf $DATA_DIR/$advertisement_ip
+          exit 3
+        fi
+
+        # Wait for etcd to come up. Note - all this tests is that clearwater-etcd
+        # is listening on 4000 - it doesn't confirm that etcd is running fully
         start_time=$(date +%s)
         while true; do
           if nc -z $listen_ip 4000; then
@@ -227,7 +243,7 @@ wait_for_etcd()
         done
 }
 
-verify_etcd_health()
+verify_etcd_health_before_startup()
 {
         # If we're already in the member list but are 'unstarted', remove our data dir, which
         # contains stale data from a previous unsuccessful startup attempt. This copes with a race
@@ -243,10 +259,7 @@ verify_etcd_health()
         if [[ $unstarted_member_id != '' ]]
         then
           /usr/bin/etcdctl member remove $local_member_id
-          if [[ $? == 0 ]]
-          then
-            rm -rf $DATA_DIR/$advertisement_ip
-          fi
+          rm -rf $DATA_DIR/$advertisement_ip
         fi
 
         if [[ -e $DATA_DIR/$advertisement_ip ]]
@@ -261,10 +274,7 @@ verify_etcd_health()
           if [[ $rc != 0 ]]
           then
             /usr/bin/etcdctl member remove $local_member_id
-            if [[ $? == 0 ]]
-            then
-              rm -rf $DATA_DIR/$advertisement_ip
-            fi
+            rm -rf $DATA_DIR/$advertisement_ip
           fi
         fi
 }
@@ -284,7 +294,7 @@ do_start()
         ETCD_NAME=${advertisement_ip//./-}
         CLUSTER_ARGS=
 
-        verify_etcd_health
+        verify_etcd_health_before_startup
 
         if [ -n "$etcd_cluster" ] && [ -n "$etcd_proxy" ]
         then
@@ -330,38 +340,8 @@ do_start()
         start-stop-daemon --start --quiet --background --pidfile $PIDFILE --startas $DAEMONWRAPPER --chuid $NAME -- $DAEMON_ARGS $CLUSTER_ARGS \
                 || return 2
 
-        wait_for_etcd
+        verify_etcd_health_after_startup
 }
-
-do_rebuild()
-{
-        rm -f $JOINED_CLUSTER_SUCCESSFULLY
-
-        # Return
-        #   0 if daemon has been started
-        #   1 if daemon was already running
-        #   2 if daemon could not be started
-        start-stop-daemon --start --quiet --pidfile $PIDFILE --name $NAME --startas $DAEMONWRAPPER --test > /dev/null \
-                || (echo "Cannot recreate cluster while etcd is running; stop it first" && return 1)
-
-        ETCD_NAME=${advertisement_ip//./-}
-        create_cluster
-
-        # Standard ports
-        DAEMON_ARGS="--listen-client-urls http://0.0.0.0:4000
-                     --advertise-client-urls http://$advertisement_ip:4000
-                     --listen-peer-urls http://$listen_ip:2380
-                     --initial-advertise-peer-urls http://$advertisement_ip:2380
-                     --data-dir $DATA_DIR/$advertisement_ip
-                     --name $ETCD_NAME
-                     --force-new-cluster"
-
-        start-stop-daemon --start --quiet --background --pidfile $PIDFILE --startas $DAEMONWRAPPER --chuid $NAME -- $DAEMON_ARGS $CLUSTER_ARGS \
-                || return 2
-
-        wait_for_etcd
-}
-
 
 #
 # Function that stops the daemon/service
@@ -454,28 +434,6 @@ do_decommission()
 }
 
 #
-# Function that decommissions an etcd instance
-#
-# This function should be used to permanently and forcibly remove an etcd instance from a broken
-# cluster.
-#
-do_force_decommission()
-{
-        # Return
-        #   0 if successful
-        #   2 on error
-        start-stop-daemon --stop --retry=USR2/60/KILL/5 --pidfile $PIDFILE --startas $DAEMONWRAPPER
-        RETVAL=$?
-        [[ $RETVAL == 2 ]] && return 2
-
-        [[ -n $PIDFILE ]] && rm -f $PIDFILE
-
-        # Decommissioned so destroy the data directory
-        [[ -n $DATA_DIR ]] && [[ -n $advertisement_ip ]] && rm -rf $DATA_DIR/$advertisement_ip
-}
-
-
-#
 # Function that sends a SIGHUP to the daemon/service
 #
 do_reload() {
@@ -549,44 +507,6 @@ case "$1" in
         service clearwater-queue-manager decommission || /bin/true
         service clearwater-config-manager decommission || /bin/true
         do_decommission
-        ;;
-  force-decommission)
-        echo "Forcibly decommissioning $DESC on $public_hostname."
-        echo
-        echo "This should only be done when following the documented disaster "
-        echo "recovery process. It deletes data from this node, so you should "
-        echo "make sure you have:"
-        echo
-        echo "* confirmed that the etcd_cluster setting in "
-        echo "/etc/clearwater/config ($etcd_cluster) is correct"
-        echo "* created a working one-node cluster to begin the recovery process"
-        echo
-        echo "Do you want to proceed with this decommission? [y/N]"
-        read -r REPLY
-        if [[ $REPLY = "y" ]]
-        then
-          log_daemon_msg "Continuing to forcibly decommission $DESC" "$NAME"
-          do_force_decommission
-        fi
-        ;;
-  force-new-cluster)
-        echo "Forcibly recreating a cluster for $DESC on $public_hostname."
-        echo
-        echo "This should only be done when following the documented disaster "
-        echo "recovery process. It deletes the etcd cluster configuration from "
-        echo "this node, so you should make sure you have:"
-        echo
-        echo "* confirmed that the etcd_cluster setting in "
-        echo "/etc/clearwater/local_config ($etcd_cluster) is correct"
-        echo
-        echo "Do you want to proceed with this rebuild? [y/N]"
-        read -r REPLY
-        if [[ $REPLY = "y" ]]
-        then
-          log_daemon_msg "Continuing to forcibly recreate cluster for $DESC" "$NAME"
-          do_rebuild
-        fi
-
         ;;
   abort-restart)
         log_daemon_msg "Abort-Restarting $DESC" "$NAME"

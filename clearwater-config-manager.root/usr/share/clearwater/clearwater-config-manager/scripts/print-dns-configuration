@@ -1,6 +1,6 @@
 #! /usr/bin/python
 
-# @file print-bgcf-configuration
+# @file print-dns-configuration
 #
 # Project Clearwater - IMS in the Cloud
 # Copyright (C) 2016  Metaswitch Networks Ltd
@@ -37,64 +37,50 @@
 import json, sys
 from textwrap import dedent
 
-# Expected format for the BGCF file
+# Expected format for the dns_config file
 EXPECTED_FORMAT = dedent("""The expected format is:\n\
 {
-\"routes\" :
+\"hostnames\" :
  [
    {
-     \"name\" : \"<route 1 descriptive name>\",
-     \"<domain|number>\" : \"<SIP trunk IP address, domain name or routing number>\",
-     \"route\" : [<\"IBCF SIP URI\">, <\"IBCF SIP URI\">,...]
+     \"name\" : \"<hostname 1>\",
+     \"records\" : [{\"rrtype\": \"CNAME\", \"target\": \"<target for hostname 1>\"}]
+   },
+   {
+     \"name\" : \"<hostname 1>\",
+     \"records\" : [{\"rrtype\": \"CNAME\", \"target\": \"<target for hostname 1>\"}]
    },
    ...
  ]
 }""")
 
-source = sys.argv[1] if len(sys.argv) > 1 else "/etc/clearwater/bgcf.json"
+source = sys.argv[1] if len(sys.argv) > 1 else "/etc/clearwater/dns_config"
 
-# This does some basic validation of the BGCF configuration file, and
+# This does some basic validation of the dns configuration file, and
 # prints the contents
 try:
-    with open(source) as bgcf_file:
+    with open(source) as dns_file:
         try:
-            bgcf_data = json.load(bgcf_file)
-            routes = bgcf_data["routes"]
+            dns_data = json.load(dns_file)
+            hostnames = dns_data["hostnames"]
 
-            if routes:
+            if hostnames:
                 try:
-                    for bgcf_route in routes:
-                        name = bgcf_route["name"]
-                        route = bgcf_route["route"]
-                        value = ""
-                        value_count = 0
-
-                        try:
-                            domain = bgcf_route["domain"]
-                            value = "Domain: " + domain
-                            value_count += 1
-                        except KeyError as e:
-                            pass
-
-                        try:
-                            number = bgcf_route["number"]
-                            value = "Number: " + number
-                            value_count += 1
-                        except KeyError as e:
-                            pass
-
-                        if value_count != 1:
-                            raise KeyError
+                    for hostname in hostnames:
+                        name = hostname["name"]
+                        records = hostname["records"]
 
                         print "  Name: {}".format(name)
-                        print "  {}".format(value)
-                        print "  Route: "
-                        for route_part in route:
-                            print "    {}".format(route_part)
+                        print "  Records:"
+                        for record in records:
+                            if record["rrtype"] != "CNAME":
+                                print "Only CNAME records are supported"
+                                raise KeyError
+                            print "    rrtype: {}, target: {}".format(record["rrtype"], record["target"])
                         print ""
 
                 except KeyError as e:
-                    print "Invalid BGCF entry detected in file.\n"
+                    print "Invalid DNS entry detected in file.\n"
                     print EXPECTED_FORMAT
 
             else:
@@ -102,8 +88,8 @@ try:
                 print EXPECTED_FORMAT
 
         except ValueError, KeyError:
-            print "\nInvalid BGCF file at %s\n" % source
+            print "\nInvalid DNS file at %s\n" % source
             print EXPECTED_FORMAT
 
 except IOError:
-    print "\nNo BGCF file at %s\n" % source
+    print "\nNo DNS file at %s\n" % source

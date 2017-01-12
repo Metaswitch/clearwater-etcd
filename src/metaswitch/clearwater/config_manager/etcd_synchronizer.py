@@ -34,6 +34,7 @@ from hashlib import md5
 
 from .pdlogs import FILE_CHANGED
 from metaswitch.clearwater.etcd_shared.common_etcd_synchronizer import CommonEtcdSynchronizer
+from metaswitch.common import utils
 import logging
 
 _log = logging.getLogger("config_manager.etcd_synchronizer")
@@ -61,10 +62,14 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
                 _log.info("Got new config value from etcd - filename {}, file size {}, MD5 hash {}".format(
                     self._plugin.file(),
                     len(value),
-                    md5(value.encode("utf-8", errors="replace")).hexdigest()))
-                _log.debug("Got new config value from etcd:\n{}".format(value))
+                    md5(utils.safely_encode(value)).hexdigest()))
+                _log.debug("Got new config value from etcd:\n{}".format(
+                           utils.safely_encode(value)))
                 self._plugin.on_config_changed(value, self._alarm)
                 FILE_CHANGED.log(filename=self._plugin.file())
 
     def key(self):
         return "/" + self._key + "/" + self._site + "/configuration/" + self._plugin.key()
+
+    def default_value(self):
+        return self._plugin.default_value()

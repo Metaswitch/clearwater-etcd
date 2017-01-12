@@ -33,7 +33,6 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 FILENAME=/etc/clearwater/dns_config
-SAMPLE_FILENAME=/etc/clearwater/sample/dns_config
 local_site_name=site1
 etcd_key=clearwater
 . /etc/clearwater/config
@@ -48,10 +47,14 @@ then
   exit 2
 fi
 
-# Populate the file with defaults if not already present
+# Check that the file is already present. The config file should either be put
+# in place by the user, or created by the plugin at startup if it finds both
+# the file and etcd key missing. If it does not exist, the disk may have been
+# full, or some other error may have occured.
 if [[ ! -f $FILENAME ]]
 then
-    cp $SAMPLE_FILENAME $FILENAME
+    echo "No configuration file at $FILENAME, unable to upload"
+    exit 2
 fi
 
 # Upload the file to etcd

@@ -36,6 +36,7 @@ import httplib
 import json
 import sys
 import uuid
+import socket
 
 def main(ip, servers):
     my_url = "http://{}:2380".format(ip)
@@ -52,7 +53,7 @@ def main(ip, servers):
             cluster = ",".join(members)
             print "{}".format(cluster)
             return
-        except OSError:
+        except (OSError, socket.error):
             pass
 
 if __name__ == "__main__":
