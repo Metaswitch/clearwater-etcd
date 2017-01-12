@@ -232,8 +232,7 @@ seed_provider:\n\
              mock.call("mkdir -m 755 /var/lib/cassandra"),
              mock.call("chown -R cassandra /var/lib/cassandra"),
              mock.call("/usr/share/clearwater/bin/poll_cassandra.sh --no-grace-period", log_error=False),
-             mock.call("sudo service clearwater-infrastructure restart"),
-             mock.call("/usr/share/clearwater/infrastructure/scripts/cassandra_schemas/run_cassandra_schemas")]
+             mock.call("sudo service clearwater-infrastructure restart")]
 
         mock_run_command.assert_has_calls(run_command_call_list)
 
