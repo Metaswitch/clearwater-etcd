@@ -3,4 +3,6 @@ clearwater-config-manager.root/* /
 
 # Install the etcd plugins
 src/clearwater_etcd_plugins/clearwater_config_manager/shared_config_plugin.py /usr/share/clearwater/clearwater-config-manager/plugins/
-src/clearwater_etcd_plugins/clearwater_config_manager/dns_config_plugin.py /usr/share/clearwater/clearwater-config-manager/plugins/
+# We do not want the DNS config plugin in place atm, as it creates an
+# unused config file, which can then create spurious output in scripts
+# src/clearwater_etcd_plugins/clearwater_config_manager/dns_config_plugin.py /usr/share/clearwater/clearwater-config-manager/plugins/
