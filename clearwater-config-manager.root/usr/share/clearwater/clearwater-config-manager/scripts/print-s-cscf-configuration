@@ -44,9 +44,9 @@ EXPECTED_FORMAT = dedent("""The expected format is:\n\
  [
    {
      \"server\" : \"<S-CSCF URI>\",
-     \"priority\" : \"<priority>\",
-     \"weight\" : \"<weight>\",
-     \"capabilities\" : \"[<comma separated capabilities>]\",
+     \"priority\" : <priority>,
+     \"weight\" : <weight>,
+     \"capabilities\" : [<comma separated capabilities>],
    },
    ...
  ]
