@@ -59,7 +59,7 @@ c = etcd.Client(local_ip, 4000)
 
 def load_file_into_etcd(filename, etcd_key):
     with open(filename) as f:
-    nodes = {}
+        nodes = {}
 
         for line in f.readlines():
             if '=' in line:
@@ -71,7 +71,7 @@ def load_file_into_etcd(filename, etcd_key):
                     for server in value.split(","):
                         nodes[strip_port(server)] = "joining"
 
-         data = json.dumps(nodes)
+        data = json.dumps(nodes)
 
     print "Inserting data %s into etcd key %s" % (data, etcd_key)
 
