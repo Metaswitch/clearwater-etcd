@@ -1,0 +1,2 @@
+/usr/share/clearwater/clearwater-cluster-manager/scripts/check_cluster_state /usr/bin/cw-check_cluster_state
+/usr/share/clearwater/clearwater-cluster-manager/scripts/mark_node_failed /usr/bin/cw-mark_node_failed
