@@ -543,7 +543,7 @@ case "$1" in
         esac
         ;;
   *)
-        echo "Usage: $SCRIPTNAME {start|stop|status|restart|force-reload|decommission|force-decommission|force-new-cluster}" >&2
+        echo "Usage: $SCRIPTNAME {start|stop|status|restart|force-reload|decommission}" >&2
         exit 3
         ;;
 esac
