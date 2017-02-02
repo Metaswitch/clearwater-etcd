@@ -55,6 +55,7 @@ DESC="etcd"
 NAME=clearwater-etcd
 DATA_DIR=/var/lib/$NAME
 JOINED_CLUSTER_SUCCESSFULLY=$DATA_DIR/clustered_successfully
+HEALTHY_CLUSTER_VIEW=/etc/clearwater/healthy_etcd_members
 PIDFILE=/var/run/$NAME/$NAME.pid
 DAEMON=/usr/bin/etcd
 DAEMONWRAPPER=/usr/bin/etcdwrapper
@@ -127,10 +128,18 @@ join_cluster_as_proxy()
 
 setup_etcdctl_peers()
 {
-        # Build the client list based on $etcd_cluster, each entry is simply
-        # <IP>:<port> using the client port. Replace commas with whitespace,
-        # then split on whitespace (to cope with etcd_cluster values that have
-        # spaces)
+        # Build the client list based on $etcd_cluster. Each entry is simply
+        # <IP>:<port>, using the client port. Replace commas with whitespace,
+        # then split on whitespace (to cope with etcd_cluster values that have spaces)
+
+        # If we were in a working cluster before, we will have saved off an up to
+        # date view of the cluster. We want to override etcd_cluster with this, so
+        # that functions later in this script use the correct cluster value.
+        if [ -f $HEALTHY_CLUSTER_VIEW ]
+        then
+          . $HEALTHY_CLUSTER_VIEW
+        fi
+
         export ETCDCTL_PEERS=
         for server in ${etcd_cluster//,/ }
         do
@@ -199,8 +208,9 @@ join_cluster()
 #
 join_or_create_cluster()
 {
-        if [[ $etcd_cluster == $advertisement_ip ]] ||
-           [[ $etcd_cluster =~ (^|,)$advertisement_ip(,|$) && ! -f $JOINED_CLUSTER_SUCCESSFULLY ]]
+        # We only want to create the cluster if we are both a founding member,
+        # and we have never successfully clustered before. Otherwise, we join
+        if [[ ! -f $JOINED_CLUSTER_SUCCESSFULLY && $etcd_cluster =~ (^|,)$advertisement_ip(,|$) ]]
         then
           create_cluster
         else
