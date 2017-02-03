@@ -73,12 +73,13 @@ cluster_state()
       # The output of cluster-health can report the following:
       #   Member is healthy
       #   Member is unhealthy
-      #   Member is unreachable :: we don't treat this as an alarmable condition atm
-      local unhealthy_node_regex="member [a-zA-Z0-9]* is unhealthy"
+      #   Member is unreachable
       local healthy_node_regex="member [a-zA-Z0-9]* is healthy"
+      local unhealthy_node_regex="member [a-zA-Z0-9]* is unhealthy"
+      local unreachable_node_regex="member [a-zA-Z0-9]* is unreachable"
       for line in $out
       do
-        if [[ $line =~ $unhealthy_node_regex ]]
+        if [[ $line =~ $unhealthy_node_regex ]] || [[ $line =~ $unreachable_node_regex ]]
         then
           unhealthy_members=true
         elif [[ $line =~ $healthy_node_regex ]]
@@ -96,6 +97,7 @@ cluster_state()
     fi
     return 0
 }
+
 
 parse_member_ip()
 {
