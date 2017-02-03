@@ -87,7 +87,12 @@ def safely_write(filename, contents, permissions=0644):
     # Create the temporary file in the same directory (to ensure it's on the
     # same filesystem and can be moved atomically), and don't automatically
     # delete it on close (os.rename deletes it).
-    tmp = tempfile.NamedTemporaryFile(dir=dirname(filename), delete=False)
+    # This requires creating the directory if if doesn't exist.
+    directory = dirname(filename)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    tmp = tempfile.NamedTemporaryFile(dir=directory, delete=False)
 
     tmp.write(contents)
 
