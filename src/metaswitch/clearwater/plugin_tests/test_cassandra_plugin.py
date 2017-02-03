@@ -46,27 +46,11 @@ from metaswitch.clearwater.cluster_manager import alarm_constants
 from metaswitch.clearwater.cluster_manager.plugin_utils import WARNING_HEADER
 
 class TestCassandraPlugin(unittest.TestCase):
-    # run_command returns 0 if a command completes successfully, but python mocks
-    # return 'True', i.e. 1. Force return value of 0 to simulate successes.
-    @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.run_command',\
-                return_value=0)
-    @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.safely_write')
-    @mock.patch('metaswitch.common.alarms.alarm_manager.get_alarm')
-    @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.os.path.exists')
-    @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.os.remove')
-    # The plugin uses check_output to get the latency value, so we return 100000.
-    @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.subprocess.check_output',\
-                return_value=100000)
-    def test_cassandra_startup(self,\
-                               mock_check_output,\
-                               mock_os_remove,\
-                               mock_os_path,\
-                               mock_get_alarm,\
-                               mock_safely_write,\
-                               mock_run_command):
-        """Test the cassandra_plugin startup process"""
 
+    @mock.patch('metaswitch.common.alarms.alarm_manager.get_alarm')
+    def get_plugin(self, mock_get_alarm):
         # Create a plugin with dummy parameters
+        # Do this here to separate out the check for the alarm call
         plugin = CassandraPlugin(PluginParams(ip='10.0.0.1',
                                               mgmt_ip='10.0.1.1',
                                               local_site='local_site',
@@ -80,26 +64,28 @@ class TestCassandraPlugin(unittest.TestCase):
         # We expect this alarm to be called on creation of the plugin
         mock_get_alarm.assert_called_once_with('cluster-manager',
                                                alarm_constants.CASSANDRA_NOT_YET_CLUSTERED)
+        return plugin
 
-        # Build a cluster_view that includes all possible node states
-        cluster_view = {"10.0.0.1": "waiting to join",
-                        "10.0.0.2": "joining",
-                        "10.0.0.3": "joining, acknowledged change",
-                        "10.0.0.4": "joining, config changed",
-                        "10.0.0.5": "normal",
-                        "10.0.0.6": "normal, acknowledged change",
-                        "10.0.0.7": "normal, config changed",
-                        "10.0.0.8": "waiting to leave",
-                        "10.0.0.9": "leaving",
-                        "10.0.0.10": "leaving, acknowledged change",
-                        "10.0.0.11": "leaving, config changed",
-                        "10.0.0.12": "finished",
-                        "10.0.0.13": "error"}
+    def setUp(self):
+        # Get a plugin for the test case
+        self.plugin = self.get_plugin()
 
-        # Set up conditions and test data
-        mock_os_path.return_value = True
+        # This test cluster view includes all possible node states
+        self.test_cluster_view = {"10.0.0.1": "waiting to join",
+                                  "10.0.0.2": "joining",
+                                  "10.0.0.3": "joining, acknowledged change",
+                                  "10.0.0.4": "joining, config changed",
+                                  "10.0.0.5": "normal",
+                                  "10.0.0.6": "normal, acknowledged change",
+                                  "10.0.0.7": "normal, config changed",
+                                  "10.0.0.8": "waiting to leave",
+                                  "10.0.0.9": "leaving",
+                                  "10.0.0.10": "leaving, acknowledged change",
+                                  "10.0.0.11": "leaving, config changed",
+                                  "10.0.0.12": "finished",
+                                  "10.0.0.13": "error"}
 
-        yaml_template = """\
+        self.test_yaml_template = """\
 listen_address: testing\n\
 seed_provider:\n\
     - class_name: org.apache.cassandra.locator.SimpleSeedProvider\n\
@@ -107,10 +93,32 @@ seed_provider:\n\
           - seeds: "127.0.0.1"\n\
 """
 
+
+    # run_command returns 0 if a command completes successfully, but python mocks
+    # return 'True', i.e. 1. Force return value of 0 to simulate successes.
+    @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.run_command',\
+                return_value=0)
+    @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.safely_write')
+    @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.os.path.exists')
+    @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.os.remove')
+    # The plugin uses check_output to get the latency value, so we return 100000.
+    @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.subprocess.check_output',\
+                return_value=100000)
+    def test_cassandra_startup(self,\
+                               mock_check_output,\
+                               mock_os_remove,\
+                               mock_os_path,\
+                               mock_safely_write,\
+                               mock_run_command):
+        """Test the cassandra_plugin startup process"""
+
+        # Set up conditions and test data
+        mock_os_path.return_value = True
+
         # Call startup actions, as the FSM would, assuming 'force_cassandra_yaml_refresh'
         # is in place, as is the case on upgrade, to test the full 'on_startup' flow
-        with mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.open', mock.mock_open(read_data=yaml_template), create=True) as mock_open:
-            plugin.on_startup(cluster_view)
+        with mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.open', mock.mock_open(read_data=self.test_yaml_template), create=True) as mock_open:
+            self.plugin.on_startup(self.test_cluster_view)
 
         mock_open.assert_called_once_with("/usr/share/clearwater/cassandra/cassandra.yaml.template")
 
@@ -142,7 +150,7 @@ seed_provider:\n\
         # Pull out the call for writing the yaml file
         yaml_write_args = mock_safely_write.call_args_list[1]
         # Check the write location matches the plugin files location
-        self.assertEqual(plugin.files()[0], yaml_write_args[0][0])
+        self.assertEqual(self.plugin.files()[0], yaml_write_args[0][0])
 
         # Parse config, and test we are writing correct values
         yaml_string = yaml_write_args[0][1]
@@ -162,7 +170,6 @@ seed_provider:\n\
     @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.run_command',\
                 return_value=0)
     @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.safely_write')
-    @mock.patch('metaswitch.common.alarms.alarm_manager.get_alarm')
     @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.os.path.exists')
     @mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.os.remove')
     # The plugin uses check_output to get the latency value, so we return 100000.
@@ -172,55 +179,15 @@ seed_provider:\n\
                                        mock_check_output,\
                                        mock_os_remove,\
                                        mock_os_path,\
-                                       mock_get_alarm,\
                                        mock_safely_write,\
                                        mock_run_command):
         """Test the cassandra_plugin joining process"""
-
-        # Create a plugin with dummy parameters
-        plugin = CassandraPlugin(PluginParams(ip='10.0.0.1',
-                                              mgmt_ip='10.0.1.1',
-                                              local_site='local_site',
-                                              remote_site='remote_site',
-                                              remote_cassandra_seeds='10.2.2.1',
-                                              signaling_namespace='',
-                                              uuid=uuid.UUID('92a674aa-a64b-4549-b150-596fd466923f'),
-                                              etcd_key='etcd_key',
-                                              etcd_cluster_key='etcd_cluster_key'))
-
-        # We expect this alarm to be called on creation of the plugin
-        mock_get_alarm.assert_called_once_with('cluster-manager',
-                                               alarm_constants.CASSANDRA_NOT_YET_CLUSTERED)
-
-        # Build a cluster_view that includes all possible node states
-        cluster_view = {"10.0.0.1": "waiting to join",
-                        "10.0.0.2": "joining",
-                        "10.0.0.3": "joining, acknowledged change",
-                        "10.0.0.4": "joining, config changed",
-                        "10.0.0.5": "normal",
-                        "10.0.0.6": "normal, acknowledged change",
-                        "10.0.0.7": "normal, config changed",
-                        "10.0.0.8": "waiting to leave",
-                        "10.0.0.9": "leaving",
-                        "10.0.0.10": "leaving, acknowledged change",
-                        "10.0.0.11": "leaving, config changed",
-                        "10.0.0.12": "finished",
-                        "10.0.0.13": "error"}
-
         # Set up conditions and test data
         mock_os_path.return_value = True
 
-        yaml_template = """\
-listen_address: testing\n\
-seed_provider:\n\
-    - class_name: org.apache.cassandra.locator.SimpleSeedProvider\n\
-      parameters:\n\
-          - seeds: "127.0.0.1"\n\
-"""
-
         # Call join cluster as the FSM would
-        with mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.open', mock.mock_open(read_data=yaml_template), create=True) as mock_open:
-            plugin.on_joining_cluster(cluster_view)
+        with mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.open', mock.mock_open(read_data=self.test_yaml_template), create=True) as mock_open:
+            self.plugin.on_joining_cluster(self.test_cluster_view)
 
         mock_open.assert_called_once_with("/usr/share/clearwater/cassandra/cassandra.yaml.template")
 
@@ -255,42 +222,11 @@ seed_provider:\n\
                                        mock_safely_write,\
                                        mock_run_command):
         """Test the cassandra_plugin leaving process"""
-
-        # Create a plugin with dummy parameters
-        plugin = CassandraPlugin(PluginParams(ip='10.0.0.1',
-                                              mgmt_ip='10.0.1.1',
-                                              local_site='local_site',
-                                              remote_site='remote_site',
-                                              remote_cassandra_seeds='10.2.2.1',
-                                              signaling_namespace='',
-                                              uuid=uuid.UUID('92a674aa-a64b-4549-b150-596fd466923f'),
-                                              etcd_key='etcd_key',
-                                              etcd_cluster_key='etcd_cluster_key'))
-
-        # We expect this alarm to be called on creation of the plugin
-        mock_get_alarm.assert_called_once_with('cluster-manager',
-                                               alarm_constants.CASSANDRA_NOT_YET_CLUSTERED)
-
-        # Build a cluster_view that includes all possible node states
-        cluster_view = {"10.0.0.1": "waiting to join",
-                        "10.0.0.2": "joining",
-                        "10.0.0.3": "joining, acknowledged change",
-                        "10.0.0.4": "joining, config changed",
-                        "10.0.0.5": "normal",
-                        "10.0.0.6": "normal, acknowledged change",
-                        "10.0.0.7": "normal, config changed",
-                        "10.0.0.8": "waiting to leave",
-                        "10.0.0.9": "leaving",
-                        "10.0.0.10": "leaving, acknowledged change",
-                        "10.0.0.11": "leaving, config changed",
-                        "10.0.0.12": "finished",
-                        "10.0.0.13": "error"}
-
         # Set up conditions and test data
         mock_os_path.return_value = True
 
         # Call leave cluster as the FSM would
-        plugin.on_leaving_cluster(cluster_view)
+        self.plugin.on_leaving_cluster(self.test_cluster_view)
 
         mock_get_alarm.assert_called_with('cluster-manager',
                                           alarm_constants.CASSANDRA_NOT_YET_DECOMMISSIONED)
@@ -299,7 +235,7 @@ seed_provider:\n\
         # the nodetool decommission command
         run_command_call_list = \
             [mock.call("/usr/share/clearwater/bin/poll_cassandra.sh --no-grace-period", log_error=False),
-             mock.call("nodetool decommission", plugin._sig_namespace)]
+             mock.call("nodetool decommission", self.plugin._sig_namespace)]
 
         mock_run_command.assert_has_calls(run_command_call_list)
 
