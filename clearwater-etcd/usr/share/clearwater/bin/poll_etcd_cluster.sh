@@ -86,6 +86,9 @@ cluster_state()
           parse_member_ip $line
         fi
       done
+      # add the list of healthy mambers to a state file, so we can rejoin safely if we die
+      echo "etcd_cluster=$HEALTHY_MEMBER_LIST" > "/var/lib/clearwater-etcd/healthy_etcd_members"
+
       if [ $unhealthy_members ]
       then
         return 1
@@ -142,8 +145,6 @@ state=$?
 echo $state
 
 if [ "$state" = 0 ] ; then
-    # add the list of healthy mambers to a state file, so we can rejoin safely if we die
-    echo "etcd_cluster=$HEALTHY_MEMBER_LIST" > "/etc/clearwater/healthy_etcd_members"
     check_clear_alarm
 elif [ "$state" = 1 ] ; then
     check_issue_major_alarm
