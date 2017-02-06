@@ -391,8 +391,12 @@ seed_provider:\n\
                                        mock_run_command):
         """Test the cassandra_plugin leaving process
         We should make sure that the bootstrapped flag is removed once we leave"""
-        # Set up the state to be returned by mock_path_exists
+        # Set up the state to be returned by mock_path_exists. We wouldn't
+        # normally expect both the bootstrap_in_progress and bootstrapping
+        # flags to be present at the same time, but to make sure we remove
+        # them without needing two near identical tests, we'll set them both here.
         flags = [self.plugin.CASSANDRA_YAML_FILE,
+                 self.plugin.BOOTSTRAP_IN_PROGRESS_FLAG,
                  self.plugin.BOOTSTRAPPED_FLAG]
         mock_os_path.side_effect = mock_exists(flags)
 
@@ -412,9 +416,11 @@ seed_provider:\n\
 
         path_exists_call_list = \
             [mock.call(self.plugin.CASSANDRA_YAML_FILE),
+             mock.call(self.plugin.BOOTSTRAP_IN_PROGRESS_FLAG),
              mock.call(self.plugin.BOOTSTRAPPED_FLAG)]
         path_remove_call_list = \
             [mock.call(self.plugin.CASSANDRA_YAML_FILE),
+             mock.call(self.plugin.BOOTSTRAP_IN_PROGRESS_FLAG),
              mock.call(self.plugin.BOOTSTRAPPED_FLAG)]
 
         mock_os_path.assert_has_calls(path_exists_call_list)
