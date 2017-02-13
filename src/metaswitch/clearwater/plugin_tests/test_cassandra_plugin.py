@@ -49,7 +49,7 @@ from metaswitch.clearwater.cluster_manager.plugin_utils import WARNING_HEADER
 # used in the plugin to check the system state via a set of state flags. This
 # can be set up in each test to simulate a specific system state, rather than
 # needing a separate side effect definition for each.
-class mock_exists(object):
+class mock_existing_files(object):
     def __init__(self, state_flags):
         self.existing_flags = state_flags
 
@@ -112,7 +112,7 @@ seed_provider:\n\
 
         # Return for all os.path.exists checks, to simulate no state flags
         flags = []
-        mock_os_path.side_effect = mock_exists(flags)
+        mock_os_path.side_effect = mock_existing_files(flags)
 
         # Call startup actions, as the FSM would
         self.plugin.on_startup(self.test_cluster_view)
@@ -144,7 +144,7 @@ seed_provider:\n\
 
         # Set up the state to be returned by mock_path_exists
         flags = ["/etc/clearwater/force_cassandra_yaml_refresh", "/etc/cassandra/cassandra.yaml"]
-        mock_os_path.side_effect = mock_exists(flags)
+        mock_os_path.side_effect = mock_existing_files(flags)
 
         # Call startup actions, as the FSM would. As 'force_cassandra_yaml_refresh'
         # is in place, as is the case on upgrade, we test the full 'on_startup' flow
@@ -230,7 +230,7 @@ seed_provider:\n\
            and perform a full destructive restart."""
         # Set up conditions and test data
         flags = [self.plugin.CASSANDRA_YAML_FILE]
-        mock_os_path.side_effect = mock_exists(flags)
+        mock_os_path.side_effect = mock_existing_files(flags)
 
         # Call join cluster as the FSM would
         with mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.open', mock.mock_open(read_data=self.test_yaml_template), create=True) as mock_open:
@@ -285,7 +285,7 @@ seed_provider:\n\
         # Set up the state to be returned by mock_path_exists
         flags = [self.plugin.CASSANDRA_YAML_FILE,
                  self.plugin.BOOTSTRAP_IN_PROGRESS_FLAG]
-        mock_os_path.side_effect = mock_exists(flags)
+        mock_os_path.side_effect = mock_existing_files(flags)
 
         # Call join cluster as the FSM would
         with mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.open', mock.mock_open(read_data=self.test_yaml_template), create=True) as mock_open:
@@ -344,7 +344,7 @@ seed_provider:\n\
         # Set up the state to be returned by mock_path_exists
         flags = [self.plugin.CASSANDRA_YAML_FILE,
                  self.plugin.BOOTSTRAPPED_FLAG]
-        mock_os_path.side_effect = mock_exists(flags)
+        mock_os_path.side_effect = mock_existing_files(flags)
 
         # Call join cluster as the FSM would
         with mock.patch('clearwater_etcd_plugins.clearwater_cassandra.cassandra_plugin.open', mock.mock_open(read_data=self.test_yaml_template), create=True) as mock_open:
@@ -398,7 +398,7 @@ seed_provider:\n\
         flags = [self.plugin.CASSANDRA_YAML_FILE,
                  self.plugin.BOOTSTRAP_IN_PROGRESS_FLAG,
                  self.plugin.BOOTSTRAPPED_FLAG]
-        mock_os_path.side_effect = mock_exists(flags)
+        mock_os_path.side_effect = mock_existing_files(flags)
 
         # Call leave cluster as the FSM would
         self.plugin.on_leaving_cluster(self.test_cluster_view)
