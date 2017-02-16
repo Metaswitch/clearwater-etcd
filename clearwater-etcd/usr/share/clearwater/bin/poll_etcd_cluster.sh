@@ -35,15 +35,16 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 # This script is used by Monit to check connectivity to remote etcd instances.
-# If connectivity is lost to any instances in the cluster an alarm will be
-# issued (major severity for a single instance, critical severity if enough
-# instances are unreachable that quorum can't be formed). When connectivity is
-# restored to all instances, the alarm is cleared. Alarms are issued here vs.
-# the Monit DSL to avoid retransmissions.
+# If connectivity is lost to any instances in the cluster, an alarm severity is
+# written to the alarm_waiting_file. When monit notices that the cluster is
+# unhealthy for a period of time, it raises the appropriate alarm (major
+# severity for a single instance, critical severity if enough instances are
+# unreachable that quorum can't be formed). When connectivity is restored to all
+# instances, the alarm is cleared.
 #
 # Execution of etcdctl is "niced" to minimize the impact of its use.
 
-alarm_state_file="/tmp/.clearwater_etcd_alarm_issued"
+alarm_waiting_file="/tmp/.clearwater_etcd_alarm_waiting"
 
 . /etc/clearwater/config
 export ETCDCTL_PEERS=http://${management_local_ip:-$local_ip}:4000
@@ -83,44 +84,21 @@ cluster_state()
 }
 
 
-check_clear_alarm()
-{
-    if [ -f $alarm_state_file ] ; then
-        rm -f $alarm_state_file
-        /usr/share/clearwater/bin/issue-alarm "monit" "6501.1"
-    fi
-}
-
-
-check_issue_major_alarm()
-{
-    if [ ! -f $alarm_state_file ] || [ `cat $alarm_state_file` != "major" ] ; then
-        echo "major" > $alarm_state_file
-        /usr/share/clearwater/bin/issue-alarm "monit" "6501.4"
-    fi
-}
-
-
-check_issue_critial_alarm()
-{
-    if [ ! -f $alarm_state_file ] || [ `cat $alarm_state_file` != "critical" ] ; then
-        echo "critical" > $alarm_state_file
-        /usr/share/clearwater/bin/issue-alarm "monit" "6501.3"
-    fi
-}
-
-
 cluster_state
 state=$?
 
 echo $state
 
+# If the cluster is healthy, remove alarm file and clear alarm.
+# If not, write the alarm level to the alarm_waiting_file so that monit can
+# raise the alarm.
 if [ "$state" = 0 ] ; then
-    check_clear_alarm
+    rm -f $alarm_waiting_file > /dev/null 2>&1
+    /usr/share/clearwater/bin/issue-alarm "monit" "6501.1"
 elif [ "$state" = 1 ] ; then
-    check_issue_major_alarm
+    echo "major" > $alarm_waiting_file
 else
-    check_issue_critial_alarm
+    echo "critical" > $alarm_waiting_file
 fi
 
 exit $state
