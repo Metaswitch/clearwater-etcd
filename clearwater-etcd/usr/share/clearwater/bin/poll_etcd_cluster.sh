@@ -70,16 +70,46 @@ cluster_state()
       fi
 
       IFS=$'\n'
-      local node_state_regex="member [a-zA-Z0-9]* is unhealthy"
+      # The output of cluster-health can report the following:
+      #   Member is healthy
+      #   Member is unhealthy
+      #   Member is unreachable
+      local healthy_node_regex="member [a-zA-Z0-9]* is healthy"
+      local unhealthy_node_regex="member [a-zA-Z0-9]* is unhealthy"
+      local unreachable_node_regex="member [a-zA-Z0-9]* is unreachable"
       for line in $out
       do
-        if [[ $line =~ $node_state_regex ]]
+        if [[ $line =~ $unhealthy_node_regex ]] || [[ $line =~ $unreachable_node_regex ]]
         then
-          return 1
+          unhealthy_members=true
+        elif [[ $line =~ $healthy_node_regex ]]
+        then
+          parse_member_ip $line
         fi
       done
+      # add the list of healthy mambers to a state file, so we can rejoin safely if we die
+      echo "etcd_cluster=$HEALTHY_MEMBER_LIST" > "/var/lib/clearwater-etcd/healthy_etcd_members"
+
+      if [ $unhealthy_members ]
+      then
+        return 1
+      fi
     fi
     return 0
+}
+
+
+parse_member_ip()
+{
+    # The output of cluter health looks like:
+    # member <member_id> is healthy: got healthy result from http://<member_ip>:4000
+    # We want to pull out the ip, to build an up to date etcd_cluster value
+    # The steps are:
+    #   select the ninth section: http://<member_ip>:4000
+    #   strip the 'http://' from the front
+    #   cut the ':4000' from the end
+    member_ip=$( echo $1 | cut -d " " -f 9 | sed 's/http:\/\///' | cut -d : -f 1 )
+    HEALTHY_MEMBER_LIST=$member_ip,$HEALTHY_MEMBER_LIST
 }
 
 
