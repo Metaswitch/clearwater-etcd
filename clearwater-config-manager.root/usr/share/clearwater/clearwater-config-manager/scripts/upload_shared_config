@@ -136,4 +136,8 @@ else
   /usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue force_false apply_config
 fi
 
+# Call into the dummy upload script to ensure that etcd doesn't run out of
+# memory when large values are being uploaded.
+/usr/share/clearwater/clearwater-config-manager/scripts/upload_dummy $FILENAME $keypath
+
 exit $rc

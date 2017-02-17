@@ -73,4 +73,8 @@ if [ $rc != 0 ] ; then
 fi
 rm -f /tmp/upload-dns-config.stderr.$$ /tmp/upload-dns-config.stdout.$$
 
+# Call into the dummy upload script to ensure that etcd doesn't run out of
+# memory when large values are being uploaded.
+/usr/share/clearwater/clearwater-config-manager/scripts/upload_dummy $FILENAME $keypath
+
 exit $rc

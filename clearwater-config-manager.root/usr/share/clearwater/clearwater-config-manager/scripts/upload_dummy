@@ -1,0 +1,80 @@
+#!/bin/bash
+
+# Project Clearwater - IMS in the Cloud
+# Copyright (C) 2016  Metaswitch Networks Ltd
+#
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version, along with the "Special Exception" for use of
+# the program along with SSL, set forth below. This program is distributed
+# in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more
+# details. You should have received a copy of the GNU General Public
+# License along with this program.  If not, see
+# <http://www.gnu.org/licenses/>.
+#
+# The author can be reached by email at clearwater@metaswitch.com or by
+# post at Metaswitch Networks Ltd, 100 Church St, Enfield EN2 6BQ, UK
+#
+# Special Exception
+# Metaswitch Networks Ltd  grants you permission to copy, modify,
+# propagate, and distribute a work formed by combining OpenSSL with The
+# Software, or a work derivative of such a combination, even if such
+# copying, modification, propagation, or distribution would otherwise
+# violate the terms of the GPL. You must comply with the GPL in all
+# respects for all of the code used other than OpenSSL.
+# "OpenSSL" means OpenSSL toolkit software distributed by the OpenSSL
+# Project and licensed under the OpenSSL Licenses, or a work based on such
+# software and licensed under the OpenSSL Licenses.
+# "OpenSSL Licenses" means the OpenSSL License and Original SSLeay License
+# under which the OpenSSL Project distributes the OpenSSL toolkit software,
+# as those licenses appear in the file LICENSE-OPENSSL.
+
+# There is a known issue with etcd whereby its memory usage will rapidly grow
+# to consume all available memory on the box if large values are repeatedly
+# uploaded to it.  We can work around this by uploading a set of dummy keys
+# with zero-length values.  This reduces the etcd memory usage in a way that
+# tuning the snapshot count doesn't.  This script should be called from
+# everywhere that might upload a large (> 10 kB) value to etcd.
+
+if [ $# -ne 2 ] ; then
+  # This script takes two mandatory arguments, but we don't expect it to be run
+  # from the command line directly:
+  #   - The name of the file that has just been uploaded
+  #   - The etcd URL indicating the key used for the upload
+  echo This is an internal script and is not meant to be run directly.
+  exit 1
+fi
+
+FILENAME=$1
+KEYPATH=${2}_dummy
+
+# Work out how many dummy keys to upload.  We do one per 5 kB of file uploaded.
+# Experiment has determined that this keeps the etcd RSS below ~300 MB, even
+# when continuously uploading keys as large as 1 MB (the quoted limit for etcd
+# v2 keys) at a rate of one every five seconds.
+#
+# If the file is under the target size, no dummy keys will be uploaded.
+target_size=5120
+dummy_count=$((`stat -c %s $FILENAME` / $target_size))
+
+# Upload the dummy keys
+for ii in `seq 1 $dummy_count`
+do
+  curl -X PUT $KEYPATH "" 2> /tmp/upload-dummy.stderr.$$ | tee /tmp/upload-dummy.stdout.$$ | egrep -q "\"action\":\"set\""
+  rc=$?
+
+  if [ $rc != 0  ] ; then
+    echo Hit problem uploading dummy key to $KEYPATH  >&2
+    cat /tmp/upload-dummy.stderr.$$                   >&2
+    cat /tmp/upload-dummy.stdout.$$                   >&2
+  fi
+
+  rm -f /tmp/upload-dummy.stderr.$$ /tmp/upload-dummy.stdout.$$
+
+  if [ $rc != 0 ] ; then
+    exit $rc
+  fi
+done
