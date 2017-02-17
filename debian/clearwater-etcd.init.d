@@ -128,10 +128,6 @@ join_cluster_as_proxy()
 
 setup_etcdctl_peers()
 {
-        # Build the client list based on $etcd_cluster. Each entry is simply
-        # <IP>:<port>, using the client port. Replace commas with whitespace,
-        # then split on whitespace (to cope with etcd_cluster values that have spaces)
-
         # If we were in a working cluster before, we will have saved off an up to
         # date view of the cluster. We want to override etcd_cluster with this, so
         # that functions later in this script use the correct cluster value.
@@ -140,6 +136,9 @@ setup_etcdctl_peers()
           . $HEALTHY_CLUSTER_VIEW
         fi
 
+        # Build the client list based on $etcd_cluster. Each entry is simply
+        # <IP>:<port>, using the client port. Replace commas with whitespace,
+        # then split on whitespace (to cope with etcd_cluster values that have spaces)
         export ETCDCTL_PEERS=
         for server in ${etcd_cluster//,/ }
         do
@@ -210,7 +209,7 @@ join_or_create_cluster()
 {
         # We only want to create the cluster if we are both a founding member,
         # and we have never successfully clustered before. Otherwise, we join
-        if [[ ! -f $JOINED_CLUSTER_SUCCESSFULLY && $etcd_cluster =~ (^|,)$advertisement_ip(,|$) ]]
+        if [[ ! -f $JOINED_CLUSTER_SUCCESSFULLY && ${etcd_cluster//,/ } =~ (^| )$advertisement_ip( |$) ]]
         then
           create_cluster
         else
@@ -441,8 +440,10 @@ do_decommission()
 
         rm -f $PIDFILE
 
-        # Decommissioned so destroy the data directory
+        # Decommissioned so destroy the data directory and cluster files
         [[ -n $DATA_DIR ]] && [[ -n $advertisement_ip ]] && rm -rf $DATA_DIR/$advertisement_ip
+        rm -f $JOINED_CLUSTER_SUCCESSFULLY
+        rm -f $HEALTHY_CLUSTER_VIEW
 }
 
 #

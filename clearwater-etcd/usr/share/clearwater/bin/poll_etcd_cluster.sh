@@ -109,7 +109,6 @@ parse_member_ip()
     #   strip the 'http://' from the front
     #   cut the ':4000' from the end
     member_ip=$( echo $1 | cut -d " " -f 9 | sed 's/http:\/\///' | cut -d : -f 1 )
-    echo Member ip is $member_ip
     HEALTHY_MEMBER_LIST=$member_ip,$HEALTHY_MEMBER_LIST
 }
 
