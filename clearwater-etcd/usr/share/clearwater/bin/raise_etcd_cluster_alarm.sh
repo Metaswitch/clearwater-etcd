@@ -36,8 +36,7 @@
 
 ALARM_TO_RAISE_FILE="/tmp/.clearwater_etcd_alarm_to_raise"
 
-# Read in the alarm level from the ALARM_TO_RAISE_FILE, and raise the appropriate
-# alarm
+# Read in the alarm from the ALARM_TO_RAISE_FILE and raise it.
 if [ -f $ALARM_TO_RAISE_FILE ] ; then
     alarm=`cat $ALARM_TO_RAISE_FILE`
     /usr/share/clearwater/bin/issue-alarm "monit" $alarm
