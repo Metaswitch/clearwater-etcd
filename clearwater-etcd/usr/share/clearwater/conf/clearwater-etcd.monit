@@ -53,14 +53,18 @@ check program etcd_uptime with path /usr/share/clearwater/infrastructure/monit_u
   every 3 cycles
   if status != 0 then alert
 
-# Monitor cluster health.  If connectivity is lost to any node issue an alarm,
-# otherwise clear it (alarm handling is done in the check script to avoid
-# unnecessary retransmissions). Only check every 60 seconds due to overhead of
-# running etcdctl cluster-health.
-check program poll_etcd_cluster with path "/usr/share/clearwater/bin/poll_etcd_cluster.sh" every 6 cycles
+# Monitor cluster health.  If connectivity is lost to any node (over 2
+# consecutive cycles) issue an alarm.
+# If the the cluster is healthy, clear any alarms (this is handled in the poll
+# script).
+# Only check every 60 seconds due to overhead of running etcdctl cluster-health.
+check program poll_etcd_cluster with path "/usr/share/clearwater/bin/poll_etcd_cluster.sh"
   group etcd
   depends on etcd_process
-  if status != 0 then alert
+  every 6 cycles
+  if status != 0 for 2 cycles then exec "/bin/bash -c '/usr/share/clearwater/bin/raise_etcd_cluster_alarm.sh'"
+    # Raise the alarm every time the above test fails
+    repeat every 1 cycles
 
 # Check that etcd is listening on 4000. This depends on the etcd process (and
 # so won't run unless the etcd process is running)
