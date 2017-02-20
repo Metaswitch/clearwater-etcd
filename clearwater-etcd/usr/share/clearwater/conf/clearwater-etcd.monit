@@ -63,6 +63,8 @@ check program poll_etcd_cluster with path "/usr/share/clearwater/bin/poll_etcd_c
   depends on etcd_process
   every 6 cycles
   if status != 0 for 2 cycles then exec "/bin/bash -c '/usr/share/clearwater/bin/raise_etcd_cluster_alarm.sh'"
+    # Raise the alarm every time the above test fails
+    repeat every 1 cycles
 
 # Check that etcd is listening on 4000. This depends on the etcd process (and
 # so won't run unless the etcd process is running)

@@ -34,17 +34,13 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-alarm_waiting_file="/tmp/.clearwater_etcd_alarm_waiting"
+ALARM_TO_RAISE_FILE="/tmp/.clearwater_etcd_alarm_to_raise"
 
-# Read in the alarm level from the alarm_waiting_file, and raise the appropriate
+# Read in the alarm level from the ALARM_TO_RAISE_FILE, and raise the appropriate
 # alarm
-if [ -f $alarm_waiting_file ] ; then
-    level=`cat $alarm_waiting_file`
-    if [ "$level" = "major" ] ; then
-        /usr/share/clearwater/bin/issue-alarm "monit" "6501.4"
-    else
-        /usr/share/clearwater/bin/issue-alarm "monit" "6501.3"
-    fi
+if [ -f $ALARM_TO_RAISE_FILE ] ; then
+    alarm=`cat $ALARM_TO_RAISE_FILE`
+    /usr/share/clearwater/bin/issue-alarm "monit" $alarm
 fi
 
 

@@ -88,7 +88,7 @@ case "$1" in
         setup_user
         setup_data_dir
         setup_log_dir
-        
+
         install -D --mode=0644 /usr/share/clearwater/conf/clearwater-etcd.monit /etc/monit/conf.d/
         reload clearwater-monit || /bin/true
 
@@ -97,10 +97,14 @@ case "$1" in
         # significant lag.)
         # Don't fail if it's already stopped.
         service clearwater-etcd stop || /bin/true
-        
+
         # Clean up any pidfile still in the old location - we've moved it to
         # /var/run/clearwater-etd/clearwater-etcd.pid
         rm -f /var/run/$NAME.pid
+
+        # Clean up any old clearwater_etcd_alarm_issued file - it's no longer
+        # used
+        rm -f /tmp/.clearwater_etcd_alarm_issued
 
     ;;
 

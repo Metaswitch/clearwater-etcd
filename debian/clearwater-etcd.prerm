@@ -73,6 +73,10 @@ case "$1" in
 
           rm -rf /var/log/$NAME
           rm -rf /var/lib/$NAME
+
+          # Remove any alarm markers
+          rm -f /tmp/.clearwater_etcd_alarm_issued
+          rm -f /tmp/.clearwater_etcd_alarm_to_raise
         fi
     ;;
 
