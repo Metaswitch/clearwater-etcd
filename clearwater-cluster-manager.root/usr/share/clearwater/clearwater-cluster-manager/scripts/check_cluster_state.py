@@ -70,7 +70,7 @@ def describe_clusters():
             # The key isn't to do with clustering, skip it
             continue
 
-        if site != "":
+        if site != "" and remote_site != "":
             print "Describing the {} {} cluster in site {}:".format(node_type.capitalize(), store_name.capitalize(), site)
         else:
             print "Describing the {} {} cluster:".format(node_type.capitalize(), store_name.capitalize())
