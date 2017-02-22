@@ -72,6 +72,13 @@ then
   exit 2
 fi
 
+# Check that the file isn't too large.  Large values (>10 kB) cause memory
+# issues for etcd.
+if [ `stat -c %s $FILENAME` -gt 10240 ] ; then
+  echo "File is too large to safely store in etcd: $FILENAME"
+  exit 2
+fi
+
 # Run any config validation scripts (either native or supplied by an integrator)
 any_scripts=$(ls /usr/share/clearwater/clearwater-config-manager/scripts/config_validation/* 2> /dev/null)
 if [ "$any_scripts" != "" ]
@@ -135,9 +142,5 @@ then
 else
   /usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue force_false apply_config
 fi
-
-# Call into the dummy upload script to ensure that etcd doesn't run out of
-# memory when large values are being uploaded.
-/usr/share/clearwater/clearwater-config-manager/scripts/upload_dummy $FILENAME $keypath
 
 exit $rc

@@ -57,6 +57,13 @@ then
     exit 2
 fi
 
+# Check that the file isn't too large.  Large values (>10 kB) cause memory
+# issues for etcd.
+if [ `stat -c %s $FILENAME` -gt 10240 ] ; then
+  echo "File is too large to safely store in etcd: $FILENAME"
+  exit 2
+fi
+
 # Upload the file to etcd
 keypath=http://${management_local_ip:-$local_ip}:4000/v2/keys/$etcd_key/$local_site_name/configuration/dns_config
 curl -X PUT $keypath --data-urlencode value@$FILENAME 2> /tmp/upload-dns-config.stderr.$$ | tee /tmp/upload-dns-config.stdout.$$ | egrep -q "\"action\":\"set\""
@@ -72,9 +79,5 @@ if [ $rc != 0 ] ; then
   cat /tmp/upload-dns-config.stdout.$$              >&2
 fi
 rm -f /tmp/upload-dns-config.stderr.$$ /tmp/upload-dns-config.stdout.$$
-
-# Call into the dummy upload script to ensure that etcd doesn't run out of
-# memory when large values are being uploaded.
-/usr/share/clearwater/clearwater-config-manager/scripts/upload_dummy $FILENAME $keypath
 
 exit $rc
