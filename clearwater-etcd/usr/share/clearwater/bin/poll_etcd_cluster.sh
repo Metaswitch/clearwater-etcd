@@ -35,15 +35,16 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 # This script is used by Monit to check connectivity to remote etcd instances.
-# If connectivity is lost to any instances in the cluster an alarm will be
-# issued (major severity for a single instance, critical severity if enough
-# instances are unreachable that quorum can't be formed). When connectivity is
-# restored to all instances, the alarm is cleared. Alarms are issued here vs.
-# the Monit DSL to avoid retransmissions.
+# If connectivity is lost to any instances in the cluster, an alarm id is
+# written to the ALARM_TO_RAISE_FILE. When monit notices that the cluster is
+# unhealthy for a period of time, it raises the appropriate alarm (major
+# severity for a single instance, critical severity if enough instances are
+# unreachable that quorum can't be formed). When connectivity is restored to all
+# instances, the alarm is cleared.
 #
 # Execution of etcdctl is "niced" to minimize the impact of its use.
 
-alarm_state_file="/tmp/.clearwater_etcd_alarm_issued"
+ALARM_TO_RAISE_FILE="/tmp/.clearwater_etcd_alarm_to_raise"
 
 . /etc/clearwater/config
 export ETCDCTL_PEERS=http://${management_local_ip:-$local_ip}:4000
@@ -70,43 +71,46 @@ cluster_state()
       fi
 
       IFS=$'\n'
-      local node_state_regex="member [a-zA-Z0-9]* is unhealthy"
+      # The output of cluster-health can report the following:
+      #   Member is healthy
+      #   Member is unhealthy
+      #   Member is unreachable
+      local healthy_node_regex="member [a-zA-Z0-9]* is healthy"
+      local unhealthy_node_regex="member [a-zA-Z0-9]* is unhealthy"
+      local unreachable_node_regex="member [a-zA-Z0-9]* is unreachable"
       for line in $out
       do
-        if [[ $line =~ $node_state_regex ]]
+        if [[ $line =~ $unhealthy_node_regex ]] || [[ $line =~ $unreachable_node_regex ]]
         then
-          return 1
+          unhealthy_members=true
+        elif [[ $line =~ $healthy_node_regex ]]
+        then
+          parse_member_ip $line
         fi
       done
+      # add the list of healthy mambers to a state file, so we can rejoin safely if we die
+      echo "etcd_cluster=$HEALTHY_MEMBER_LIST" > "/var/lib/clearwater-etcd/healthy_etcd_members"
+
+      if [ $unhealthy_members ]
+      then
+        return 1
+      fi
     fi
     return 0
 }
 
 
-check_clear_alarm()
+parse_member_ip()
 {
-    if [ -f $alarm_state_file ] ; then
-        rm -f $alarm_state_file
-        /usr/share/clearwater/bin/issue-alarm "monit" "6501.1"
-    fi
-}
-
-
-check_issue_major_alarm()
-{
-    if [ ! -f $alarm_state_file ] || [ `cat $alarm_state_file` != "major" ] ; then
-        echo "major" > $alarm_state_file
-        /usr/share/clearwater/bin/issue-alarm "monit" "6501.4"
-    fi
-}
-
-
-check_issue_critial_alarm()
-{
-    if [ ! -f $alarm_state_file ] || [ `cat $alarm_state_file` != "critical" ] ; then
-        echo "critical" > $alarm_state_file
-        /usr/share/clearwater/bin/issue-alarm "monit" "6501.3"
-    fi
+    # The output of cluter health looks like:
+    # member <member_id> is healthy: got healthy result from http://<member_ip>:4000
+    # We want to pull out the ip, to build an up to date etcd_cluster value
+    # The steps are:
+    #   select the ninth section: http://<member_ip>:4000
+    #   strip the 'http://' from the front
+    #   cut the ':4000' from the end
+    member_ip=$( echo $1 | cut -d " " -f 9 | sed 's/http:\/\///' | cut -d : -f 1 )
+    HEALTHY_MEMBER_LIST=$member_ip,$HEALTHY_MEMBER_LIST
 }
 
 
@@ -115,12 +119,15 @@ state=$?
 
 echo $state
 
+# If the cluster is healthy, remove alarm file and clear alarm.
+# If not, write the alarm to the ALARM_TO_RAISE_FILE so that monit can raise it.
 if [ "$state" = 0 ] ; then
-    check_clear_alarm
+    rm -f $ALARM_TO_RAISE_FILE > /dev/null 2>&1
+    /usr/share/clearwater/bin/issue-alarm "monit" "6501.1"
 elif [ "$state" = 1 ] ; then
-    check_issue_major_alarm
+    echo "6501.4" > $ALARM_TO_RAISE_FILE
 else
-    check_issue_critial_alarm
+    echo "6501.3" > $ALARM_TO_RAISE_FILE
 fi
 
 exit $state
