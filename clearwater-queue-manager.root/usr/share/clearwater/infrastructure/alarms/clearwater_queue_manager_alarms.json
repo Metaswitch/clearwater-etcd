@@ -84,6 +84,68 @@
                     "action": "Check that the shared configuration is valid. If it isn't, correct it and re-upload it. If the alarm still doesn't clear, contact your support representative."
                 }
             ]
+        },
+        {
+            "name": "GLOBAL_CHRONOS_GR_CONFIG_RESYNCHING",
+            "index": 9003,
+            "cause": "DATABASE_INCONSISTENCY",
+            "levels": [
+                {
+                    "severity": "CLEARED",
+                    "description": "etcd: Chronos GR configuration is now consistent across the deployment.",
+                    "details": "All Chronos GR configuration has been synchronized across the deployment.",
+                    "cause": "Chronos GR configuration is now consistent across the deployment.",
+                    "effect": "Changes to Chronos GR configuration have been picked up by all nodes in the deployment.",
+                    "action": "No action."
+                },
+                {
+                    "severity": "MINOR",
+                    "description": "etcd: Chronos GR configuration is being synchronized across the cluster.",
+                    "details": "Chronos GR configuration is being synchronized across the cluster. This involves restarting the Chronos processes on individual nodes.",
+                    "cause": "A change has been made to Chronos GR configuration.",
+                    "effect": "Changes to Chronos GR configuration are synchronized across the cluster and processes are restarted to pick up the changes.",
+                    "action": "Monitor this alarm, and wait for it to clear. If the alarm doesn't clear in a timely fashion, contact your support representative."
+                },
+                {
+                    "severity": "CRITICAL",
+                    "description": "etcd: A Chronos node has failed to resync successfully after receiving new Chronos GR configuration.",
+                    "details": "A Chronos node has failed to resync successfully after receiving new Chronos GR configuration. Check that the Chronos GR configuration is valid, and the node is alive.",
+                    "cause": "A change has been made to Chronos GR configuration which has led to the Chronos node not being able to successfully resync.",
+                    "effect": "Timer redundancy has been lost",
+                    "action": "Check that the Chronos GR configuration is valid. If it isn't, correct it and re-upload it. If the alarm still doesn't clear, contact your support representative."
+                }
+            ]
+        },
+        {
+            "name": "LOCAL_CHRONOS_GR_CONFIG_RESYNCHING",
+            "index": 9004,
+            "cause": "DATABASE_INCONSISTENCY",
+            "levels": [
+                {
+                    "severity": "CLEARED",
+                    "description": "etcd: Chronos GR configuration has been learned by the local node.",
+                    "details": "All Chronos GR configuration has been synchronized to the local node.",
+                    "cause": "All Chronos GR configuration has been synchronized to the local node.",
+                    "effect": "Chronos GR configuration is up to date on the local node.",
+                    "action": "No action."
+                },
+                {
+                    "severity": "MINOR",
+                    "description": "etcd: Chronos GR configuration is being synchronized on this node.",
+                    "details": "Chronos GR configuration is being synchronized on this node. This involves restarting the Chronos processes on this node.",
+                    "cause": "This node is picking up a change that has been made to Chronos GR configuration.",
+                    "effect": "The Chronos process on this node is restarted to pick up the changes to Chronos GR configuration.",
+                    "action": "Monitor this alarm, and wait for it to clear. If the alarm doesn't clear in a timely fashion, contact your support representative."
+                },
+                {
+                    "severity": "CRITICAL",
+                    "description": "etcd: This node has failed to resync successfully after receiving new Chronos GR configuration.",
+                    "details": "This node has failed to resync successfully after receiving new Chronos GR configuration. Check that the Chronos GR configuration is valid, and this node is alive.",
+                    "cause": "A change has been made to Chronos GR configuration which has led to the Chronos node not being able to successfully resync.",
+                    "effect": "Timer redundancy has been lost.",
+                    "action": "Check that the Chronos GR configuration is valid. If it isn't, correct it and re-upload it. If the alarm still doesn't clear, contact your support representative."
+                }
+            ]
         }
     ]
 }
