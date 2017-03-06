@@ -81,7 +81,7 @@ def main():
 
     additions = [line[2:] for line in difflines if line.startswith("+ ") and len(line) > 2]
     additions_str = ", ".join(['"' + line + '"' for line in additions])
- 
+
     # We'll be running as root, but SUDO_USER pulls out the user who invoked sudo
     username = os.environ['SUDO_USER']
 
