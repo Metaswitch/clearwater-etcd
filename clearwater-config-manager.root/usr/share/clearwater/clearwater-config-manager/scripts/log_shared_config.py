@@ -57,7 +57,7 @@ def main():
         # right format; this is likely because the shared config key doesn't
         # exist yet (and if it's something more complicated then again
         # upload_shared_config can handle it).
-        new_config_lines = open("/etc/clearwater/shared_config").read().splitlines()
+        new_config_lines = codecs.open("/etc/clearwater/shared_config", encoding='utf-8')
         jsonstr = requests.get(url).text
 
         try:
@@ -81,7 +81,7 @@ def main():
 
     additions = [line[2:] for line in difflines if line.startswith("+ ") and len(line) > 2]
     additions_str = ", ".join(['"' + line + '"' for line in additions])
-
+ 
     # We'll be running as root, but SUDO_USER pulls out the user who invoked sudo
     username = os.environ['SUDO_USER']
 
