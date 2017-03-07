@@ -89,7 +89,7 @@ def safely_write(filename, contents, permissions=0644):
     # delete it on close (os.rename deletes it).
     tmp = tempfile.NamedTemporaryFile(dir=dirname(filename), delete=False)
 
-    tmp.write(contents)
+    tmp.write(contents.encode("utf-8"))
 
     os.chmod(tmp.name, permissions)
 

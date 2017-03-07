@@ -57,7 +57,7 @@ def main():
         # right format; this is likely because the shared config key doesn't
         # exist yet (and if it's something more complicated then again
         # upload_shared_config can handle it).
-        new_config_lines = open("/etc/clearwater/shared_config").read().splitlines()
+        new_config_lines = codecs.open("/etc/clearwater/shared_config", encoding='utf-8')
         jsonstr = requests.get(url).text
 
         try:
