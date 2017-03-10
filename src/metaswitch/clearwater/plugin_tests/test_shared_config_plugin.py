@@ -54,13 +54,13 @@ class TestSharedConfigPlugin(unittest.TestCase):
         old_config_string = "Test config string here. \n More test config string."
         new_config_string = "This is a different config string. \n Like, totally different."
 
-        # Call 'on_config_changed' with file.open mocked out
-        with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.open',\
+        # Call 'on_config_changed' with codecs.open mocked out
+        with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.codecs.open',\
                         mock.mock_open(read_data=old_config_string), create=True) as mock_open:
             plugin.on_config_changed(new_config_string, None)
 
         # Test assertions
-        mock_open.assert_called_once_with(plugin.file(), "r")
+        mock_open.assert_called_once_with(plugin.file(), "r", encoding="utf-8")
         mock_safely_write.assert_called_once_with(plugin.file(), new_config_string)
         mock_run_command.assert_called_once_with\
             ("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config")
@@ -78,13 +78,13 @@ class TestSharedConfigPlugin(unittest.TestCase):
         old_config_string = "This is more test config. \n It won't change."
         new_config_string = old_config_string
 
-        # Call 'on_config_changed' with file.open mocked out
-        with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.open',\
+        # Call 'on_config_changed' with codecs.open mocked out
+        with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.codecs.open',\
                         mock.mock_open(read_data=old_config_string), create=True) as mock_open:
             plugin.on_config_changed(new_config_string, None)
 
         # Test assertions
-        mock_open.assert_called_once_with(plugin.file(), "r")
+        mock_open.assert_called_once_with(plugin.file(), "r", encoding="utf-8")
         mock_safely_write.assert_not_called()
         mock_run_command.assert_not_called()
 
@@ -100,12 +100,12 @@ class TestSharedConfigPlugin(unittest.TestCase):
         old_config_string = "This is clearly not the default config value."
         new_config_string = plugin.default_value()
 
-        # Call 'on_config_changed' with file.open mocked out
-        with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.open',\
+        # Call 'on_config_changed' with codecs.open mocked out
+        with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.codecs.open',\
                         mock.mock_open(read_data=old_config_string), create=True) as mock_open:
             plugin.on_config_changed(new_config_string, None)
 
         # Test assertions
-        mock_open.assert_called_once_with(plugin.file(), "r")
+        mock_open.assert_called_once_with(plugin.file(), "r", encoding="utf-8")
         mock_safely_write.assert_called_once_with(plugin.file(), plugin.default_value())
         mock_run_command.assert_not_called()
