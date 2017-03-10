@@ -36,6 +36,7 @@ import json
 import difflib
 import requests
 import syslog
+import codecs
 
 def main():
     '''
@@ -57,8 +58,14 @@ def main():
         # right format; this is likely because the shared config key doesn't
         # exist yet (and if it's something more complicated then again
         # upload_shared_config can handle it).
-        new_config_lines = codecs.open("/etc/clearwater/shared_config", encoding='utf-8')
-        jsonstr = requests.get(url).text
+        with codecs.open("/etc/clearwater/shared_config", "r", encoding='utf-8') as ifile:
+            new_config_lines = ifile.read().splitlines()
+
+        # Ensure that the text we get back from the request is encoded correctly
+        # so that the comparison between old and new config works correctly
+        r = requests.get(url)
+        r.encoding = "utf-8"
+        jsonstr = r.text
 
         try:
             # etcd returns JSON; the shared_config is in node.value.
@@ -94,6 +101,9 @@ def main():
             logstr += "Lines added: "
             logstr += additions_str + "."
 
+        # Force encoding so logstr prints and syslogs nicely
+        logstr = logstr.encode("utf-8")
+
         # Print changes to console so the user can do a sanity check
         print logstr
 
@@ -101,5 +111,7 @@ def main():
         syslog.openlog("audit-log", syslog.LOG_PID)
         syslog.syslog(syslog.LOG_NOTICE, logstr)
         syslog.closelog()
+    else:
+        print "No changes detected in shared configuration file"
 
 main()
