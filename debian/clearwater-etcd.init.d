@@ -59,6 +59,7 @@ HEALTHY_CLUSTER_VIEW=$DATA_DIR/healthy_etcd_members
 PIDFILE=/var/run/$NAME/$NAME.pid
 DAEMON=/usr/bin/etcd
 DAEMONWRAPPER=/usr/bin/etcdwrapper
+USER=$NAME
 
 # Exit if the package is not installed
 [ -x "$DAEMON" ] || exit 0
@@ -303,6 +304,10 @@ do_start()
         ETCD_NAME=${advertisement_ip//./-}
         CLUSTER_ARGS=
 
+        # Make sure the data directory exists and is owned by the correct user
+        mkdir -p $DATA_DIR
+        chown $USER $DATA_DIR
+
         verify_etcd_health_before_startup
 
         if [ -n "$etcd_cluster" ] && [ -n "$etcd_proxy" ]
@@ -346,7 +351,8 @@ do_start()
                      --name $ETCD_NAME
                      --debug"
 
-        start-stop-daemon --start --quiet --background --pidfile $PIDFILE --startas $DAEMONWRAPPER --chuid $NAME -- $DAEMON_ARGS $CLUSTER_ARGS \
+        start-stop-daemon --start --quiet --background --pidfile $PIDFILE \
+            --startas $DAEMONWRAPPER --chuid $USER -- $DAEMON_ARGS $CLUSTER_ARGS \
                 || return 2
 
         verify_etcd_health_after_startup
