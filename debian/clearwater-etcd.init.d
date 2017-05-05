@@ -151,7 +151,16 @@ setup_etcdctl_peers()
         # <IP>:<port>, using the client port. Replace commas with whitespace,
         # then split on whitespace (to cope with etcd_cluster values that have spaces)
         export ETCDCTL_PEERS=
-        for server in ${etcd_cluster//,/ }
+        servers=""
+        if [ -n "$etcd_cluster" ]
+        then
+          servers=$etcd_cluster
+        elif [ -n "$etcd_proxy" ]
+        then
+          servers=$etcd_proxy
+        fi
+
+        for server in ${servers//,/ }
         do
             if [[ $server != $advertisement_ip ]]
             then
