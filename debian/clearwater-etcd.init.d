@@ -130,11 +130,21 @@ join_cluster_as_proxy()
 setup_etcdctl_peers()
 {
         # If we were in a working cluster before, we will have saved off an up to
-        # date view of the cluster. We want to override etcd_cluster with this, so
-        # that functions later in this script use the correct cluster value.
+        # date view of the cluster. We want to override etcd_cluster or
+        # etcd_proxy with this, so that functions later in this script use the
+        # correct cluster value.
         if [ -f $HEALTHY_CLUSTER_VIEW ]
         then
-          . $HEALTHY_CLUSTER_VIEW
+          # We want to stip anything up to and including the first = character
+          # so we can select etcd_cluster or etcd_proxy appropriately
+          healthy_cluster=$(sed -e 's/.*=//' < $HEALTHY_CLUSTER_VIEW)
+          if [ -n "$etcd_cluster" ]
+          then
+            etcd_cluster=$healthy_cluster
+          elif [ -n "$etcd_proxy" ]
+          then
+            etcd_proxy=$healthy_cluster
+          fi
         fi
 
         # Build the client list based on $etcd_cluster. Each entry is simply

@@ -89,7 +89,7 @@ cluster_state()
         fi
       done
       # add the list of healthy mambers to a state file, so we can rejoin safely if we die
-      echo "etcd_cluster=$HEALTHY_MEMBER_LIST" > "/var/lib/clearwater-etcd/healthy_etcd_members"
+      echo "$HEALTHY_MEMBER_LIST" > "/var/lib/clearwater-etcd/healthy_etcd_members"
 
       if [ $unhealthy_members ]
       then
