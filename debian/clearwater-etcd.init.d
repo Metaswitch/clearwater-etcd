@@ -134,7 +134,13 @@ setup_etcdctl_peers()
         # that functions later in this script use the correct cluster value.
         if [ -f $HEALTHY_CLUSTER_VIEW ]
         then
-          . $HEALTHY_CLUSTER_VIEW
+          if [ -n "$etcd_cluster" ]
+          then
+            etcd_cluster=$( cat $HEALTHY_CLUSTER_VIEW )
+          elif [ -n "$etcd_proxy" ]
+          then
+            etcd_proxy=$( cat $HEALTHY_CLUSTER_VIEW )
+          fi
         fi
 
         # Build the client list based on $etcd_cluster. Each entry is simply
