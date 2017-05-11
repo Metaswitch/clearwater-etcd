@@ -60,7 +60,7 @@ PIDFILE=/var/run/$NAME/$NAME.pid
 USER=$NAME
 
 # Default the etcd version to the latest supported etcd version.
-etcd_version=3.17
+etcd_version=3.1.7
 . /etc/clearwater/config
 
 DAEMON=/usr/share/clearwater/clearwater-etcd/$etcd_version/etcd
