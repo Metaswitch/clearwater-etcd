@@ -61,7 +61,7 @@ SCRIPTNAME=/etc/init.d/$NAME
 # to check if they exist before starting a new process).
 #
 # See also start-stop-daemon's manpage, specifically the comment on --exec: "this might not work as
-# intended with interpreted scripts, as the executable will point to the interpreter". 
+# intended with interpreted scripts, as the executable will point to the interpreter".
 DAEMON=/usr/share/clearwater/bin/clearwater-config-manager
 ACTUAL_EXEC=/usr/share/clearwater/clearwater-config-manager/env/bin/python
 
@@ -125,7 +125,7 @@ do_stop()
 	#   1 if daemon was already stopped
 	#   2 if daemon could not be stopped
 	#   other if a failure occurred
-	start-stop-daemon --stop --quiet --retry=TERM/30/KILL/5 --exec $ACTUAL_EXEC --pidfile $PIDFILE
+	start-stop-daemon --stop --quiet --retry=TERM/120/KILL/5 --exec $ACTUAL_EXEC --pidfile $PIDFILE
 	RETVAL="$?"
 	return "$RETVAL"
 }
@@ -142,7 +142,7 @@ do_abort()
         #   1 if daemon was already stopped
         #   2 if daemon could not be stopped
         #   other if a failure occurred
-        start-stop-daemon --stop --quiet --retry=USR1/5/TERM/30/KILL/5 --exec $ACTUAL_EXEC --pidfile $PIDFILE
+        start-stop-daemon --stop --quiet --retry=USR1/5/TERM/120/KILL/5 --exec $ACTUAL_EXEC --pidfile $PIDFILE
         RETVAL="$?"
         # If the abort failed, it may be because the PID in PIDFILE doesn't match the right process
         # In this window condition, we may not recover, so remove the PIDFILE to get it running

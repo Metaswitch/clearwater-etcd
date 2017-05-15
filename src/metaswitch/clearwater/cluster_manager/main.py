@@ -96,17 +96,6 @@ def install_sigquit_handler(plugins):
         should_quit = True
     signal.signal(signal.SIGQUIT, sigquit_handler)
 
-
-def install_sigterm_handler(plugins):
-    def sigterm_handler(sig, stack):
-        global should_quit
-        _log.info("Handling SIGTERM")
-        for plugin in plugins:
-            _log.info("{} exiting cleanly".format(plugin))
-            plugin.terminate()
-        should_quit = True
-    signal.signal(signal.SIGTERM, sigterm_handler)
-
 def main(args):
     syslog.openlog("cluster-manager", syslog.LOG_PID)
     pdlogs.STARTUP.log()
@@ -216,7 +205,7 @@ def main(args):
 
 
     install_sigquit_handler(synchronizers)
-    install_sigterm_handler(synchronizers)
+    utils.install_sigterm_handler(synchronizers)
 
     while any([thread.isAlive() for thread in threads]):
         for thread in threads:
@@ -224,7 +213,7 @@ def main(args):
                 thread.join(1)
 
     _log.info("No plugin threads running, waiting for a SIGTERM or SIGQUIT")
-    while not should_quit:
+    while not utils.should_quit and not should_quit:
         sleep(1)
     _log.info("Quitting")
     _log.debug("%d threads outstanding at exit" % activeCount())
