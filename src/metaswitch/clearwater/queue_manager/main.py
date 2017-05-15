@@ -62,6 +62,7 @@ from metaswitch.clearwater.queue_manager.etcd_synchronizer \
     import EtcdSynchronizer
 from metaswitch.clearwater.queue_manager import pdlogs
 import syslog
+from time import sleep
 import logging
 import os
 import prctl

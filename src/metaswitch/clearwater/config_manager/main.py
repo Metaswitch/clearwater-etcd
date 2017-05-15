@@ -61,6 +61,7 @@ from metaswitch.clearwater.config_manager.alarms \
     import ConfigAlarm
 from metaswitch.clearwater.config_manager import pdlogs
 import syslog
+from time import sleep
 import logging
 import os
 import prctl
