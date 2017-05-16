@@ -57,12 +57,20 @@ DATA_DIR=/var/lib/$NAME
 JOINED_CLUSTER_SUCCESSFULLY=$DATA_DIR/clustered_successfully
 HEALTHY_CLUSTER_VIEW=$DATA_DIR/healthy_etcd_members
 PIDFILE=/var/run/$NAME/$NAME.pid
-DAEMON=/usr/bin/etcd
-DAEMONWRAPPER=/usr/bin/etcdwrapper
 USER=$NAME
 
+# Default the etcd version to the latest supported etcd version.
+etcd_version=3.1.7
+. /etc/clearwater/config
+
+DAEMON=/usr/share/clearwater/clearwater-etcd/$etcd_version/etcd
+DAEMONWRAPPER=/usr/share/clearwater/clearwater-etcd/$etcd_version/etcdwrapper
+
 # Exit if the package is not installed
-[ -x "$DAEMON" ] || exit 0
+if [ ! -x "$DAEMON" ]; then
+  echo "Invalid etcd version: valid versions are 3.1.7 (recommended) and 2.2.5"
+  exit 0
+fi
 
 # Read configuration variable file if it is present
 #[ -r /etc/default/$NAME ] && . /etc/default/$NAME
@@ -74,8 +82,6 @@ USER=$NAME
 # Depend on lsb-base (>= 3.2-14) to ensure that this file is present
 # and status_of_proc is working.
 . /lib/lsb/init-functions
-
-. /etc/clearwater/config
 
 listen_ip=${management_local_ip:-$local_ip}
 advertisement_ip=${management_local_ip:-$local_ip}
@@ -187,7 +193,7 @@ join_cluster()
         # Check to make sure the cluster we want to join is healthy.
         # If it's not, don't even try joining (it won't work, and may
         # cause problems with the cluster)
-        /usr/bin/etcdctl cluster-health 2>&1 | grep "cluster is healthy"
+        /usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl cluster-health 2>&1 | grep "cluster is healthy"
         if [ $? -ne 0 ]
          then
            echo "Not joining an unhealthy cluster"
@@ -195,11 +201,11 @@ join_cluster()
         fi
 
         # Tell the cluster we're joining
-        /usr/bin/etcdctl member add $ETCD_NAME http://$advertisement_ip:2380
+        /usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl member add $ETCD_NAME http://$advertisement_ip:2380
         if [[ $? != 0 ]]
         then
-          local_member_id=$(/usr/bin/etcdctl member list | grep -F -w "http://$advertisement_ip:2380" | grep -o -E "^[^:]*" | grep -o "^[^[]\+")
-          /usr/bin/etcdctl member remove $local_member_id
+          local_member_id=$(/usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl member list | grep -F -w "http://$advertisement_ip:2380" | grep -o -E "^[^:]*" | grep -o "^[^[]\+")
+          /usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl member remove $local_member_id
           rm -rf $DATA_DIR/$advertisement_ip
           echo "Failed to add local node to cluster"
           exit 2
@@ -282,12 +288,12 @@ verify_etcd_health_before_startup()
         # <id>[unstarted]: name=xx-xx-xx-xx peerURLs=http://xx.xx.xx.xx:2380 clientURLs=http://xx.xx.xx.xx:4000
         # The [unstarted] is only present while the member hasn't fully joined the etcd cluster
         setup_etcdctl_peers
-        member_list=$(/usr/bin/etcdctl member list)
+        member_list=$(/usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl member list)
         local_member_id=$(echo "$member_list" | grep -F -w "http://$local_ip:2380" | grep -o -E "^[^:]*" | grep -o "^[^[]\+")
         unstarted_member_id=$(echo "$member_list" | grep -F -w "http://$local_ip:2380" | grep "unstarted")
         if [[ $unstarted_member_id != '' ]]
         then
-          /usr/bin/etcdctl member remove $local_member_id
+          /usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl member remove $local_member_id
           rm -rf $DATA_DIR/$advertisement_ip
         fi
 
@@ -297,12 +303,12 @@ verify_etcd_health_before_startup()
           # data directory is irrecoverably corrupt (perhaps because we ran out
           # of disk space and the files were half-written), so we should clean it
           # out and rejoin the cluster from scratch.
-          timeout 5 /usr/bin/etcd-dump-logs --data-dir $DATA_DIR/$advertisement_ip > /dev/null 2>&1
+          timeout 5 /usr/share/clearwater/clearwater-etcd/$etcd_version/etcd-dump-logs --data-dir $DATA_DIR/$advertisement_ip > /dev/null 2>&1
           rc=$?
 
           if [[ $rc != 0 ]]
           then
-            /usr/bin/etcdctl member remove $local_member_id
+            /usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl member remove $local_member_id
             rm -rf $DATA_DIR/$advertisement_ip
           fi
         fi
@@ -439,14 +445,14 @@ do_decommission()
         #   0 if successful
         #   2 on error
         export ETCDCTL_PEERS=$advertisement_ip:4000
-        health=$(/usr/bin/etcdctl cluster-health)
+        health=$(/usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl cluster-health)
         if [[ $health =~ unhealthy ]]
         then
           echo Cannot decommission while cluster is unhealthy
           return 2
         fi
 
-        id=$(/usr/bin/etcdctl member list | grep -F -w ${advertisement_ip//./-} | cut -f 1 -d :)
+        id=$(/usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl member list | grep -F -w ${advertisement_ip//./-} | cut -f 1 -d :)
         if [[ -z $id ]]
         then
           echo Local node does not appear in the cluster
@@ -456,7 +462,7 @@ do_decommission()
         # etcdctl will stop the daemon automatically once it has removed the
         # local id (see https://coreos.com/etcd/docs/latest/runtime-configuration.html
         # "Remove a Member")
-        /usr/bin/etcdctl member remove $id
+        /usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl member remove $id
         if [[ $? != 0 ]]
         then
           echo Failed to remove instance from cluster

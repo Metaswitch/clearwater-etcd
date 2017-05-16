@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Default the etcd version to the latest supported etcd version.
+etcd_version=3.1.7
 . /etc/clearwater/config
 
 # Work out the IP address to contact etcd on. Look first for
@@ -13,4 +15,4 @@ if [ -z "$target_ip" ]; then
 fi
 
 # Run the real etcdctl.
-etcdctl -C $target_ip:4000 "$@"
+/usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl -C $target_ip:4000 "$@"
