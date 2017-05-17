@@ -50,46 +50,7 @@ class EtcdTestBase(unittest.TestCase):
         self.assertEquals(2, len(s1.memberList()))
         c.delete_datadir()
 
-    def test_basic_clustering2(self):
+    def test_large_clusters(self):
         c = EtcdCluster(10)
         self.assertEquals(10, len(c.servers.values()[0].memberList()))
-        c.delete_datadir()
-
-    def test_iss203(self):
-        c = EtcdCluster(2)
-        s1, s2 = c.servers.values()
-        s3 = c.add_server(actually_start=False) # noqa
-        s4 = c.add_server()
-        s5 = c.add_server()
-        s6 = c.add_server()
-
-        # Try to start any failed nodes again (in the same way that Monit would
-        # when live)
-        sleep(2)
-
-        s4.recover()
-        s5.recover()
-        s6.recover()
-
-        sleep(2)
-
-        s4.recover()
-        s5.recover()
-        s6.recover()
-
-        sleep(2)
-
-        s4.recover()
-        s5.recover()
-        s6.recover()
-
-        sleep(2)
-
-        nameless = [m for m in s1.memberList() if not m['name']]
-
-        # s3 should have no name, but s4, s5 and s6 all should
-        self.assertEquals(1, len(nameless))
-        self.assertEquals(s1.memberList(), s4.memberList())
-        self.assertEquals(s1.memberList(), s5.memberList())
-        self.assertEquals(s1.memberList(), s6.memberList())
         c.delete_datadir()
