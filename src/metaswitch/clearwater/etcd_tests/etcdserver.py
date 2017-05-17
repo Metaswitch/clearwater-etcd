@@ -31,11 +31,10 @@ class EtcdServer(object):
             self._cmd = shlex.split(first_member_cmd.format(self._ip, self._name, self._datadir))
         else:
             my_url = "http://{}:2380".format(self._ip)
-            cxn = httplib.HTTPConnection(self._existing, 4000)
+            cxn = httplib.HTTPConnection(self._existing, 4000, timeout=10)
 
             cxn.request("GET", "/v2/members?consistent=false");
             member_data = json.loads(cxn.getresponse().read())
-
             replacement = False
 
             # Am I already in the cluster?
@@ -49,14 +48,21 @@ class EtcdServer(object):
 
             if not replacement:
                 # Add this node to the cluster by POSTing to an existing node
-                cxn.request("POST",
-                            "/v2/members",
-                            json.dumps({"name": self._name, "peerURLs": [my_url]}),
-                            {"Content-Type": "application/json"})
-                me = json.loads(cxn.getresponse().read())
-                self._id = me['id']
+                while True:
+                    cxn = httplib.HTTPConnection(self._existing, 4000, timeout=10)
+                    cxn.request("POST",
+                                "/v2/members",
+                                json.dumps({"name": self._name, "peerURLs": [my_url]}),
+                                {"Content-Type": "application/json"})
+                    response = cxn.getresponse()
+                    if response.status != 500:
+                        me = json.loads(response.read())
+                        self._id = me['id']
+                        break
+                    sleep(1)
 
             # Learn about my peers
+            cxn = httplib.HTTPConnection(self._existing, 4000, timeout=10)
             cxn.request("GET", "/v2/members?consistent=false");
             member_data = json.loads(cxn.getresponse().read())
             for m in member_data['members']:

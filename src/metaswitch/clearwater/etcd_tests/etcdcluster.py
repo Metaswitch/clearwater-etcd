@@ -33,7 +33,7 @@
 from shutil import rmtree
 from .etcdserver import EtcdServer
 from metaswitch.common.logging_config import configure_test_logging
-
+from time import sleep
 configure_test_logging()
 
 
@@ -65,14 +65,12 @@ class EtcdCluster(object):
         ret.append(srv1)
         srv1.waitUntilAlive()
         for _ in range(n-1):
-            ret.append(self.add_server())
-
-        # Now start all the other servers, and check that they actually come up
-        for server in ret:
+            server = self.add_server()
             rc = server.waitUntilAlive()
             while not rc:
                 server.recover()
                 rc = server.waitUntilAlive()
+            ret.append(server)
 
         return ret
 
