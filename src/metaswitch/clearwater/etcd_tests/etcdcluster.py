@@ -33,7 +33,6 @@
 from shutil import rmtree
 from .etcdserver import EtcdServer
 from metaswitch.common.logging_config import configure_test_logging
-from time import sleep
 configure_test_logging()
 
 
