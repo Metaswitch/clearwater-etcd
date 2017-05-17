@@ -30,7 +30,6 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-from time import sleep
 import unittest
 from .etcdcluster import EtcdCluster
 from metaswitch.common.logging_config import configure_test_logging
