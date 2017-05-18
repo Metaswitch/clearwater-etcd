@@ -208,6 +208,7 @@ join_cluster()
           /usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl member remove $local_member_id
           rm -rf $DATA_DIR/$advertisement_ip
           echo "Failed to add local node to cluster"
+          logger -p daemon.error -t $NAME Failed to add the local node \($advertisement_ip\) to the etcd cluster
           exit 2
         fi
 
@@ -254,6 +255,7 @@ verify_etcd_health_after_startup()
         tail -10 /var/log/clearwater-etcd/clearwater-etcd.log | grep -q "etcdserver: the member has been permanently removed from the cluster"
         if [[ $? == 0 ]]
         then
+          logger -p daemon.error -t $NAME Etcd is in an inconsistent state - removing the data directory
           echo "Etcd is in an inconsistent state - removing the data directory"
           rm -rf $DATA_DIR/$advertisement_ip
           exit 3
@@ -271,6 +273,7 @@ verify_etcd_health_after_startup()
             let "delta_time=$current_time - $start_time"
             if [ $delta_time -gt 60 ]; then
               echo "Etcd failed to come up - exiting"
+              logger -p daemon.error -t $NAME Etcd failed to start
               exit 2
             fi
             sleep 1
@@ -293,6 +296,7 @@ verify_etcd_health_before_startup()
         unstarted_member_id=$(echo "$member_list" | grep -F -w "http://$local_ip:2380" | grep "unstarted")
         if [[ $unstarted_member_id != '' ]]
         then
+          logger -p daemon.error -t $NAME Etcd failed to start successfully on a previous attempt - removing the data directory
           /usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl member remove $local_member_id
           rm -rf $DATA_DIR/$advertisement_ip
         fi
@@ -308,6 +312,7 @@ verify_etcd_health_before_startup()
 
           if [[ $rc != 0 ]]
           then
+            logger -p daemon.error -t $NAME The etcd data is corrupted - removing the data directory
             /usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl member remove $local_member_id
             rm -rf $DATA_DIR/$advertisement_ip
           fi
