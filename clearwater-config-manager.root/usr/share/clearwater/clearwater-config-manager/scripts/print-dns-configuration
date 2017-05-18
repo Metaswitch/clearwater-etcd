@@ -54,7 +54,7 @@ EXPECTED_FORMAT = dedent("""The expected format is:\n\
  ]
 }""")
 
-source = sys.argv[1] if len(sys.argv) > 1 else "/etc/clearwater/dns_config"
+source = sys.argv[1] if len(sys.argv) > 1 else "/etc/clearwater/dns.json"
 
 # This does some basic validation of the dns configuration file, and
 # prints the contents
