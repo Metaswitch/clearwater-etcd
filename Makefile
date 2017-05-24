@@ -1,3 +1,4 @@
+ROOT ?= ${PWD}
 ENV_DIR := $(shell pwd)/_env
 ENV_PYTHON := ${ENV_DIR}/bin/python
 PYTHON_BIN := $(shell which python)
@@ -112,7 +113,7 @@ ${ENV_DIR}/.cluster-mgr-build-eggs: cluster_mgr_setup.py shared_setup.py common/
 	# Generate .egg files
 	${ENV_DIR}/bin/python cluster_mgr_setup.py build -b build_clustermgr bdist_egg -d cluster_mgr_eggs
 	${ENV_DIR}/bin/python shared_setup.py build -b build_shared bdist_egg -d cluster_mgr_eggs
-	cd common && EGG_DIR=../cluster_mgr_eggs make build_common_egg 
+	cd common && EGG_DIR=../cluster_mgr_eggs make build_common_egg
 
 	# Download the egg files they depend upon
 	${ENV_DIR}/bin/easy_install -zmaxd cluster_mgr_eggs/ cluster_mgr_eggs/clearwater_cluster_manager-1.0-py2.7.egg
