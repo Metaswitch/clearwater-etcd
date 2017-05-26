@@ -65,7 +65,7 @@ class TestDefaultIFCsXMLPlugin(unittest.TestCase):
     @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.default_ifcs_xml_plugin.safely_write')
     @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.default_ifcs_xml_plugin.run_command')
     def test_default_config_created(self, mock_run_command, mock_safely_write):
-        """Test Config Manager when a new default value is set as etcd key"""
+        """Test Config Manager writes new config when a new default value is set as etcd key"""
 
         # Create the plugin
         plugin = DefaultIFCsXMLPlugin(None)
