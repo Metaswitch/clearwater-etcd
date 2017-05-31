@@ -62,8 +62,12 @@ cluster_state()
           parse_member_ip $line
         fi
       done
-      # add the list of healthy mambers to a state file, so we can rejoin safely if we die
-      echo "$HEALTHY_MEMBER_LIST" > "/var/lib/clearwater-etcd/healthy_etcd_members"
+      # If there are any healthy members, add them to a state file, so we can
+      # rejoin safely if we die.
+      if [[ ! -z $HEALTHY_MEMBER_LIST ]]
+      then
+        echo "$HEALTHY_MEMBER_LIST" > "/var/lib/clearwater-etcd/healthy_etcd_members"
+      fi
 
       if [ $unhealthy_members ]
       then
