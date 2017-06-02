@@ -12,7 +12,7 @@ import json
 mgmt_node = sys.argv[1]
 local_node = sys.argv[2]
 local_site = sys.argv[3]
-remote_sites = sys.argv[4]
+sites = sys.argv[4]
 etcd_version = sys.argv[5]
 
 client = etcd.Client(mgmt_node, 4000)
@@ -30,7 +30,7 @@ def describe_clusters():
     cluster_values = {subkey.key: subkey.value for subkey in result.leaves}
 
     local_site_info = ""
-    if remote_sites != "" and etcd_version != "2.2.5":
+    if sites != "" and etcd_version != "2.2.5":
         local_site_info = " in the local site (" + local_site + ")"
 
     print "This script prints out the status of the Chronos, Memcached and Cassandra clusters{}.\n".format(local_site_info)
@@ -52,7 +52,7 @@ def describe_clusters():
             # The key isn't to do with clustering, skip it
             continue
 
-        if site != "" and remote_sites != "" and etcd_version == "2.2.5":
+        if site != "" and sites != "" and etcd_version == "2.2.5":
             print "Describing the {} {} cluster in site {}:".format(node_type.capitalize(), store_name.capitalize(), site)
         else:
             print "Describing the {} {} cluster:".format(node_type.capitalize(), store_name.capitalize())
