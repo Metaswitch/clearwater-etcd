@@ -57,5 +57,9 @@ setup(
         "pyyaml==3.11",
         "six==1.10.0",
         "urllib3==1.21.1"],
-    tests_require=["Mock"],
+    tests_require=[
+        "funcsigs==1.0.2",
+        "Mock==2.0.0",
+        "pbr==1.6",
+        "six==1.10.0"],
     )

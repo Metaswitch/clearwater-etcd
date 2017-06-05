@@ -51,5 +51,9 @@ setup(
     install_requires=[
         "clearwater_etcd_shared",
         "metaswitchcommon"],
-    tests_require=["pbr==1.6", "Mock"],
+    tests_require=[
+        "funcsigs==1.0.2",
+        "Mock==2.0.0",
+        "pbr==1.6",
+        "six==1.10.0"]
     )
