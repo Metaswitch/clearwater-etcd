@@ -38,11 +38,11 @@
                 },
                 {
                     "severity": "MAJOR",
-                    "details": "The local Chronos process is not yet part of a Chronos cluster. Timer requests sent to this node will not be replicated correctly. You should not direct service traffic to this node until this alarm is cleared.",
+                    "details": "The local Chronos process is not yet part of a Chronos cluster.  If you are in the process of scaling out your chronos cluster and have recently added this node then this is eexpected behavior.",
                     "description": "Chronos: The local Chronos is not yet part of a cluster.",
-                    "cause": "The local Chronos process is not yet part of a Chronos cluster. Timers set by this node will not be handled correctly. You should not direct service traffic to this node until this alarm is cleared. Adding a node that uses chronos timers causes this alarm.",
-                    "effect": "The Clearwater node being added has not completed the Chronos clustering and is not yet operational.",
-                    "action": "Monitor for the alarm to clear. If the alarm fails to clear then contact your support representative."
+                    "cause": "This alarm is expected to occur transiently as part of adding a new Chronos node to the cluster; it will clear once the Chronos process has completely initialization and successfully joined the cluster.  If it occurs at other times this indicates an error condition.",
+                    "effect": "If the local node is not part of the DNS record for the Chronos cluster then there is no impact (and this should be the case during normal scale out of the Chronos cluster).  If the local node is a member of the DNS record for the Chronos cluster then timer requests directed to this node will not be successfully replicated.",
+                    "action": "If you are scaling out your Chronos cluster you should wait for this alarm to clear before adding the local node to the Chronos cluster DNS entry.  If you are not scaling out your cluster and this alarm does not clear shortly then contact your support representative."
                 }
             ]
         },
