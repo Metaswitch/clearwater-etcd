@@ -23,6 +23,18 @@ setup(
         },
     # Note - if you are updating the version of python-etcd, check if you should
     # remove the monkeypatch in the common_etcd_synchronizer
-    install_requires=["docopt", "urllib3==1.17", "python-etcd==0.4.3", "pyzmq==16.0.2", "pyyaml==3.11"],
-    tests_require=["Mock"],
+    install_requires=[
+        "docopt==0.6.2",
+        "futures==3.0.5",
+        "prctl==1.0.1",
+        "python-etcd==0.4.3",
+        "py2_ipaddress==3.4.1",
+        "pyyaml==3.11",
+        "six==1.10.0",
+        "urllib3==1.21.1"],
+    tests_require=[
+        "funcsigs==1.0.2",
+        "Mock==2.0.0",
+        "pbr==1.6",
+        "six==1.10.0"],
     )

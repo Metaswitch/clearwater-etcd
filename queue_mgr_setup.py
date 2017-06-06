@@ -23,6 +23,12 @@ setup(
         '': ['*.eml'],
         },
     test_suite='metaswitch.clearwater.queue_manager.test',
-    install_requires=["docopt", "urllib3==1.17", "python-etcd==0.4.3", "pyzmq==16.0.2", "futures==3.0.5", "prctl", "metaswitchcommon", "clearwater_etcd_shared"],
-    tests_require=["pbr==1.6", "Mock"],
+    install_requires=[
+        "clearwater_etcd_shared",
+        "metaswitchcommon"],
+    tests_require=[
+        "funcsigs==1.0.2",
+        "Mock==2.0.0",
+        "pbr==1.6",
+        "six==1.10.0"]
     )
