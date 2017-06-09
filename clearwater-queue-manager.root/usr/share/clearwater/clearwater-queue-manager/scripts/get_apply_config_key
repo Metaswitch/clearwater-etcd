@@ -1,0 +1,14 @@
+#!/bin/bash
+
+. /etc/clearwater/config
+
+if [ -d /usr/share/clearwater/node_type.d ]; then
+  . /usr/share/clearwater/node_type.d/$(ls /usr/share/clearwater/node_type.d | head -n 1)
+  if [ "$use_single_restart_queue" == "Y" ]; then
+    echo "apply_config"
+  else
+    echo "apply_config_$etcd_cluster_key"
+  fi
+else
+  echo "apply_config"
+fi
