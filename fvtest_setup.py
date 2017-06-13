@@ -17,5 +17,8 @@ setup(
     name='clearwater-etcd-tests',
     version='1.0',
     test_suite='metaswitch.clearwater.etcd_tests',
-    tests_require=["urllib3==1.17", "python-etcd"],
+    tests_require=[
+        "dnspython==1.15.0",
+        "python-etcd==0.4.3",
+        "urllib3==1.21.1"],
     )

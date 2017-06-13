@@ -18,10 +18,18 @@ setup(
     version='1.0',
     namespace_packages = ['metaswitch'],
     packages=['metaswitch', 'metaswitch.clearwater', 'metaswitch.clearwater.plugin_tests','clearwater_etcd_plugins','clearwater_etcd_plugins.chronos', 'clearwater_etcd_plugins.clearwater_memcached', 'clearwater_etcd_plugins.clearwater_config_manager', 'clearwater_etcd_plugins.clearwater_queue_manager', 'clearwater_etcd_plugins.clearwater_cassandra'],
-    package_dir={'':'src'},  
+    package_dir={'':'src'},
     package_data={
         '': ['*.eml'],
         },
     test_suite='metaswitch.clearwater.plugin_tests',
-    tests_require=["pyzmq==16.0.2", "metaswitchcommon", "py2-ipaddress==3.4.1", "pbr==1.6", "Mock", "pyyaml==3.11"],
+    tests_require=[
+        "funcsigs==1.0.2",
+        "metaswitchcommon",
+        "Mock==2.0.0",
+        "pbr==1.6",
+        "pyyaml==3.11",
+        "pyzmq==16.0.2",
+        "py2-ipaddress==3.4.1",
+        "six==1.10.0"],
     )
