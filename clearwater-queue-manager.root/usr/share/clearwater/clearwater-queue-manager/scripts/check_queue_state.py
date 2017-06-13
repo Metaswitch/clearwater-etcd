@@ -47,5 +47,6 @@ def describe_queue_state():
         print "  Nodes that have completed:"
         for node in values["COMPLETED"]:
             print "    Node ID: {}".format(node["ID"])
-
+    
+    print "\n"
 describe_queue_state()
