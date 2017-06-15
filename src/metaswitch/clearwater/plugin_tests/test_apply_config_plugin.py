@@ -32,13 +32,16 @@ def run_command_check_node_health_fails(command):
 
 
 class TestApplyConfigPlugin(unittest.TestCase):
+    @mock.patch('clearwater_etcd_plugins.clearwater_queue_manager.apply_config_plugin.subprocess.check_output')
     @mock.patch('clearwater_etcd_plugins.clearwater_queue_manager.apply_config_plugin.run_command',\
                 side_effect=run_command_all_succeed)
     @mock.patch('clearwater_etcd_plugins.clearwater_queue_manager.apply_config_plugin.os.path.exists')
     @mock.patch('clearwater_etcd_plugins.clearwater_queue_manager.apply_config_plugin.os.listdir')
-    def test_front_of_queue(self, mock_os_listdir, mock_os_path_exists, mock_run_command):
+    def test_front_of_queue(self, mock_os_listdir, mock_os_path_exists,
+            mock_run_command, mock_subproc_check_output):
         """Test Queue Manager front_of_queue function"""
-
+        
+        mock_subproc_check_output.return_value = "apply_config"
         # Create the plugin
         plugin = ApplyConfigPlugin(PluginParams(wait_plugin_complete='Y'))
 

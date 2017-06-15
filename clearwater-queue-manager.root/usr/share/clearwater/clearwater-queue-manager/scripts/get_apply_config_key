@@ -13,10 +13,10 @@ fi
 
 if [ -v etcd_cluster_key ]; then
   if [ "$use_single_restart_queue" == "Y" ]; then
-    echo "apply_config"
+    echo -n "apply_config"
   else
-    echo "apply_config_$etcd_cluster_key"
+    echo -n "apply_config_$etcd_cluster_key"
   fi
 else
-  echo "apply_config"
+  echo -n "apply_config"
 fi
