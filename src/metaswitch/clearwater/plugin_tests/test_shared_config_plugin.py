@@ -17,9 +17,11 @@ from clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin impo
 
 
 class TestSharedConfigPlugin(unittest.TestCase):
+    @mock.patch('clearwater_etcd_plugins.clearwater_queue_manager.apply_config_plugin.subprocess.check_output')
     @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.safely_write')
     @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.run_command')
-    def test_config_changed(self, mock_run_command, mock_safely_write):
+    def test_config_changed(self, mock_run_command, mock_safely_write,
+            mock_subproc_check_output):
         """Test Config Manager writes new config when config has changed"""
 
         # Create the plugin
@@ -29,6 +31,7 @@ class TestSharedConfigPlugin(unittest.TestCase):
         old_config_string = "Test config string here. \n More test config string."
         new_config_string = "This is a different config string. \n Like, totally different."
 
+        mock_subproc_check_output.return_value = "apply_config"
         # Call 'on_config_changed' with codecs.open mocked out
         with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.codecs.open',\
                         mock.mock_open(read_data=old_config_string), create=True) as mock_open:
