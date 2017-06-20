@@ -41,7 +41,7 @@ class TestApplyConfigPlugin(unittest.TestCase):
             mock_run_command, mock_subproc_check_output):
         """Test Queue Manager front_of_queue function"""
         
-        mock_subproc_check_output.return_value = "apply_config"
+        mock_subproc_check_output.return_value = "apply_config_key"
         # Create the plugin
         plugin = ApplyConfigPlugin(PluginParams(wait_plugin_complete='Y'))
 
@@ -54,7 +54,7 @@ class TestApplyConfigPlugin(unittest.TestCase):
              mock.call("/usr/share/clearwater/infrastructure/scripts/restart/test_restart_script"),
              mock.call("/usr/share/clearwater/clearwater-queue-manager/scripts/check_node_health.py"),
              mock.call("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue"\
-                       " remove_success apply_config")]
+                       " remove_success apply_config_key")]
 
         # Call the plugin hook
         plugin.at_front_of_queue()
@@ -77,7 +77,7 @@ class TestApplyConfigPlugin(unittest.TestCase):
                                              mock_subproc_check_output):
         """Test Queue Manager when check_node_health fails"""
 
-        mock_subproc_check_output.return_value = "apply_config"
+        mock_subproc_check_output.return_value = "apply_config_key"
         # Create the plugin
         plugin = ApplyConfigPlugin(PluginParams(wait_plugin_complete='Y'))
 
@@ -90,7 +90,7 @@ class TestApplyConfigPlugin(unittest.TestCase):
              mock.call("/usr/share/clearwater/infrastructure/scripts/restart/test_restart_script"),
              mock.call("/usr/share/clearwater/clearwater-queue-manager/scripts/check_node_health.py"),
              mock.call("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue"\
-                       " remove_failure apply_config")]
+                       " remove_failure apply_config_key")]
 
         # Call the plugin hook
         plugin.at_front_of_queue()
@@ -113,7 +113,7 @@ class TestApplyConfigPlugin(unittest.TestCase):
                                             mock_subproc_check_output):
         """Test Queue Manager when we're not checking node health"""
 
-        mock_subproc_check_output.return_value = "apply_config"
+        mock_subproc_check_output.return_value = "apply_config_key"
         # Create the plugin
         plugin = ApplyConfigPlugin(PluginParams(wait_plugin_complete='N'))
 
@@ -125,7 +125,7 @@ class TestApplyConfigPlugin(unittest.TestCase):
             [mock.call("service clearwater-infrastructure restart"),
              mock.call("/usr/share/clearwater/infrastructure/scripts/restart/test_restart_script"),
              mock.call("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue"\
-                       " remove_success apply_config")]
+                       " remove_success apply_config_key")]
 
         # Call the plugin hook
         plugin.at_front_of_queue()

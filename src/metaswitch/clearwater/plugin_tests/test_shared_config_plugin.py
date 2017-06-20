@@ -31,7 +31,7 @@ class TestSharedConfigPlugin(unittest.TestCase):
         old_config_string = "Test config string here. \n More test config string."
         new_config_string = "This is a different config string. \n Like, totally different."
 
-        mock_subproc_check_output.return_value = "apply_config"
+        mock_subproc_check_output.return_value = "apply_config_key"
         # Call 'on_config_changed' with codecs.open mocked out
         with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.codecs.open',\
                         mock.mock_open(read_data=old_config_string), create=True) as mock_open:
@@ -41,7 +41,7 @@ class TestSharedConfigPlugin(unittest.TestCase):
         mock_open.assert_called_once_with(plugin.file(), "r", encoding="utf-8")
         mock_safely_write.assert_called_once_with(plugin.file(), new_config_string)
         mock_run_command.assert_called_once_with\
-            ("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config")
+            ("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config_key")
 
 
     @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.safely_write')
