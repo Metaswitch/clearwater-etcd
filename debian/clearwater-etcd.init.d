@@ -33,6 +33,7 @@ JOINED_CLUSTER_SUCCESSFULLY=$DATA_DIR/clustered_successfully
 HEALTHY_CLUSTER_VIEW=$DATA_DIR/healthy_etcd_members
 PIDFILE=/var/run/$NAME/$NAME.pid
 USER=$NAME
+LOG_FILE=/var/log/clearwater-etcd/clearwater-etcd-initd.log
 
 # Default the etcd version to the latest supported etcd version.
 etcd_version=3.1.7
@@ -41,9 +42,34 @@ etcd_version=3.1.7
 DAEMON=/usr/share/clearwater/clearwater-etcd/$etcd_version/etcd
 DAEMONWRAPPER=/usr/share/clearwater/clearwater-etcd/$etcd_version/etcdwrapper
 
+# Log parameters at "debug" level. These are just written to the log file (with
+# timestamps).
+log_debug() {
+  echo $(date +'%Y-%m-%d %H:%M:%S.%N') "$@" >> $LOG_FILE
+}
+
+# Log parameters at "info" level. These are written to the console (without
+# timestamps) and also to the log file (with them)
+log_info() {
+  echo "$@"
+  log_debug "$@"
+}
+
+# Wrapper that runs etcdctl but also logs:
+# - The etcdctl command being run
+# - stdout and stderr from the command
+# - The status code from the command
+etcdctl_wrapper() {
+  log_debug "Running etcdctl $@"
+  /usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl "$@" 2>>$LOG_FILE | tee -a $LOG_FILE
+  retcode=$?
+  log_debug "etcdctl returned $retcode"
+  return $retcode
+}
+
 # Exit if the package is not installed
 if [ ! -x "$DAEMON" ]; then
-  echo "Invalid etcd version: valid versions are 3.1.7 (recommended) and 2.2.5"
+  log_info "Invalid etcd version: valid versions are 3.1.7 (recommended) and 2.2.5"
   exit 0
 fi
 
@@ -80,7 +106,7 @@ generate_initial_cluster()
 
 create_cluster()
 {
-        echo Creating new cluster...
+        log_info "Creating new cluster..."
 
         # Build the initial cluster view string based on the IP addresses in
         # $etcd_cluster.
@@ -92,7 +118,7 @@ create_cluster()
 
 join_cluster_as_proxy()
 {
-        echo Joining cluster as proxy...
+        log_info "Joining cluster as proxy..."
 
         # We can either be supplied with a complete proxy setup string
         # in $etcd_proxy, or a list of IP addresses, like etcd_cluster
@@ -154,7 +180,7 @@ setup_etcdctl_peers()
 join_cluster()
 {
         # Joining existing cluster
-        echo Joining existing cluster...
+        log_info "Joining existing cluster..."
 
         # If this fails, then hold off trying again for a time. This stops us
         # overwhelming the etcd elections on a large scale-up.
@@ -168,21 +194,21 @@ join_cluster()
         # Check to make sure the cluster we want to join is healthy.
         # If it's not, don't even try joining (it won't work, and may
         # cause problems with the cluster)
-        /usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl cluster-health 2>&1 | grep "cluster is healthy"
+        etcdctl_wrapper cluster-health 2>&1 | grep "cluster is healthy"
         if [ $? -ne 0 ]
          then
-           echo "Not joining an unhealthy cluster"
+           log_info "Not joining an unhealthy cluster"
            exit 2
         fi
 
         # Tell the cluster we're joining
-        /usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl member add $ETCD_NAME http://$advertisement_ip:2380
+        etcdctl_wrapper member add $ETCD_NAME http://$advertisement_ip:2380
         if [[ $? != 0 ]]
         then
-          local_member_id=$(/usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl member list | grep -F -w "http://$advertisement_ip:2380" | grep -o -E "^[^:]*" | grep -o "^[^[]\+")
-          /usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl member remove $local_member_id
+          local_member_id=$(etcdctl_wrapper member list | grep -F -w "http://$advertisement_ip:2380" | grep -o -E "^[^:]*" | grep -o "^[^[]\+")
+          etcdctl_wrapper member remove $local_member_id
           rm -rf $DATA_DIR/$advertisement_ip
-          echo "Failed to add local node to cluster"
+          log_info "Failed to add local node $advertisement_ip to the etcd cluster"
           logger -p daemon.error -t $NAME Failed to add the local node \($advertisement_ip\) to the etcd cluster
           exit 2
         fi
@@ -230,8 +256,8 @@ verify_etcd_health_after_startup()
         tail -10 /var/log/clearwater-etcd/clearwater-etcd.log | grep -q "etcdserver: the member has been permanently removed from the cluster"
         if [[ $? == 0 ]]
         then
+          log_info "Etcd is in an inconsistent state - removing the data directory"
           logger -p daemon.error -t $NAME Etcd is in an inconsistent state - removing the data directory
-          echo "Etcd is in an inconsistent state - removing the data directory"
           rm -rf $DATA_DIR/$advertisement_ip
           exit 3
         fi
@@ -247,7 +273,7 @@ verify_etcd_health_after_startup()
             current_time=$(date +%s)
             let "delta_time=$current_time - $start_time"
             if [ $delta_time -gt 60 ]; then
-              echo "Etcd failed to come up - exiting"
+              log_info "Etcd failed to start"
               logger -p daemon.error -t $NAME Etcd failed to start
               exit 2
             fi
@@ -266,13 +292,15 @@ verify_etcd_health_before_startup()
         # <id>[unstarted]: name=xx-xx-xx-xx peerURLs=http://xx.xx.xx.xx:2380 clientURLs=http://xx.xx.xx.xx:4000
         # The [unstarted] is only present while the member hasn't fully joined the etcd cluster
         setup_etcdctl_peers
-        member_list=$(/usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl member list)
+        member_list=$(etcdctl_wrapper member list)
         local_member_id=$(echo "$member_list" | grep -F -w "http://$local_ip:2380" | grep -o -E "^[^:]*" | grep -o "^[^[]\+")
         unstarted_member_id=$(echo "$member_list" | grep -F -w "http://$local_ip:2380" | grep "unstarted")
         if [[ $unstarted_member_id != '' ]]
         then
+          log_debug "Etcd failed to start successfully on a previous attempt - removing the data directory"
           logger -p daemon.error -t $NAME Etcd failed to start successfully on a previous attempt - removing the data directory
-          /usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl member remove $local_member_id
+
+          etcdctl_wrapper member remove $local_member_id
           rm -rf $DATA_DIR/$advertisement_ip
         fi
 
@@ -287,8 +315,9 @@ verify_etcd_health_before_startup()
 
           if [[ $rc != 0 ]]
           then
+            log_debug "The etcd data is corrupted - removing the data directory"
             logger -p daemon.error -t $NAME The etcd data is corrupted - removing the data directory
-            /usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl member remove $local_member_id
+            etcdctl_wrapper member remove $local_member_id
             rm -rf $DATA_DIR/$advertisement_ip
           fi
         fi
@@ -317,7 +346,7 @@ do_start()
 
         if [ -n "$etcd_cluster" ] && [ -n "$etcd_proxy" ]
         then
-          echo "Cannot specify both etcd_cluster and etcd_proxy"
+          log_info "Cannot specify both etcd_cluster and etcd_proxy"
           return 2
         elif [ -n "$etcd_cluster" ]
         then
@@ -326,7 +355,7 @@ do_start()
           if [[ -d $DATA_DIR/$advertisement_ip ]]
           then
             # We'll start normally using the data we saved off on our last boot.
-            echo "Rejoining cluster..."
+            log_info "Rejoining cluster..."
           else
             join_or_create_cluster
           fi
@@ -342,7 +371,7 @@ do_start()
 
           join_cluster_as_proxy
         else
-          echo "Must specify either etcd_cluster or etcd_proxy"
+          log_info "Must specify either etcd_cluster or etcd_proxy"
           return 2
         fi
 
@@ -356,6 +385,7 @@ do_start()
                      --name $ETCD_NAME
                      --debug"
 
+        log_debug "Starting etcd with: $DAEMON_ARGS $CLUSTER_ARGS"
         start-stop-daemon --start --quiet --background --pidfile $PIDFILE \
             --startas $DAEMONWRAPPER --chuid $USER -- $DAEMON_ARGS $CLUSTER_ARGS \
                 || return 2
@@ -425,27 +455,27 @@ do_decommission()
         #   0 if successful
         #   2 on error
         export ETCDCTL_PEERS=$advertisement_ip:4000
-        health=$(/usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl cluster-health)
+        health=$(etcdctl_wrapper cluster-health)
         if [[ $health =~ unhealthy ]]
         then
-          echo Cannot decommission while cluster is unhealthy
+          log_info "Cannot decommission while cluster is unhealthy"
           return 2
         fi
 
-        id=$(/usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl member list | grep -F -w ${advertisement_ip//./-} | cut -f 1 -d :)
+        id=$(etcdctl_wrapper member list | grep -F -w ${advertisement_ip//./-} | cut -f 1 -d :)
         if [[ -z $id ]]
         then
-          echo Local node does not appear in the cluster
+          log_info "Local node does not appear in the cluster"
           return 2
         fi
 
         # etcdctl will stop the daemon automatically once it has removed the
         # local id (see https://coreos.com/etcd/docs/latest/runtime-configuration.html
         # "Remove a Member")
-        /usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl member remove $id
+        etcdctl_wrapper member remove $id
         if [[ $? != 0 ]]
         then
-          echo Failed to remove instance from cluster
+          log_info "Failed to remove instance from cluster"
           return 2
         fi
 
@@ -479,6 +509,7 @@ else
 fi
 if [ -n "$leaked_pids" ] ; then
   for pid in $leaked_pids ; do
+    log_debug "Found leaked etcd $pid (correct is $(cat $PIDFILE)) - killing $pid"
     logger -p daemon.error -t $NAME Found leaked etcd $pid \(correct is $(cat $PIDFILE)\) - killing $pid
     kill -9 $pid
   done
@@ -487,6 +518,7 @@ fi
 case "$1" in
   start)
         [ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC" "$NAME"
+        log_debug "Starting $DESC" "$NAME"
         do_start
         case "$?" in
                 0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
@@ -495,6 +527,7 @@ case "$1" in
         ;;
   stop)
         [ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$NAME"
+        log_debug "Stopping $DESC" "$NAME"
         do_stop
         case "$?" in
                 0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
@@ -519,6 +552,7 @@ case "$1" in
         # 'force-reload' alias
         #
         log_daemon_msg "Restarting $DESC" "$NAME"
+        log_debug "Restarting $DESC" "$NAME"
         do_stop
         case "$?" in
           0|1)
@@ -537,10 +571,12 @@ case "$1" in
         ;;
   abort)
         log_daemon_msg "Aborting $DESC" "$NAME"
+        log_debug "Aborting $DESC" "$NAME"
         do_abort
         ;;
   decommission)
         log_daemon_msg "Decommissioning $DESC" "$NAME"
+        log_debug "Decommissioning $DESC" "$NAME"
         service clearwater-cluster-manager decommission || /bin/true
         service clearwater-queue-manager decommission || /bin/true
         service clearwater-config-manager decommission || /bin/true
@@ -548,6 +584,7 @@ case "$1" in
         ;;
   abort-restart)
         log_daemon_msg "Abort-Restarting $DESC" "$NAME"
+        log_debug "Abort-Restarting $DESC" "$NAME"
         do_abort
         case "$?" in
           0|1)
