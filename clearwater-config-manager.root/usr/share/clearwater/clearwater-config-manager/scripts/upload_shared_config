@@ -100,15 +100,18 @@ if [ $rc != 0 ] ; then
 fi
 rm -f /tmp/upload-shared-config.stderr.$$ /tmp/upload-shared-config.stdout.$$
 
+# Get the right config key based on whether multiple restart queues are supported
+apply_config_key=$(/usr/share/clearwater/clearwater-queue-manager/scripts/get_apply_config_key)
+
 # Add this node to the list of nodes to restart
-/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config
+/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add "$apply_config_key"
 
 # Set the force value
 if $force
 then
-  /usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue force_true apply_config
+  /usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue force_true "$apply_config_key"
 else
-  /usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue force_false apply_config
+  /usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue force_false "$apply_config_key"
 fi
 
 exit $rc
