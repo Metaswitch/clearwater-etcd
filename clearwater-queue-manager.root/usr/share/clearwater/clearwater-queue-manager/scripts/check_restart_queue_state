@@ -21,7 +21,7 @@ fi
 if [[ $use_single_restart_queue == "Y" ]] ; then
   /usr/share/clearwater/clearwater-queue-manager/env/bin/python /usr/share/clearwater/clearwater-queue-manager/scripts/check_queue_state.py "${management_local_ip:-$local_ip}" "$local_site_name" apply_config
 else
-  for apply_config_key in $( clearwater-etcdctl ls -p --recursive | grep apply_config_ ); do
+  for apply_config_key in $( clearwater-etcdctl ls -p --recursive | grep apply_config_ | sort -n); do
     prefix="/clearwater/$local_site_name/configuration/"
     # Remove the prefix to get apply_config_<node_type> as etcd-key
     apply_config_key=${apply_config_key#$prefix}
