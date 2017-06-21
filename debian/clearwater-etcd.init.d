@@ -68,7 +68,7 @@ etcdctl_wrapper() {
   # a)  Make file descriptor 7 a copy of the original stdout
   # b)  Redirect stdout to the original stderr.
   # c)  Redirect stderr to a temporary FD that is passed to the stdin of a tee
-  #     subcommand. This write all it's input to the log file and to the stdout
+  #     subcommand. This writes all its input to the log file and to the stdout
   #     inherited from its parent. But the parent stdout is currently pointing
   #     at the original stderr.
   # d)  Restore stdout to the original stdout (currently pointed to by FD 7).
@@ -81,7 +81,7 @@ etcdctl_wrapper() {
   # captured to the log file.
   #
   # We also save off the status code from etcdctl so it can be logged and
-  # returned. Despite all out shenanigans we've only run one command in this
+  # returned. Despite all our shenanigans we've only run one command in this
   # shell, so $? does indeed contain the exit code from etcdctl.
   /usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl "$@" \
     7>&1 \
