@@ -55,15 +55,45 @@ log_info() {
   log_debug "$@"
 }
 
-# Wrapper that runs etcdctl but also logs:
+# Wrapper that runs etcdctl but also logs the following to the log file:
 # - The etcdctl command being run
 # - stdout and stderr from the command
 # - The status code from the command
 etcdctl_wrapper() {
   log_debug "Running etcdctl $@"
-  /usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl "$@" 2>>$LOG_FILE | tee -a $LOG_FILE
+
+  # Run the etcdctl command and capture stdout and stderr to the log file.
+  #
+  # The redirections in this command are a bit insane:
+  # a)  Make file descriptor 7 a copy of the original stdout
+  # b)  Redirect stdout to the original stderr.
+  # c)  Redirect stderr to a temporary FD that is passed to the stdin of a tee
+  #     subcommand. This write all it's input to the log file and to the stdout
+  #     inherited from its parent. But the parent stdout is currently pointing
+  #     at the original stderr.
+  # d)  Restore stdout to the original stdout (currently pointed to by FD 7).
+  # e)  Redirect stdout to another tee command. This command's stdout is the
+  #     original stdout.
+  # f)  We're done with FD 7, so close it.
+  #
+  # The end result of all this is that the stdout and stderr of the etcdctl
+  # command go to same place as if we hadn't done any of this, but they are also
+  # captured to the log file.
+  #
+  # We also save off the status code from etcdctl so it can be logged and
+  # returned. Despite all out shenanigans we've only run one command in this
+  # shell, so $? does indeed contain the exit code from etcdctl.
+  /usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl "$@" \
+    7>&1 \
+    1>&2 \
+    2> >(tee -a $LOG_FILE) \
+    1>&7 \
+    1> >(tee -a $LOG_FILE) \
+    7>&-
   retcode=$?
+
   log_debug "etcdctl returned $retcode"
+
   return $retcode
 }
 
@@ -174,6 +204,8 @@ setup_etcdctl_peers()
                 ETCDCTL_PEERS="$server:4000,$ETCDCTL_PEERS"
             fi
         done
+
+        log_debug "Configured ETCDCTL_PEERS: $ETCDCTL_PEERS"
 }
 
 
@@ -194,6 +226,7 @@ join_cluster()
         # Check to make sure the cluster we want to join is healthy.
         # If it's not, don't even try joining (it won't work, and may
         # cause problems with the cluster)
+        log_debug "Check cluster is healthy"
         etcdctl_wrapper cluster-health 2>&1 | grep "cluster is healthy"
         if [ $? -ne 0 ]
          then
@@ -202,6 +235,7 @@ join_cluster()
         fi
 
         # Tell the cluster we're joining
+        log_debug "Tell the cluster we're joining"
         etcdctl_wrapper member add $ETCD_NAME http://$advertisement_ip:2380
         if [[ $? != 0 ]]
         then
@@ -253,6 +287,7 @@ verify_etcd_health_after_startup()
 
         # We could have a data directory already, but not actually be a member of
         # the etcd cluster. Remove the data directory.
+        log_debug "Check we're actually a member of the cluster"
         tail -10 /var/log/clearwater-etcd/clearwater-etcd.log | grep -q "etcdserver: the member has been permanently removed from the cluster"
         if [[ $? == 0 ]]
         then
@@ -264,6 +299,8 @@ verify_etcd_health_after_startup()
 
         # Wait for etcd to come up. Note - all this tests is that clearwater-etcd
         # is listening on 4000 - it doesn't confirm that etcd is running fully
+        log_debug "Wait for etcd to startup"
+
         start_time=$(date +%s)
         while true; do
           if nc -z $listen_ip 4000; then
@@ -280,6 +317,8 @@ verify_etcd_health_after_startup()
             sleep 1
           fi
         done
+
+        log_debug "Etcd started successfully"
 }
 
 verify_etcd_health_before_startup()
@@ -292,6 +331,8 @@ verify_etcd_health_before_startup()
         # <id>[unstarted]: name=xx-xx-xx-xx peerURLs=http://xx.xx.xx.xx:2380 clientURLs=http://xx.xx.xx.xx:4000
         # The [unstarted] is only present while the member hasn't fully joined the etcd cluster
         setup_etcdctl_peers
+
+        log_debug "Check for previous failed startup attempt"
         member_list=$(etcdctl_wrapper member list)
         local_member_id=$(echo "$member_list" | grep -F -w "http://$local_ip:2380" | grep -o -E "^[^:]*" | grep -o "^[^[]\+")
         unstarted_member_id=$(echo "$member_list" | grep -F -w "http://$local_ip:2380" | grep "unstarted")
@@ -310,6 +351,7 @@ verify_etcd_health_before_startup()
           # data directory is irrecoverably corrupt (perhaps because we ran out
           # of disk space and the files were half-written), so we should clean it
           # out and rejoin the cluster from scratch.
+          log_debug "Check we can read files in the data directory"
           timeout 5 /usr/share/clearwater/clearwater-etcd/$etcd_version/etcd-dump-logs --data-dir $DATA_DIR/$advertisement_ip > /dev/null 2>&1
           rc=$?
 
@@ -454,6 +496,7 @@ do_decommission()
         # Return
         #   0 if successful
         #   2 on error
+        log_debug "Check cluster is healthy before decommissioning"
         export ETCDCTL_PEERS=$advertisement_ip:4000
         health=$(etcdctl_wrapper cluster-health)
         if [[ $health =~ unhealthy ]]
@@ -462,6 +505,7 @@ do_decommission()
           return 2
         fi
 
+        log_debug "Check we are currently in the cluster"
         id=$(etcdctl_wrapper member list | grep -F -w ${advertisement_ip//./-} | cut -f 1 -d :)
         if [[ -z $id ]]
         then
@@ -472,6 +516,7 @@ do_decommission()
         # etcdctl will stop the daemon automatically once it has removed the
         # local id (see https://coreos.com/etcd/docs/latest/runtime-configuration.html
         # "Remove a Member")
+        log_debug "Remove ourselves from the cluster"
         etcdctl_wrapper member remove $id
         if [[ $? != 0 ]]
         then
