@@ -11,7 +11,7 @@ if [ -d /usr/share/clearwater/node_type.d ]; then
 fi
 . /etc/clearwater/config
 
-if [ -z "$etcd_cluster_key" ] || [ $use_single_restart_queue == "Y" ]
+if [ -z "$etcd_cluster_key" ] || [ $use_single_restart_queue == "Y" ]; then
   echo -n "apply_config"
 else
   echo -n "apply_config_$etcd_cluster_key"
