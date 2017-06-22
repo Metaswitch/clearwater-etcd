@@ -8,9 +8,10 @@
 import sys
 import etcd
 import json
+import os
 
 mgmt_node = sys.argv[1]
-local_node = sys.argv[2]
+local_node_ip = sys.argv[2]
 local_site = sys.argv[3]
 sites = sys.argv[4]
 etcd_version = sys.argv[5]
@@ -33,7 +34,27 @@ def describe_clusters():
     if sites != "" and etcd_version != "2.2.5":
         local_site_info = " in the local site (" + local_site + ")"
 
-    print "This script prints out the status of the Chronos, Memcached and Cassandra clusters{}.\n".format(local_site_info)
+    print "This script prints the status of the Chronos, Memcached and Cassandra clusters{}.".format(local_site_info)
+
+    plugin_dir = '/usr/share/clearwater/clearwater-cluster-manager/plugins'
+    if os.path.isdir(plugin_dir):
+        plugins = [(plugin_name[:-10]).capitalize() for plugin_name in os.listdir(plugin_dir) if
+                plugin_name.endswith('_plugin.py')]
+
+        # Memcached_remote is now deprecated with the new GR support
+        if 'Memcached_remote' in plugins:
+            plugins.remove('Memcached_remote')
+        
+        if len(plugins) >= 2:
+            cluster_str = "{} and {} clusters".format(", ".join(plugins[:-1]),
+                    plugins[-1])
+        else:
+            cluster_str = str(plugins[0]) + " cluster"
+
+        print "This node ({}) should be in the {}.\n".format(local_node_ip,
+                cluster_str)
+    else:
+        print "This node ({}) should not be in any cluster.\n".format(local_node_ip)
 
     for (key, value) in sorted(cluster_values.items()):
         # Check if the key relates to clustering. The clustering key has the format
@@ -53,18 +74,13 @@ def describe_clusters():
             continue
 
         if site != "" and sites != "" and etcd_version == "2.2.5":
-            print "Describing the {} {} cluster in site {}:".format(node_type.capitalize(), store_name.capitalize(), site)
+            print "Describing the {} cluster in site {}:".format(store_name.capitalize(), site)
         else:
-            print "Describing the {} {} cluster:".format(node_type.capitalize(), store_name.capitalize())
+            print "Describing the {} cluster:".format(store_name.capitalize())
 
         cluster = json.loads(value)
         cluster_ok = all([state == "normal"
                           for node, state in cluster.iteritems()])
-
-        if local_node in cluster:
-            print "  The local node is in this cluster"
-        else:
-            print "  The local node is *not* in this cluster"
 
         if cluster_ok:
             print "  The cluster is stable"
