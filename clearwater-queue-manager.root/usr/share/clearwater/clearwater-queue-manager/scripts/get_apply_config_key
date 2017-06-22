@@ -6,17 +6,14 @@
 # Otherwise no rights are granted except for those provided to you by
 # Metaswitch Networks in a separate written agreement.
 
-set -ue
-
-local_site_name=site1
-site_names=
-etcd_version=
+if [ -d /usr/share/clearwater/node_type.d ]; then
+  . /usr/share/clearwater/node_type.d/$(ls /usr/share/clearwater/node_type.d | head -n 1)
+fi
 . /etc/clearwater/config
 
-if [ $# -ne 0 ]
-then
-  echo "Usage: check_cluster_state"
-  exit 1
+if [ -z "$etcd_cluster_key" ] || [ "$use_single_restart_queue" == "Y" ]; then
+  echo -n "apply_config"
+else
+  echo -n "apply_config_$etcd_cluster_key"
 fi
 
-/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-cluster-manager/scripts/check_cluster_state.py "${management_local_ip:-$local_ip}" "$local_ip" "$local_site_name" "$site_names" "$etcd_version"
