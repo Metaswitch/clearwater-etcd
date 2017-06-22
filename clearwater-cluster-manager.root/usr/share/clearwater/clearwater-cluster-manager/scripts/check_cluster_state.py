@@ -13,7 +13,7 @@ import os
 mgmt_node = sys.argv[1]
 local_node_ip = sys.argv[2]
 local_site = sys.argv[3]
-remote_sites = sys.argv[4]
+sites = sys.argv[4]
 etcd_version = sys.argv[5]
 
 client = etcd.Client(mgmt_node, 4000)
@@ -31,24 +31,27 @@ def describe_clusters():
     cluster_values = {subkey.key: subkey.value for subkey in result.leaves}
 
     local_site_info = ""
-    if remote_sites != "" and etcd_version != "2.2.5":
+    if sites != "" and etcd_version != "2.2.5":
         local_site_info = " in the local site (" + local_site + ")"
 
     print "This script prints the status of the Chronos, Memcached and Cassandra clusters{}.".format(local_site_info)
 
     plugin_dir = '/usr/share/clearwater/clearwater-cluster-manager/plugins'
     if os.path.isdir(plugin_dir):
-        plugins = [plugin_name[:-10] for plugin_name in os.listdir(plugin_dir) if
+        plugins = [(plugin_name[:-10]).capitalize() for plugin_name in os.listdir(plugin_dir) if
                 plugin_name.endswith('_plugin.py')]
-        plugins.remove('memcached_remote')
+
+        # Memcached_remote is now deprecated with the new GR support
+        if 'Memcached_remote' in plugins:
+            plugins.remove('Memcached_remote')
         
         if len(plugins) >= 2:
-            cluster_str = "{} and {}".format(", ".join(plugins[:-1]),
+            cluster_str = "{} and {} clusters".format(", ".join(plugins[:-1]),
                     plugins[-1])
         else:
-            cluster_str = str(plugins[0])
+            cluster_str = str(plugins[0]) + " cluster"
 
-        print "This node ({}) should be in {} cluster.\n".format(local_node_ip,
+        print "This node ({}) should be in the {}.\n".format(local_node_ip,
                 cluster_str)
     else:
         print "This node ({}) should not be in any cluster.\n".format(local_node_ip)
@@ -70,7 +73,7 @@ def describe_clusters():
             # The key isn't to do with clustering, skip it
             continue
 
-        if site != "" and remote_sites != "" and etcd_version == "2.2.5":
+        if site != "" and sites != "" and etcd_version == "2.2.5":
             print "Describing the {} cluster in site {}:".format(store_name.capitalize(), site)
         else:
             print "Describing the {} cluster:".format(store_name.capitalize())
