@@ -10,5 +10,5 @@ check process clearwater_cluster_manager_process with pidfile /var/run/clearwate
 
   # Check the service's resource usage, and abort the process if it's too high. This will
   # generate a (dummy) core file and trigger diagnostics collection.
-  if memory > 80% for 6 cycles then exec "/bin/bash -c '/etc/init.d/clearwater-cluster-manager abort'"
+  if memory > 80% then exec "/bin/bash -c '/etc/init.d/clearwater-cluster-manager abort'"
 
