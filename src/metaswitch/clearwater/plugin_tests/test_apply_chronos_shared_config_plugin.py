@@ -1,4 +1,4 @@
-# @file test_apply_chronos_gr_config_plugin.py
+# @file test_apply_chronos_shared_config_plugin.py
 #
 # Copyright (C) Metaswitch Networks 2017
 # If license terms are provided to you in a COPYING file in the root directory
@@ -13,15 +13,15 @@ import logging
 
 _log = logging.getLogger()
 
-from clearwater_etcd_plugins.chronos.apply_chronos_gr_config_plugin import ApplyChronosGRConfigPlugin
+from clearwater_etcd_plugins.chronos.apply_chronos_shared_config_plugin import ApplyChronosSharedConfigPlugin
 
-class TestApplyChronosGRConfigPlugin(unittest.TestCase):
-    @mock.patch('clearwater_etcd_plugins.chronos.apply_chronos_gr_config_plugin.run_command')
+class TestApplyChronosSharedConfigPlugin(unittest.TestCase):
+    @mock.patch('clearwater_etcd_plugins.chronos.apply_chronos_shared_config_plugin.run_command')
     def test_front_of_queue(self, mock_run_command):
-        """Test apply Chronos GR config plugin front_of_queue function"""
+        """Test apply Chronos shared config plugin front_of_queue function"""
 
         # Create the plugin
-        plugin = ApplyChronosGRConfigPlugin({})
+        plugin = ApplyChronosSharedConfigPlugin({})
 
         expected_command_call_list = \
             [mock.call("service chronos stop"),
@@ -29,7 +29,7 @@ class TestApplyChronosGRConfigPlugin(unittest.TestCase):
              mock.call("service chronos wait-sync"),
              mock.call().__nonzero__(),
              mock.call("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue"\
-                       " remove_success apply_chronos_gr_config"),
+                       " remove_success apply_chronos_shared_config"),
              mock.call().__nonzero__()]
 
         # Call the plugin hook
