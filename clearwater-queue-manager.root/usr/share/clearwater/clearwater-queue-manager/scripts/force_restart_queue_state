@@ -18,4 +18,6 @@ then
   exit 1
 fi
 
-/usr/share/clearwater/clearwater-queue-manager/env/bin/python /usr/share/clearwater/clearwater-queue-manager/scripts/force_queue_state.py "${management_local_ip:-$local_ip}" "$local_site_name" "apply_config"
+apply_config_key=$(/usr/share/clearwater/clearwater-queue-manager/scripts/get_apply_config_key)
+
+/usr/share/clearwater/clearwater-queue-manager/env/bin/python /usr/share/clearwater/clearwater-queue-manager/scripts/force_queue_state.py "${management_local_ip:-$local_ip}" "$local_site_name" "$apply_config_key"
