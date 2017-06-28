@@ -29,12 +29,14 @@ def describe_clusters():
         return
 
     cluster_values = {subkey.key: subkey.value for subkey in result.leaves}
+    cluster_values = {key: cluster_values[key] for key in sorted(cluster_values)}    
 
     local_site_info = ""
     if sites != "" and etcd_version != "2.2.5":
         local_site_info = " in the local site (" + local_site + ")"
 
-    print "This script prints the status of the Chronos, Memcached and Cassandra clusters{}.".format(local_site_info)
+    # Put the cluster name in alphabetical order
+    print "This script prints the status of the Cassandra, Chronos, and Memcached clusters{}.".format(local_site_info)
 
     plugin_dir = '/usr/share/clearwater/clearwater-cluster-manager/plugins'
     if os.path.isdir(plugin_dir):
@@ -45,6 +47,8 @@ def describe_clusters():
         if 'Memcached_remote' in plugins:
             plugins.remove('Memcached_remote')
         
+        plugins.sort()
+
         if len(plugins) >= 2:
             cluster_str = "{} and {} clusters".format(", ".join(plugins[:-1]),
                     plugins[-1])
@@ -56,7 +60,7 @@ def describe_clusters():
     else:
         print "This node ({}) should not be in any cluster.\n".format(local_node_ip)
 
-    for (key, value) in sorted(cluster_values.items()):
+    for (key, value) in cluster_values.items():
         # Check if the key relates to clustering. The clustering key has the format
         # /clearwater*[</optional site name>]/<node type>/clustering/<store type>
         key_parts = key.split('/')
