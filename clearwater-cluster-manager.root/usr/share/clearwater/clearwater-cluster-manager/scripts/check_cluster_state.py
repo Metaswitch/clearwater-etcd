@@ -32,7 +32,7 @@ def describe_clusters():
     cluster_values = {key: cluster_values[key] for key in sorted(cluster_values)}    
 
     local_site_info = ""
-    if sites != "" and etcd_version != "2.2.5":
+    if sites != "" and local_site != sites and etcd_version != "2.2.5":
         local_site_info = " in the local site (" + local_site + ")"
 
     # Put the cluster name in alphabetical order
