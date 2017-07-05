@@ -29,7 +29,6 @@ def describe_clusters():
         return
 
     cluster_values = {subkey.key: subkey.value for subkey in result.leaves}
-    cluster_values = {key: cluster_values[key] for key in sorted(cluster_values)}    
 
     local_site_info = ""
     if sites != "" and local_site != sites and etcd_version != "2.2.5":
@@ -60,7 +59,7 @@ def describe_clusters():
     else:
         print "This node ({}) should not be in any cluster.\n".format(local_node_ip)
 
-    for (key, value) in cluster_values.items():
+    for (key, value) in sorted(cluster_values.items()):
         # Check if the key relates to clustering. The clustering key has the format
         # /clearwater*[</optional site name>]/<node type>/clustering/<store type>
         key_parts = key.split('/')
