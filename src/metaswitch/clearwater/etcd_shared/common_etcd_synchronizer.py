@@ -29,14 +29,15 @@
 # DEALINGS IN THE SOFTWARE.
 
 import etcd
-from threading import Thread
+# from threading import Thread
 from time import sleep
 from functools import wraps
 import logging
-import traceback
-import os
-import signal
+# import traceback
+# import os
+# import signal
 from metaswitch.common import utils
+from metaswitch.clearwater.etcd_shared.common_synchronizer import CommonSynchronizer
 
 _log = logging.getLogger(__name__)
 
@@ -228,59 +229,15 @@ def api_execute_with_patched_decorator(self, path, method, params=None, timeout=
             'HTTP method {} not supported'.format(method))
 etcd.Client.api_execute = api_execute_with_patched_decorator
 
-class CommonEtcdSynchronizer(object):
-    PAUSE_BEFORE_RETRY_ON_EXCEPTION = 30
-    PAUSE_BEFORE_RETRY_ON_MISSING_KEY = 5
-    TIMEOUT_ON_WATCH = 5
+
+class CommonEtcdSynchronizer(CommonSynchronizer):
 
     def __init__(self, plugin, ip, etcd_ip=None):
-        self._plugin = plugin
+        super(CommonEtcdSynchronizer, self).__init__(plugin)
         self._ip = ip
         cxn_ip = etcd_ip or ip
+
         self._client = etcd.Client(cxn_ip, 4000)
-        self._index = None
-        self._last_value = None
-
-        # Set the terminate flag and the abort read flag to false initially
-        # The terminate flag controls whether the synchronizer as a whole
-        # should terminate, the abort flag ensures that any synchronizer
-        # threads controlled by a futures is shut down fully
-        self._terminate_flag = False
-        self._abort_read = False
-        self.thread = Thread(target=self.main_wrapper, name=self.thread_name())
-
-    def start_thread(self):
-        self.thread.daemon = True
-        self.thread.start()
-
-    def terminate(self):
-        self._terminate_flag = True
-        self.thread.join()
-
-    def pause(self):
-        sleep(self.PAUSE_BEFORE_RETRY_ON_EXCEPTION)
-
-    def main_wrapper(self): # pragma: no cover
-        # This function should be the entry point when we start an
-        # EtcdSynchronizer thread. We use it to catch exceptions in main and
-        # restart the whole process; if we didn't do this the thread would be
-        # dead and we'd never notice.
-        try:
-            self.main()
-        except Exception:
-            # Log the exception and send a SIGTERM to this process. If the
-            # process needs to do anything before shutting down, it will have a
-            # handler for catching the SIGTERM.
-            _log.error(traceback.format_exc())
-            os.kill(os.getpid(), signal.SIGTERM)
-
-    def main(self): pass
-
-    def default_value(self): return None
-
-    def is_running(self): return True
-
-    def thread_name(self): return self._plugin.__class__.__name__
 
     # Read the state of the cluster from etcd (optionally waiting for a changed
     # state). Returns None if nothing could be read.
@@ -364,14 +321,6 @@ class CommonEtcdSynchronizer(object):
 
         return self.tuple_from_result(result)
 
-    def tuple_from_result(self, result):
-        if result is None:
-            return (None, None)
-        elif self._abort_read is True:
-            return (self._last_value, self._index)
-        else:
-            return (result.value, result.modifiedIndex)
-
     # Calls read_from_etcd, and updates internal state to track the previously
     # seen value.
     #
@@ -385,3 +334,11 @@ class CommonEtcdSynchronizer(object):
     def update_from_etcd(self):
         self._last_value, self._index = self.read_from_etcd(wait=True)
         return self._last_value
+
+    def tuple_from_result(self, result):
+        if result is None:
+            return (None, None)
+        elif self._abort_read is True:
+            return (self._last_value, self._index)
+        else:
+            return (result.value, result.modifiedIndex)
