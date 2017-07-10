@@ -12,7 +12,7 @@
 Usage:
   main.py --mgmt-local-ip=IP --sig-local-ip=IP --local-site=NAME --remote-site=NAME --remote-cassandra-seeds=IPs --uuid=UUID --etcd-key=KEY --etcd-cluster-key=CLUSTER_KEY
           [--signaling-namespace=NAME] [--foreground] [--log-level=LVL]
-          [--log-directory=DIR] [--pidfile=FILE] [--cluster-manager-enabled=Y/N]
+          [--log-directory=DIR] [--pidfile=FILE] [--cluster-manager-enabled=Y/N] [--etcd | --consul]
 
 Options:
   -h --help                      Show this screen.
@@ -30,6 +30,8 @@ Options:
   --log-directory=DIR            Directory to log to [default: ./]
   --pidfile=FILE                 Pidfile to write [default: ./cluster-manager.pid]
   --cluster-manager-enabled=Y/N  Whether the cluster manager should start any threads [default: Yes]
+  --etcd                         Use the etcd back-end (the default)
+  --consul                       Use the Consul back-end
 
 """
 
@@ -37,6 +39,7 @@ from docopt import docopt, DocoptExit
 
 from metaswitch.common import logging_config, utils
 from metaswitch.clearwater.etcd_shared.plugin_loader import load_plugins_in_dir
+from metaswitch.clearwater.cluster_manager.consul_synchronizer import ConsulSynchronizer
 from metaswitch.clearwater.cluster_manager.etcd_synchronizer import EtcdSynchronizer
 from metaswitch.clearwater.cluster_manager.plugin_base import PluginParams
 from metaswitch.clearwater.cluster_manager import pdlogs
@@ -96,6 +99,10 @@ def main(args):
     cluster_manager_enabled = arguments['--cluster-manager-enabled']
     log_dir = arguments['--log-directory']
     log_level = LOG_LEVELS.get(arguments['--log-level'], logging.DEBUG)
+    if arguments.get('--consul'):
+        synchronizer_gen = ConsulSynchronizer
+    else:
+        synchronizer_gen = EtcdSynchronizer
 
     stdout_err_log = os.path.join(log_dir, "cluster-manager.output.log")
 
@@ -171,7 +178,7 @@ def main(args):
         pdlogs.DO_NOT_CLUSTER.log()
     else:
         for plugin in plugins_to_use:
-            syncer = EtcdSynchronizer(plugin, sig_ip, etcd_ip=mgmt_ip)
+            syncer = synchronizer_gen(plugin, sig_ip, etcd_ip=mgmt_ip)
             syncer.start_thread()
 
             synchronizers.append(syncer)
