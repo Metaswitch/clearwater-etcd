@@ -28,9 +28,6 @@ class ConsulSynchronizer(CommonConsulSynchronizer):
     def key(self):
         return self._plugin.key()
 
-    def is_running(self):
-        return self._fsm.is_running()
-
     def default_value(self):
         return "{}"
 

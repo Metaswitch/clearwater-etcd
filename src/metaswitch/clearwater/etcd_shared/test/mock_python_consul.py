@@ -7,8 +7,8 @@
 
 from threading import Condition
 import consul
-from consul import Timeout
-from random import random, choice
+from consul import Timeout, Consul
+from random import random
 from time import sleep
 import os
 
@@ -22,7 +22,7 @@ def ConsulFactory(*args, **kwargs):
     """Factory method, returning a connection to a real etcd if we need one for
     FV, or to an in-memory implementation for UT."""
     if os.environ.get('ETCD_IP'):
-        return Client(host=os.environ.get('ETCD_IP'),
+        return Consul(host=os.environ.get('ETCD_IP'),
                       port=int(os.environ.get('ETCD_PORT', 8500)))
     else:
         return MockConsulClient(None, None)
@@ -85,9 +85,9 @@ class MockConsulKv(object):
             if wait:
                 if global_index == 0:
                     return (global_index, None)
-                if waitIndex > global_index:
+                if index > global_index:
                     global_condvar.wait(0.1)
-                if waitIndex > global_index:
+                if index > global_index:
                     raise Timeout
             if global_data == None:
                 return (global_index, None)
@@ -150,14 +150,14 @@ class SlowMockConsulKv(MockConsulKv):
             dc=None):
         """Make writes take 0-200ms to discover race conditions"""
         sleep(random()/5.0)
-        super(SlowMockEtcdClient, self).write(key,
-                                              value,
-                                              cas=cas,
-                                              flags=flags,
-                                              acquire=acquire,
-                                              release=release,
-                                              token=token,
-                                              dc=dc)
+        super(SlowMockConsulKv, self).write(key,
+                                            value,
+                                            cas=cas,
+                                            flags=flags,
+                                            acquire=acquire,
+                                            release=release,
+                                            token=token,
+                                            dc=dc)
 
     def get_noexcept(self, *args, **kwargs):
         """Method to allow the UT infrastructure to read the value, without

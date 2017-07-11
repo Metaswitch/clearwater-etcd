@@ -44,22 +44,10 @@ class CommonConsulSynchronizer(CommonSynchronizer):
                 if result and result.get("Value") == self._last_value:
                     _log.info("Watching for changes with {}".format(wait_index))
 
-                    while not self._terminate_flag and not self._abort_read and self.is_running():
-                        _log.debug("Started a new watch")
-                        try:
-                            (_, result) = self._client.get(self.key(),
-                                                           wait=self.TIMEOUT_ON_WATCH,
-                                                           index=wait_index,
-                                                           recurse=False)
-                            break
-                        except consul.Timeout as e:
-                            if "Read timed out" in e.message:
-                                # Timeouts after TIMEOUT_ON_WATCH seconds are expected, so
-                                # ignore them - unless we're terminating, we'll
-                                # stay in the while loop and try again
-                                pass
-                            else:
-                                raise
+                    (_, result) = self._client.get(self.key(),
+                                                   wait=self.TIMEOUT_ON_WATCH,
+                                                   index=wait_index,
+                                                   recurse=False)
 
                     _log.debug("Finished watching")
 
@@ -121,7 +109,8 @@ class CommonConsulSynchronizer(CommonSynchronizer):
     def tuple_from_result(self, result):
         if result is None:
             return (None, None)
-        elif self._abort_read is True:
-            return (self._last_value, self._index)
+        # FIXME: re-enable this to support Consul for Queue Manger
+        # elif self._abort_read is True:
+        #     return (self._last_value, self._index)
         else:
             return (result.get("Value"), result.get("ModifyIndex"))
