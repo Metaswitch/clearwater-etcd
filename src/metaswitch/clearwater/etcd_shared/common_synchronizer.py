@@ -7,15 +7,12 @@
 # Otherwise no rights are granted except for those provided to you by
 # Metaswitch Networks in a separate written agreement.
 
-# import etcd
 from threading import Thread
 from time import sleep
-# from functools import wraps
 import logging
 import traceback
 import os
 import signal
-# from metaswitch.common import utils
 
 _log = logging.getLogger(__name__)
 
@@ -49,27 +46,27 @@ class CommonSynchronizer(object):
     def pause(self):
         sleep(self.PAUSE_BEFORE_RETRY_ON_EXCEPTION)
 
-    def main_wrapper(self):  # pragma: no cover
+    def main_wrapper(self):
         # This function should be the entry point when we start an
         # EtcdSynchronizer thread. We use it to catch exceptions in main and
         # restart the whole process; if we didn't do this the thread would be
         # dead and we'd never notice.
         try:
             self.main()
-        except Exception:
+        except Exception:  # pragma: no cover
             # Log the exception and send a SIGTERM to this process. If the
             # process needs to do anything before shutting down, it will have a
             # handler for catching the SIGTERM.
             _log.error(traceback.format_exc())
             os.kill(os.getpid(), signal.SIGTERM)
 
-    def main(self):
+    def main(self):  # pragma: no cover
         pass
 
-    def default_value(self):
+    def default_value(self):  # pragma: no cover
         return None
 
-    def is_running(self):
+    def is_running(self):  # pragma: no cover
         return True
 
     def thread_name(self):

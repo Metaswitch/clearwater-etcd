@@ -162,7 +162,7 @@ class ConsulSynchronizer(CommonConsulSynchronizer):
                         _log.debug("Retrying contended write with updated value")
                         self.write_to_db(updated_cluster_info,
                                            new_state,
-                                           cas=idx)
+                                           with_index=idx)
         except Exception as e:
             # Catch-all error handler (for invalid requests, timeouts, etc -
             # unset our state and start over.
