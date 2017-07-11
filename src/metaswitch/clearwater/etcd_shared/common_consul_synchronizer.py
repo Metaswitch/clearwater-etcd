@@ -22,11 +22,11 @@ _log = logging.getLogger(__name__)
 
 class CommonConsulSynchronizer(CommonSynchronizer):
 
-    def __init__(self, plugin, ip):
+    def __init__(self, plugin, ip, db_ip):
         super(CommonConsulSynchronizer, self).__init__(plugin)
         self._ip = ip
 
-        self._client = consul.Consul(host=ip).kv
+        self._client = consul.Consul(host=db_ip).kv
 
     # Read the state of the cluster from Consul (optionally waiting for a
     # changed state). Returns None if nothing could be read.
@@ -43,7 +43,7 @@ class CommonConsulSynchronizer(CommonSynchronizer):
                 # wait for it to change before doing anything else.
                 _log.info("Read value {} from Consul, "
                           "comparing to last value {}".format(
-                              utils.safely_encode(result.get("Value")),
+                              utils.safely_encode(str(result)),
                               utils.safely_encode(self._last_value)))
 
                 if result and result.get("Value") == self._last_value:

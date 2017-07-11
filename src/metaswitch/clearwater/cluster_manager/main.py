@@ -183,7 +183,7 @@ def main(args):
             if backend == "etcd":
                 syncer = EtcdSynchronizer(plugin, sig_ip, etcd_ip=mgmt_ip)
             else:
-                syncer = ConsulSynchronizer(plugin, mgmt_ip)
+                syncer = ConsulSynchronizer(plugin, sig_ip, db_ip=mgmt_ip)
 
             syncer.start_thread()
 
