@@ -22,11 +22,11 @@ _log = logging.getLogger(__name__)
 
 class CommonConsulSynchronizer(CommonSynchronizer):
 
-    def __init__(self, plugin, ip, db_ip=None):
+    def __init__(self, plugin, ip):
         super(CommonConsulSynchronizer, self).__init__(plugin)
         self._ip = ip
 
-        self._client = consul.Consul(host=db_ip).kv
+        self._client = consul.Consul(host=ip).kv
 
     # Read the state of the cluster from Consul (optionally waiting for a
     # changed state). Returns None if nothing could be read.

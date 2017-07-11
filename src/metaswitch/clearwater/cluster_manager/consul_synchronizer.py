@@ -19,8 +19,8 @@ _log = logging.getLogger(__name__)
 
 
 class ConsulSynchronizer(CommonConsulSynchronizer):
-    def __init__(self, plugin, ip, db_ip=None, force_leave=False):
-        super(ConsulSynchronizer, self).__init__(plugin, ip, db_ip)
+    def __init__(self, plugin, ip, force_leave=False):
+        super(ConsulSynchronizer, self).__init__(plugin, ip)
         self._fsm = SyncFSM(self._plugin, self._ip)
         self._leaving_requested = False
         self.force_leave = force_leave
