@@ -31,6 +31,8 @@ class CommonConsulSynchronizer(CommonSynchronizer):
 
         try:
             (wait_index, result) = self._client.get(self.key(), consistency=True)
+            # FIXME: is this a string???
+            wait_index=int(wait_index)
             wait_index += 1
 
             if wait:
