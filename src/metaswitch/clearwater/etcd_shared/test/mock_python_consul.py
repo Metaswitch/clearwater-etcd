@@ -7,7 +7,6 @@
 
 from threading import Condition
 import consul
-# from etcd import EtcdResult, Client, EtcdException, EtcdKeyError
 from consul import Timeout
 from random import random, choice
 from time import sleep

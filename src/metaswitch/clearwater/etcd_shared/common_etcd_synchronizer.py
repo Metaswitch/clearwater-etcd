@@ -29,13 +29,9 @@
 # DEALINGS IN THE SOFTWARE.
 
 import etcd
-# from threading import Thread
 from time import sleep
 from functools import wraps
 import logging
-# import traceback
-# import os
-# import signal
 from metaswitch.common import utils
 from metaswitch.clearwater.etcd_shared.common_synchronizer import CommonSynchronizer
 
