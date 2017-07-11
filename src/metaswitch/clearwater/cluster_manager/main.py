@@ -11,13 +11,13 @@
 
 Usage:
   main.py --mgmt-local-ip=IP --sig-local-ip=IP --local-site=NAME --uuid=UUID (--etcd-key=KEY | --db-key=KEY) (--etcd-cluster-key=CLUSTER_KEY | --db-cluster-key=CLUSTER_KEY)
-          [--remote-site=NAME] [--remote-cassandra-seeds=IPs] [--signaling-namespace=NAME] [--foreground] [--log-level=LVL]
+          [--remote-site=NAME] [--remote-cassandra-seeds=IPs] [--signaling-namespace=NAME] [--foreground] [--log-level=LVL] [--log-stdout]
           [--log-directory=DIR] [--pidfile=FILE] [--cluster-manager-enabled=Y/N] [--etcd | --consul]
 
 Options:
   -h --help                      Show this screen.
-  --mgmt-local-ip=IP             Management IP address
-  --sig-local-ip=IP              Signaling IP address
+  --mgmt-local-ip=IP             Management IP address (for the back-end)
+  --sig-local-ip=IP              Signaling IP address (must be unique for each node in the cluster)
   --local-site=NAME              Name of local site
   --uuid=UUID                    UUID uniquely identifying this node
   --etcd-key=KEY                 Etcd key (top level)
@@ -29,6 +29,7 @@ Options:
   --signaling-namespace=NAME     Name of the signaling namespace
   --foreground                   Don't daemonise
   --log-level=LVL                Level to log at, 0-4 [default: 3]
+  --log-stdout                   Write logs to stdout
   --log-directory=DIR            Directory to log to [default: ./]
   --pidfile=FILE                 Pidfile to write [default: ./cluster-manager.pid]
   --cluster-manager-enabled=Y/N  Whether the cluster manager should start any threads [default: Yes]
@@ -100,6 +101,7 @@ def main(args):
     etcd_cluster_key = arguments.get('--etcd-cluster-key') or arguments.get('--db-cluster-key')
     cluster_manager_enabled = arguments['--cluster-manager-enabled']
     log_dir = arguments['--log-directory']
+    log_stdout = arguments.get('--log-stdout')
     log_level = LOG_LEVELS.get(arguments['--log-level'], logging.DEBUG)
     if arguments.get('--consul'):
         backend = "consul"
@@ -123,6 +125,9 @@ def main(args):
     prctl.prctl(prctl.NAME, "cw-cluster-mgr")
 
     logging_config.configure_logging(log_level, log_dir, "cluster-manager", show_thread=True)
+
+    if log_stdout:
+        logging_config.addHandler(logging.StreamHandler())
 
     # urllib3 logs a WARNING log whenever it recreates a connection, but our
     # etcd usage does this frequently (to allow watch timeouts), so deliberately
