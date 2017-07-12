@@ -26,7 +26,7 @@ Description: Queue manager for Clearwater
 
 Package: clearwater-config-manager
 Architecture: all
-Depends: python-pip, python-virtualenv, clearwater-etcd, clearwater-queue-manager, clearwater-monit, python-requests
+Depends: python-pip, python-virtualenv, clearwater-etcd, clearwater-queue-manager, clearwater-monit, python-requests, python-jsonschema
 Description: Configuration manager for Clearwater
 
 Package: clearwater-management
