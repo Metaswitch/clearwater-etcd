@@ -11,12 +11,12 @@ Homepage: http://projectclearwater.org/
 
 Package: clearwater-etcd
 Architecture: all
-Depends: python-pip, clearwater-infrastructure, clearwater-monit
+Depends: python-pip
 Description: etcd configured for Clearwater
 
 Package: clearwater-cluster-manager
 Architecture: all
-Depends: python-pip, python-virtualenv, clearwater-etcd, clearwater-monit
+Depends: python-pip, python-virtualenv, clearwater-etcd
 Description: Cluster manager for Clearwater
 
 Package: clearwater-queue-manager
