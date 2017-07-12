@@ -74,7 +74,10 @@ if error_list:
     temp_dict = {}
     for error in error_list:
         nest = temp_dict
-        last = error.path.pop()
+        if len(error.path) == 0:
+            last = "Top level"
+        else:
+            last = error.path.pop()
         if isinstance(last, int):
             last = 'element %i' % (last + 1)
         for error_part in error.path:
