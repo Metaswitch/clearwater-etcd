@@ -11,7 +11,7 @@
 
 Usage:
   main.py --mgmt-local-ip=IP --sig-local-ip=IP --local-site=NAME --uuid=UUID (--etcd-key=KEY | --db-key=KEY) (--etcd-cluster-key=CLUSTER_KEY | --db-cluster-key=CLUSTER_KEY)
-          [--remote-site=NAME] [--remote-cassandra-seeds=IPs] [--signaling-namespace=NAME] [--foreground] [--log-level=LVL]
+          [--remote-site=NAME] [--remote-cassandra-seeds=IPs] [--cassandra_container_id=ID] [--signaling-namespace=NAME] [--foreground] [--log-level=LVL]
           [--log-directory=DIR] [--pidfile=FILE] [--cluster-manager-enabled=Y/N] [--etcd | --consul]
 
 Options:
@@ -26,6 +26,7 @@ Options:
   --db-cluster-key=CLUSTER_KEY   Back-end database key (used in the data store clusters)
   --remote-site=NAME             Name of remote site
   --remote-cassandra-seeds=IPs   Comma separated list of at least one IP address from each remote Cassandra site
+  --cassandra-container-id=ID    When containerised, the ID of the local Cassandra container
   --signaling-namespace=NAME     Name of the signaling namespace
   --foreground                   Don't daemonise
   --log-level=LVL                Level to log at, 0-4 [default: 3]
@@ -95,6 +96,7 @@ def main(args):
         remote_cassandra_seeds = remote_cassandra_seeds.split(',')
     else:
         remote_cassandra_seeds = []
+    cassandra_container_id = arguments.get('--cassandra-container-id')
     signaling_namespace = arguments.get('--signaling-namespace')
     local_uuid = UUID(arguments['--uuid'])
     etcd_key = arguments.get('--etcd-key') or arguments.get('--db-key')
@@ -164,7 +166,8 @@ def main(args):
                                                signaling_namespace=signaling_namespace,
                                                uuid=local_uuid,
                                                etcd_key=etcd_key,
-                                               etcd_cluster_key=etcd_cluster_key))
+                                               etcd_cluster_key=etcd_cluster_key,
+                                               cassandra_container_id=cassandra_container_id))
     plugins.sort(key=lambda x: x.key())
     plugins_to_use = []
     files = []
