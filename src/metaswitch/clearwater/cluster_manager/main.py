@@ -11,7 +11,7 @@
 
 Usage:
   main.py --mgmt-local-ip=IP --sig-local-ip=IP --local-site=NAME --uuid=UUID (--etcd-key=KEY | --db-key=KEY) (--etcd-cluster-key=CLUSTER_KEY | --db-cluster-key=CLUSTER_KEY)
-          [--remote-site=NAME] [--remote-cassandra-seeds=IPs] [--signaling-namespace=NAME] [--foreground] [--log-level=LVL] [--log-stdout]
+          [--remote-site=NAME] [--remote-cassandra-seeds=IPs] [--signaling-namespace=NAME] [--foreground] [--log-level=LVL]
           [--log-directory=DIR] [--pidfile=FILE] [--cluster-manager-enabled=Y/N] [--etcd | --consul]
 
 Options:
@@ -29,7 +29,6 @@ Options:
   --signaling-namespace=NAME     Name of the signaling namespace
   --foreground                   Don't daemonise
   --log-level=LVL                Level to log at, 0-4 [default: 3]
-  --log-stdout                   Write logs to stdout
   --log-directory=DIR            Directory to log to [default: ./]
   --pidfile=FILE                 Pidfile to write [default: ./cluster-manager.pid]
   --cluster-manager-enabled=Y/N  Whether the cluster manager should start any threads [default: Yes]
@@ -49,9 +48,10 @@ from metaswitch.clearwater.cluster_manager import pdlogs
 import logging
 import os
 import prctl
+import sys
 import syslog
 from threading import activeCount
-from time import sleep
+from time import gmtime, sleep
 import signal
 from uuid import UUID
 
@@ -101,12 +101,12 @@ def main(args):
     etcd_cluster_key = arguments.get('--etcd-cluster-key') or arguments.get('--db-cluster-key')
     cluster_manager_enabled = arguments['--cluster-manager-enabled']
     log_dir = arguments['--log-directory']
-    log_stdout = arguments.get('--log-stdout')
     log_level = LOG_LEVELS.get(arguments['--log-level'], logging.DEBUG)
     if arguments.get('--consul'):
         backend = "consul"
     else:
         backend = "etcd"
+    foreground = arguments['--foreground']
 
     stdout_err_log = os.path.join(log_dir, "cluster-manager.output.log")
 
@@ -118,7 +118,7 @@ def main(args):
         pdlogs.EXITING_MISSING_ETCD_CLUSTER_KEY.log()
         exit(1)
 
-    if not arguments['--foreground']:
+    if not foreground:
         utils.daemonize(stdout_err_log)
 
     # Process names are limited to 15 characters, so abbreviate
@@ -126,8 +126,15 @@ def main(args):
 
     logging_config.configure_logging(log_level, log_dir, "cluster-manager", show_thread=True)
 
-    if log_stdout:
-        logging_config.addHandler(logging.StreamHandler())
+    if foreground:
+        # In foreground mode, write logs to stdout as well
+        root_log = logging.getLogger()
+        fmt = logging_config.THREAD_FORMAT
+        fmt.converter = gmtime
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(fmt)
+        handler.setLevel(log_level)
+        root_log.addHandler(handler)
 
     # urllib3 logs a WARNING log whenever it recreates a connection, but our
     # etcd usage does this frequently (to allow watch timeouts), so deliberately
