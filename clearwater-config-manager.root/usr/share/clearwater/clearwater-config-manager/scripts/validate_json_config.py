@@ -71,17 +71,17 @@ if error_list:
     print "{} is not valid.".format(config_file)
     print "The errors, and the location of the errors in the configuration file, are displayed below:\n"
 
-    d = {}
+    temp_dict = {}
     for error in error_list:
-        nest = d
+        nest = temp_dict
         last = error.path.pop()
         if isinstance(last, int):
             last = 'element %i' % (last + 1)
-        for a in error.path:
-            if isinstance(a, int):
-                a = 'element %i' % (a + 1)
-            nest = nest.setdefault(str(a), {})
+        for error_part in error.path:
+            if isinstance(error_part, int):
+                error_part = 'element %i' % (error_part + 1)
+            nest = nest.setdefault(str(error_part), {})
         nest.setdefault(str(last), {}).setdefault('errors', []).append(error.message)
 
-    print(yaml.dump(d, default_flow_style=False).replace("u'", "'"))
+    print(yaml.dump(temp_dict, default_flow_style=False).replace("u'", "'"))
     sys.exit(1)
