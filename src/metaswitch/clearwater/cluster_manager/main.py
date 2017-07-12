@@ -11,7 +11,7 @@
 
 Usage:
   main.py --mgmt-local-ip=IP --sig-local-ip=IP --local-site=NAME --uuid=UUID (--etcd-key=KEY | --db-key=KEY) (--etcd-cluster-key=CLUSTER_KEY | --db-cluster-key=CLUSTER_KEY)
-          [--remote-site=NAME] [--remote-cassandra-seeds=IPs] [--cassandra_container_id=ID] [--signaling-namespace=NAME] [--foreground] [--log-level=LVL]
+          [--remote-site=NAME] [--remote-cassandra-seeds=IPs] [--cassandra-container-id=ID] [--signaling-namespace=NAME] [--foreground] [--log-level=LVL]
           [--log-directory=DIR] [--pidfile=FILE] [--cluster-manager-enabled=Y/N] [--etcd | --consul]
 
 Options:
