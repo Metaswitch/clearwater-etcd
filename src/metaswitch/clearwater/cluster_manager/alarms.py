@@ -36,7 +36,7 @@ class TooLongAlarm(object):
         with self._condition:
             self._condition.wait(self._delay)
             if self._should_alarm:
-                _log.debug("Raising TOO_LONG_CLUSTERING alarm")
+                _log.info("Raising TOO_LONG_CLUSTERING alarm")
                 self._alarm.set()
 
     def trigger(self, thread_name="Alarm thread"):

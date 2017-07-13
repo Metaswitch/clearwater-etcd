@@ -20,13 +20,13 @@ class QueueAlarm(object):
         self._name = name
 
     def clear(self):
-        _log.debug("Clearing %s alarm" % self._name)
+        _log.info("Clearing %s alarm" % self._name)
         self._alarm.clear()
 
     def minor(self):
-        _log.debug("Raising minor %s alarm" % self._name)
+        _log.info("Raising minor %s alarm" % self._name)
         self._alarm.set(MINOR)
 
     def critical(self):
-        _log.debug("Raising critical %s alarm" % self._name)
+        _log.info("Raising critical %s alarm" % self._name)
         self._alarm.set(CRITICAL)
