@@ -26,7 +26,7 @@ except IOError:
     sys.exit(1)
 except ValueError as e:
     print "{} is not valid.".format(schema_file)
-    print "The errors, and the location of the errors in the configuration file, are displayed below:\n"
+    print "The errors, and the location of the errors in the schema file, are displayed below:\n"
     print e.message
     sys.exit(1)
 
