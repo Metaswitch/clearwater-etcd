@@ -17,11 +17,12 @@ from clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin impo
 
 
 class TestSharedConfigPlugin(unittest.TestCase):
+    @mock.patch("metaswitch.clearwater.config_manager.alarms.ConfigAlarm")
     @mock.patch('clearwater_etcd_plugins.clearwater_queue_manager.apply_config_plugin.subprocess.check_output')
     @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.safely_write')
     @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.run_command')
     def test_config_changed(self, mock_run_command, mock_safely_write,
-            mock_subproc_check_output):
+            mock_subproc_check_output, mock_alarm):
         """Test Config Manager writes new config when config has changed"""
 
         # Create the plugin
@@ -35,14 +36,14 @@ class TestSharedConfigPlugin(unittest.TestCase):
         # Call 'on_config_changed' with codecs.open mocked out
         with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.codecs.open',\
                         mock.mock_open(read_data=old_config_string), create=True) as mock_open:
-            plugin.on_config_changed(new_config_string, None)
+            plugin.on_config_changed(new_config_string, mock_alarm)
 
         # Test assertions
         mock_open.assert_called_once_with(plugin.file(), "r", encoding="utf-8")
         mock_safely_write.assert_called_once_with(plugin.file(), new_config_string)
         mock_run_command.assert_called_once_with\
             ("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_config_key")
-
+        mock_alarm.update_file.assert_called_once_with(plugin.file())
 
     @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.safely_write')
     @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.run_command')
@@ -66,9 +67,10 @@ class TestSharedConfigPlugin(unittest.TestCase):
         mock_safely_write.assert_not_called()
         mock_run_command.assert_not_called()
 
+    @mock.patch("metaswitch.clearwater.config_manager.alarms.ConfigAlarm")
     @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.safely_write')
     @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.run_command')
-    def test_default_config_created(self, mock_run_command, mock_safely_write):
+    def test_default_config_created(self, mock_run_command, mock_safely_write, mock_alarm):
         """Test Config Manager when a new default value is set as etcd key"""
 
         # Create the plugin
@@ -81,9 +83,10 @@ class TestSharedConfigPlugin(unittest.TestCase):
         # Call 'on_config_changed' with codecs.open mocked out
         with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.shared_config_plugin.codecs.open',\
                         mock.mock_open(read_data=old_config_string), create=True) as mock_open:
-            plugin.on_config_changed(new_config_string, None)
+            plugin.on_config_changed(new_config_string, mock_alarm)
 
         # Test assertions
         mock_open.assert_called_once_with(plugin.file(), "r", encoding="utf-8")
         mock_safely_write.assert_called_once_with(plugin.file(), plugin.default_value())
         mock_run_command.assert_not_called()
+        mock_alarm.update_file.assert_called_once_with(plugin.file())
