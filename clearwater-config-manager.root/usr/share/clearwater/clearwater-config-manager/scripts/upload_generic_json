@@ -7,6 +7,9 @@
 # Otherwise no rights are granted except for those provided to you by
 # Metaswitch Networks in a separate written agreement.
 
+local_site_name=site1
+. /etc/clearwater/config
+
 CONFPATH=/etc/clearwater
 FILENAME=$1
 KEY=$2
@@ -14,7 +17,7 @@ SCHEMA=$3
 ALLOW_LARGE_UPLOADS=$4
 
 function usage() {
-  echo "Usage: upload_json <filename> <key> <schema>"
+  echo "Usage: upload_json <filename> <key> <schema> [--allow-large]"
 }
 
 if [[ $1 == "" || $2 == "" || $3 == "" ]]
@@ -36,7 +39,7 @@ then
   echo "The configuration file at $CONFPATH/$FILENAME is empty, uploading a blank file"
 else
   # Validate config json against schema for syntactic errors
-  python /usr/share/clearwater/clearwater-config-manager/scripts/validate_json_config.py $SCHEMA $CONFPATH/$FILENAME
+  python /usr/share/clearwater/clearwater-config-manager/scripts/validate_json.py $SCHEMA $CONFPATH/$FILENAME
 
   # Abort uploading and warn user if validation fails
   rc=$?
@@ -47,8 +50,6 @@ else
 fi
 
 # Check we can contact `etcd`
-local_site_name=site1
-. /etc/clearwater/config
 nc -z ${management_local_ip:-$local_ip} 4000
 if [[ $? != 0 ]]
 then

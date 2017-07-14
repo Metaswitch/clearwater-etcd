@@ -15,7 +15,7 @@ SCHEMA=/usr/share/clearwater/clearwater-config-manager/scripts/config_validation
 
 # Pass optional argument directly to upload_json, which checks for --allow-large
 # option that allows file upload larger than advisable
-/usr/share/clearwater/clearwater-config-manager/scripts/upload_generic_json $FILENAME $KEY $SCHEMA $1
+/usr/share/clearwater/clearwater-config-manager/scripts/upload_generic_json $FILENAME $KEY $SCHEMA $@
 
 # Kick the users of dns.json on this node to reload if the upload was successful
 rc=$?

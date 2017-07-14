@@ -25,7 +25,9 @@ except IOError:
     print "Unable to open {}".format(schema_file)
     sys.exit(1)
 except ValueError as e:
-    print "{} doesn't contain valid JSON ({})".format(schema_file, e.message)
+    print "{} is not valid.".format(schema)
+    print "The errors, and the location of the errors in the configuration file, are displayed below:\n"
+    print e.message
     sys.exit(1)
 
 try:
@@ -34,7 +36,9 @@ except IOError:
     print "Unable to open {}".format(config_file)
     sys.exit(1)
 except ValueError as e:
-    print "{} doesn't contain value JSON ({})".format(config_file, e.message)
+    print "{} is not valid.".format(config_file)
+    print "The errors, and the location of the errors in the configuration file, are displayed below:\n"
+    print e.message
     sys.exit(1)
 
 # Validate the configuration file against the schema
@@ -54,15 +58,17 @@ error_list=sorted(validator.iter_errors(config), key=lambda e: e.path)
 #
 # hostnames:
 #   element 1:
+#     The errors are:
+#     - Additional properties are not allowed ('name2' was unexpected)
 #     name:
-#       errors:
+#       The errors are:
 #       - 1 is not of type 'string'
 #     records:
 #       rrtype:
-#         errors:
+#         The errors are:
 #         - 'CNAME2' does not match '^CNAME$'
 #       target:
-#         errors:
+#         The errors are:
 #         - 1 is not of type 'string'
 #
 # We construct a nested dictionary of the errors, then print it out in a YAML
@@ -74,17 +80,24 @@ if error_list:
     temp_dict = {}
     for error in error_list:
         nest = temp_dict
+
+        # Treat the first entry differently, as this is the key we'll use to
+        # actually set the error messages in the dictionary
         if len(error.path) == 0:
             last = "Top level"
         else:
             last = error.path.pop()
+
         if isinstance(last, int):
             last = 'element %i' % (last + 1)
+
         for error_part in error.path:
             if isinstance(error_part, int):
                 error_part = 'element %i' % (error_part + 1)
+
             nest = nest.setdefault(str(error_part), {})
-        nest.setdefault(str(last), {}).setdefault('errors', []).append(error.message)
+
+        nest.setdefault(str(last), {}).setdefault('The errors are', []).append(error.message)
 
     print(yaml.dump(temp_dict, default_flow_style=False).replace("u'", "'"))
     sys.exit(1)

@@ -26,13 +26,13 @@
                 },
                 "target": {
                   "type": "string"
-                },
-                "required": [
-                  "rrtype",
-                  "target"
-                ],
-                "additionalProperties": false
-              }
+                }
+              },
+              "required": [
+                "rrtype",
+                "target"
+              ],
+              "additionalProperties": false
             }
           }
         },
