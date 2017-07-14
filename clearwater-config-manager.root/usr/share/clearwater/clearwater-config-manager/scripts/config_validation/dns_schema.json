@@ -22,13 +22,17 @@
               "properties": {
                 "rrtype": {
                   "type": "string",
-                  "regex": "^CNAME$"
+                  "pattern": "^CNAME$"
                 },
                 "target": {
                   "type": "string"
-                },
-                "additionalProperties": false
-              }
+                }
+              },
+              "required": [
+                "rrtype",
+                "target"
+              ],
+              "additionalProperties": false
             }
           }
         },
