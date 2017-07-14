@@ -15,11 +15,11 @@ _log = logging.getLogger()
 
 from clearwater_etcd_plugins.clearwater_config_manager.fallback_ifcs_xml_plugin import FallbackIFCsXMLPlugin
 
-
 class TestFallbackIFCsXMLPlugin(unittest.TestCase):
+    @mock.patch("metaswitch.clearwater.config_manager.alarms.ConfigAlarm")
     @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.fallback_ifcs_xml_plugin.safely_write')
     @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.fallback_ifcs_xml_plugin.run_command')
-    def test_config_changed(self, mock_run_command, mock_safely_write):
+    def test_config_changed(self, mock_run_command, mock_safely_write, mock_alarm):
         """Test Config Manager writes new config when config has changed"""
 
         # Create the plugin
@@ -32,12 +32,13 @@ class TestFallbackIFCsXMLPlugin(unittest.TestCase):
         # Call 'on_config_changed' with file.open mocked out
         with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.fallback_ifcs_xml_plugin.open',\
                         mock.mock_open(read_data=old_config_string), create=True) as mock_open:
-            plugin.on_config_changed(new_config_string, None)
+            plugin.on_config_changed(new_config_string, mock_alarm)
 
         # Test assertions
         mock_open.assert_called_once_with(plugin.file(), "r")
         mock_safely_write.assert_called_once_with(plugin.file(), new_config_string)
         mock_run_command.assert_called_once_with("/usr/share/clearwater/bin/reload_fallback_ifcs_xml")
+        mock_alarm.update_file.assert_called_once_with(plugin.file())
 
 
     @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.fallback_ifcs_xml_plugin.safely_write')
@@ -62,9 +63,10 @@ class TestFallbackIFCsXMLPlugin(unittest.TestCase):
         mock_safely_write.assert_not_called()
         mock_run_command.assert_not_called()
 
+    @mock.patch("metaswitch.clearwater.config_manager.alarms.ConfigAlarm")
     @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.fallback_ifcs_xml_plugin.safely_write')
     @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.fallback_ifcs_xml_plugin.run_command')
-    def test_default_config_created(self, mock_run_command, mock_safely_write):
+    def test_default_config_created(self, mock_run_command, mock_safely_write, mock_alarm):
         """Test Config Manager writes new config when a new default value is set as etcd key"""
 
         # Create the plugin
@@ -77,9 +79,10 @@ class TestFallbackIFCsXMLPlugin(unittest.TestCase):
         # Call 'on_config_changed' with file.open mocked out
         with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.fallback_ifcs_xml_plugin.open',\
                         mock.mock_open(read_data=old_config_string), create=True) as mock_open:
-            plugin.on_config_changed(new_config_string, None)
+            plugin.on_config_changed(new_config_string, mock_alarm)
 
         # Test assertions
         mock_open.assert_called_once_with(plugin.file(), "r")
         mock_safely_write.assert_called_once_with(plugin.file(), plugin.default_value())
         mock_run_command.assert_called_once_with("/usr/share/clearwater/bin/reload_fallback_ifcs_xml")
+        mock_alarm.update_file.assert_called_once_with(plugin.file())
