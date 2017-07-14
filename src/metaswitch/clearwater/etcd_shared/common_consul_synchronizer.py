@@ -49,7 +49,7 @@ class CommonConsulSynchronizer(CommonSynchronizer):
                     _log.info("Watching for changes with {}".format(wait_index))
 
                     (_, result) = self._client.get(self.key(),
-                                                   wait=self.TIMEOUT_ON_WATCH,
+                                                   wait="{}s".format(self.TIMEOUT_ON_WATCH),
                                                    index=wait_index,
                                                    recurse=False)
 
