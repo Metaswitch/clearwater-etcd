@@ -16,6 +16,9 @@ from metaswitch.clearwater.etcd_shared.common_synchronizer import CommonSynchron
 _log = logging.getLogger(__name__)
 
 class CommonConsulSynchronizer(CommonSynchronizer):
+    """
+    Common synchroniser for the Consul back-end.
+    """
 
     def __init__(self, plugin, ip, db_ip):
         super(CommonConsulSynchronizer, self).__init__(plugin)
@@ -31,7 +34,6 @@ class CommonConsulSynchronizer(CommonSynchronizer):
 
         try:
             (wait_index, result) = self._client.get(self.key(), consistency=True)
-            # FIXME: is this a string???
             wait_index=int(wait_index)
             wait_index += 1
 

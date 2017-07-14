@@ -19,6 +19,10 @@ _log = logging.getLogger(__name__)
 
 
 class ConsulSynchronizer(CommonConsulSynchronizer):
+    """
+    Cluster manager synchroniser for the Consul back-end.
+    """
+
     def __init__(self, plugin, ip, db_ip=None, force_leave=False):
         super(ConsulSynchronizer, self).__init__(plugin, ip, db_ip)
         self._fsm = SyncFSM(self._plugin, self._ip)
