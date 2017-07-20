@@ -17,10 +17,10 @@ SCHEMA=$3
 ALLOW_LARGE_UPLOADS=$4
 
 function usage() {
-  echo "Usage: upload_json <filename> <key> <schema> [--allow-large]"
+  echo "Usage: upload_generic_json <filename> <key> [<schema>] [--allow-large]"
 }
 
-if [[ $1 == "" || $2 == "" || $3 == "" ]]
+if [[ $1 == "" || $2 == "" ]]
 then
   usage
   exit 2
@@ -37,7 +37,8 @@ then
 elif [[ ! -s $CONFPATH/$FILENAME ]]
 then
   echo "The configuration file at $CONFPATH/$FILENAME is empty, uploading a blank file"
-else
+elif [[ -f $SCHEMA ]]
+then
   # Validate config json against schema for syntactic errors
   python /usr/share/clearwater/clearwater-config-manager/scripts/validate_json.py $SCHEMA $CONFPATH/$FILENAME
 
