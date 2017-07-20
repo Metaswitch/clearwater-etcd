@@ -170,10 +170,11 @@ def main(args):
         # Don't start any threads as we don't want this box to cluster
         pdlogs.DO_NOT_CLUSTER.log()
     else:
+        # Load the plugins, but don't start them until we've installed the
+        # SIGTERM handler, as that handler will gracefully shut down any
+        # remaining synchronizers on receiving a SIGTERM
         for plugin in plugins_to_use:
             syncer = EtcdSynchronizer(plugin, sig_ip, etcd_ip=mgmt_ip)
-            syncer.start_thread()
-
             synchronizers.append(syncer)
             threads.append(syncer.thread)
             _log.info("Loaded plugin %s" % plugin)
@@ -181,6 +182,11 @@ def main(args):
 
     install_sigquit_handler(synchronizers)
     utils.install_sigterm_handler(synchronizers)
+
+    # If we have any plugins, start their threads now
+    for syncer in synchronizers:
+        syncer.start_thread()
+        _log.info("Started thread for plugin %s" % syncer._plugin)
 
     while any([thread.isAlive() for thread in threads]):
         for thread in threads:
