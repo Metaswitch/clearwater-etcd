@@ -11,7 +11,7 @@ import collections
 
 PluginParams = collections.namedtuple(
                  'PluginParams',
-                 ['ip', 'mgmt_ip', 'local_site', 'remote_site', 'remote_cassandra_seeds', 'signaling_namespace', 'uuid', 'etcd_key', 'etcd_cluster_key'])
+                 ['ip', 'mgmt_ip', 'local_site', 'remote_site', 'remote_cassandra_seeds', 'signaling_namespace', 'uuid', 'etcd_key', 'etcd_cluster_key', 'cassandra_container_id'])
 
 
 class SynchroniserPluginBase(object): # pragma: no cover

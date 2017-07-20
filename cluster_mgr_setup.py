@@ -25,7 +25,8 @@ setup(
     test_suite='metaswitch.clearwater.cluster_manager.test',
     install_requires=[
         "clearwater_etcd_shared",
-        "metaswitchcommon"],
+        "metaswitchcommon",
+        "python-consul==0.7.0"],
     tests_require=[
         "funcsigs==1.0.2",
         "Mock==2.0.0",

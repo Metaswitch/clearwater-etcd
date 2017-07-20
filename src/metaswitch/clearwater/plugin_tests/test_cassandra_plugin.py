@@ -45,7 +45,8 @@ class TestCassandraPlugin(unittest.TestCase):
                                               signaling_namespace='',
                                               uuid=uuid.UUID('92a674aa-a64b-4549-b150-596fd466923f'),
                                               etcd_key='etcd_key',
-                                              etcd_cluster_key='etcd_cluster_key'))
+                                              etcd_cluster_key='etcd_cluster_key',
+                                              cassandra_container_id=None))
 
         # We expect this alarm to be called on creation of the plugin
         mock_get_alarm.assert_called_once_with('cluster-manager',
@@ -140,7 +141,7 @@ seed_provider:\n\
             [mock.call("/etc/cassandra/cassandra.yaml"),
              mock.call("/etc/clearwater/force_cassandra_yaml_refresh")]
 
-        # These calls cover restarting cassandra, and the commands called by 
+        # These calls cover restarting cassandra, and the commands called by
         # the plugin in wait_for_cassandra.
         run_command_call_list = \
             [mock.call("start-stop-daemon -K -p /var/run/cassandra/cassandra.pid -R TERM/30/KILL/5"),

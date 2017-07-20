@@ -10,26 +10,31 @@
 """Clearwater Cluster Manager
 
 Usage:
-  main.py --mgmt-local-ip=IP --sig-local-ip=IP --local-site=NAME --remote-site=NAME --remote-cassandra-seeds=IPs --uuid=UUID --etcd-key=KEY --etcd-cluster-key=CLUSTER_KEY
-          [--signaling-namespace=NAME] [--foreground] [--log-level=LVL]
-          [--log-directory=DIR] [--pidfile=FILE] [--cluster-manager-enabled=Y/N]
+  main.py --mgmt-local-ip=IP --sig-local-ip=IP --local-site=NAME --uuid=UUID (--etcd-key=KEY | --db-key=KEY) (--etcd-cluster-key=CLUSTER_KEY | --db-cluster-key=CLUSTER_KEY)
+          [--remote-site=NAME] [--remote-cassandra-seeds=IPs] [--cassandra-container-id=ID] [--signaling-namespace=NAME] [--foreground] [--log-level=LVL]
+          [--log-directory=DIR] [--pidfile=FILE] [--cluster-manager-enabled=Y/N] [--etcd | --consul]
 
 Options:
   -h --help                      Show this screen.
-  --mgmt-local-ip=IP             Management IP address
-  --sig-local-ip=IP              Signaling IP address
+  --mgmt-local-ip=IP             Management IP address (for the back-end)
+  --sig-local-ip=IP              Signaling IP address (must be unique for each node in the cluster)
   --local-site=NAME              Name of local site
-  --remote-site=NAME             Name of remote site
-  --remote-cassandra-seeds=IPs   Comma separated list of at least one IP address from each remote Cassandra site
-  --signaling-namespace=NAME     Name of the signaling namespace
   --uuid=UUID                    UUID uniquely identifying this node
   --etcd-key=KEY                 Etcd key (top level)
+  --db-key=KEY                   Top-level key in back-end database
   --etcd-cluster-key=CLUSTER_KEY Etcd key (used in the data store clusters)
+  --db-cluster-key=CLUSTER_KEY   Back-end database key (used in the data store clusters)
+  --remote-site=NAME             Name of remote site
+  --remote-cassandra-seeds=IPs   Comma separated list of at least one IP address from each remote Cassandra site
+  --cassandra-container-id=ID    When containerised, the ID of the local Cassandra container
+  --signaling-namespace=NAME     Name of the signaling namespace
   --foreground                   Don't daemonise
   --log-level=LVL                Level to log at, 0-4 [default: 3]
   --log-directory=DIR            Directory to log to [default: ./]
   --pidfile=FILE                 Pidfile to write [default: ./cluster-manager.pid]
   --cluster-manager-enabled=Y/N  Whether the cluster manager should start any threads [default: Yes]
+  --etcd                         Use the etcd back-end (the default)
+  --consul                       Use the Consul back-end
 
 """
 
@@ -37,15 +42,17 @@ from docopt import docopt, DocoptExit
 
 from metaswitch.common import logging_config, utils
 from metaswitch.clearwater.etcd_shared.plugin_loader import load_plugins_in_dir
+from metaswitch.clearwater.cluster_manager.consul_synchronizer import ConsulSynchronizer
 from metaswitch.clearwater.cluster_manager.etcd_synchronizer import EtcdSynchronizer
 from metaswitch.clearwater.cluster_manager.plugin_base import PluginParams
 from metaswitch.clearwater.cluster_manager import pdlogs
 import logging
 import os
 import prctl
+import sys
 import syslog
 from threading import activeCount
-from time import sleep
+from time import gmtime, sleep
 import signal
 from uuid import UUID
 
@@ -83,19 +90,25 @@ def main(args):
     mgmt_ip = arguments['--mgmt-local-ip']
     sig_ip = arguments['--sig-local-ip']
     local_site_name = arguments['--local-site']
-    remote_site_name = arguments['--remote-site']
-    remote_cassandra_seeds = arguments['--remote-cassandra-seeds']
+    remote_site_name = arguments.get('--remote-site')
+    remote_cassandra_seeds = arguments.get('--remote-cassandra-seeds')
     if remote_cassandra_seeds:
         remote_cassandra_seeds = remote_cassandra_seeds.split(',')
     else:
         remote_cassandra_seeds = []
+    cassandra_container_id = arguments.get('--cassandra-container-id')
     signaling_namespace = arguments.get('--signaling-namespace')
     local_uuid = UUID(arguments['--uuid'])
-    etcd_key = arguments.get('--etcd-key')
-    etcd_cluster_key = arguments.get('--etcd-cluster-key')
+    etcd_key = arguments.get('--etcd-key') or arguments.get('--db-key')
+    etcd_cluster_key = arguments.get('--etcd-cluster-key') or arguments.get('--db-cluster-key')
     cluster_manager_enabled = arguments['--cluster-manager-enabled']
     log_dir = arguments['--log-directory']
     log_level = LOG_LEVELS.get(arguments['--log-level'], logging.DEBUG)
+    if arguments.get('--consul'):
+        backend = "consul"
+    else:
+        backend = "etcd"
+    foreground = arguments['--foreground']
 
     stdout_err_log = os.path.join(log_dir, "cluster-manager.output.log")
 
@@ -107,13 +120,23 @@ def main(args):
         pdlogs.EXITING_MISSING_ETCD_CLUSTER_KEY.log()
         exit(1)
 
-    if not arguments['--foreground']:
+    if not foreground:
         utils.daemonize(stdout_err_log)
 
     # Process names are limited to 15 characters, so abbreviate
     prctl.prctl(prctl.NAME, "cw-cluster-mgr")
 
     logging_config.configure_logging(log_level, log_dir, "cluster-manager", show_thread=True)
+
+    if foreground:
+        # In foreground mode, write logs to stdout as well
+        root_log = logging.getLogger()
+        fmt = logging_config.THREAD_FORMAT
+        fmt.converter = gmtime
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(fmt)
+        handler.setLevel(log_level)
+        root_log.addHandler(handler)
 
     # urllib3 logs a WARNING log whenever it recreates a connection, but our
     # etcd usage does this frequently (to allow watch timeouts), so deliberately
@@ -143,7 +166,8 @@ def main(args):
                                                signaling_namespace=signaling_namespace,
                                                uuid=local_uuid,
                                                etcd_key=etcd_key,
-                                               etcd_cluster_key=etcd_cluster_key))
+                                               etcd_cluster_key=etcd_cluster_key,
+                                               cassandra_container_id=cassandra_container_id))
     plugins.sort(key=lambda x: x.key())
     plugins_to_use = []
     files = []
@@ -171,7 +195,11 @@ def main(args):
         pdlogs.DO_NOT_CLUSTER.log()
     else:
         for plugin in plugins_to_use:
-            syncer = EtcdSynchronizer(plugin, sig_ip, etcd_ip=mgmt_ip)
+            if backend == "etcd":
+                syncer = EtcdSynchronizer(plugin, sig_ip, etcd_ip=mgmt_ip)
+            else:
+                syncer = ConsulSynchronizer(plugin, sig_ip, db_ip=mgmt_ip)
+
             syncer.start_thread()
 
             synchronizers.append(syncer)

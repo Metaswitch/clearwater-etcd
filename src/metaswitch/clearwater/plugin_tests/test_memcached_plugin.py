@@ -37,7 +37,8 @@ class TestMemcachedPlugin(unittest.TestCase):
                                               signaling_namespace='',
                                               uuid=uuid.UUID('92a674aa-a64b-4549-b150-596fd466923f'),
                                               etcd_key='etcd_key',
-                                              etcd_cluster_key='etcd_cluster_key'))
+                                              etcd_cluster_key='etcd_cluster_key',
+                                              cassandra_container_id=None))
 
         # We expect this alarm to be called on creation of the plugin
         mock_get_alarm.assert_called_once_with('cluster-manager',
@@ -111,7 +112,8 @@ class TestMemcachedPlugin(unittest.TestCase):
                                               signaling_namespace='',
                                               uuid=uuid.UUID('92a674aa-a64b-4549-b150-596fd466923f'),
                                               etcd_key='etcd_key',
-                                              etcd_cluster_key='etcd_cluster_key'))
+                                              etcd_cluster_key='etcd_cluster_key',
+                                              cassandra_container_id=None))
 
         # We expect this alarm to be called on creation of the plugin
         mock_get_alarm.assert_called_once_with('cluster-manager',
@@ -176,7 +178,8 @@ class TestMemcachedPlugin(unittest.TestCase):
                                                     signaling_namespace='',
                                                     uuid=uuid.UUID('92a674aa-a64b-4549-b150-596fd466923f'),
                                                     etcd_key='etcd_key',
-                                                    etcd_cluster_key='etcd_cluster_key'))
+                                                    etcd_cluster_key='etcd_cluster_key',
+                                                    cassandra_container_id=None))
 
         # Config writing is properly tested above, so run with simple cluster
         cluster_view = {"10.0.0.5": "normal"}
