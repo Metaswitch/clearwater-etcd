@@ -6,7 +6,7 @@
 # Metaswitch Networks in a separate written agreement.
 
 import os
-import subprocess
+import subprocess, shlex
 import sys
 import etcd
 import yaml
@@ -27,8 +27,17 @@ try:
     # output as valid yaml, we need to use tr to replace tabs with spaces.
     # We remove any xss=.., as this can be printed out by 
     # cassandra-env.sh
-    command = "/usr/share/clearwater/bin/run-in-signaling-namespace nodetool describecluster | grep -v \"^xss = \" | tr \"\t\" \" \""
-    desc_cluster_output = subprocess.check_output(command, shell=True)
+    args = ["/usr/share/clearwater/bin/run-in-signaling-namespace", "nodetool",
+            "describecluster"]
+    args2 = shlex.split("grep -v \"^xss = \" | tr \"\t\" \" \"")
+    process_nodetool = subprocess.Popen(args, stdout=subprocess.PIPE)
+    process_grep = subprocess.Popen(args2, stdin=process_nodetool.stdout,
+            stdout=subprocess.PIPE)
+    
+    # Allow process_nodetool to receive a SIGPIPE if process_grep exits.
+    process_nodetool.stdout.close()
+    desc_cluster_output = process_grep.communicate()[0]
+
     doc = yaml.load(desc_cluster_output)
     servers = doc["Cluster Information"]["Schema versions"].values()[0]
     data = json.dumps({server: "normal" for server in servers})

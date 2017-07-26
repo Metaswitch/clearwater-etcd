@@ -9,7 +9,7 @@
 import tempfile
 import os
 from os.path import dirname
-import subprocess
+import subprocess, shlex
 import logging
 
 _log = logging.getLogger("etcd_shared.plugin_utils")
@@ -25,12 +25,11 @@ def run_command(command, namespace=None, log_error=True):
     passing to this function.
     """
     if namespace:
-        command = "ip netns exec {} ".format(namespace) + command
+        command = "ip netns exec {} ".format(namespace) + shlex.quote(command)
 
     # Pass the close_fds argument to avoid the pidfile lock being held by
     # child processes
-    p = subprocess.Popen(command,
-                         shell=True,
+    p = subprocess.Popen(shlex.split(command),
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE,
                          close_fds=True)
