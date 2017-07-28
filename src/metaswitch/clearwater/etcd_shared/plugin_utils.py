@@ -25,11 +25,13 @@ def run_command(command, namespace=None, log_error=True):
     passing to this function.
     """
     if namespace:
-        command = "ip netns exec {} ".format(namespace) + shlex.quote(command)
+        command = ["ip", "netns", "exec", namespace, command]
+    else:
+        command = [command]
 
     # Pass the close_fds argument to avoid the pidfile lock being held by
     # child processes
-    p = subprocess.Popen(shlex.split(command),
+    p = subprocess.Popen(command,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE,
                          close_fds=True)
@@ -38,7 +40,7 @@ def run_command(command, namespace=None, log_error=True):
         # it failed, log the return code and output
         if log_error:
             _log.error("Command {} failed with return code {}, "
-                       "stdout {!r}, and stderr {!r}".format(command,
+                       "stdout {!r}, and stderr {!r}".format(" ".join(command),
                                                              p.returncode,
                                                              stdout,
                                                              stderr))
