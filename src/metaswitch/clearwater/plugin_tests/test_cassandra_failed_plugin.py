@@ -44,3 +44,6 @@ class TestCassandraFailedPlugin(unittest.TestCase):
              [mock.call("/usr/share/clearwater/bin/run-in-signaling-namespace nodetool removenode 92a674aa-a64b-4549-b150-596fd466923f")]
 
         mock_run_command.assert_has_calls(run_command_call_list)
+
+    def test_get_ip():
+        # pass
