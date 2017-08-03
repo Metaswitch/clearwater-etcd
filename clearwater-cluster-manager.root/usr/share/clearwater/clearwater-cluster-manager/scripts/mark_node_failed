@@ -17,8 +17,7 @@ etcd_key=clearwater
 
 if [ $# -ne 3 ] && [ $# -ne 4 ]
 then
-  echo "Usage: mark_node_failed [node_type] [datastore] [failed_node_ip]"
-  echo "       mark_node_failed [node_type] [datastore] [failed_node_ip] [etcd_ip]"
+  echo "Usage: mark_node_failed <node_type> <datastore> <failed_node_ip> [<etcd_ip>]"
   exit 1
 fi
 
