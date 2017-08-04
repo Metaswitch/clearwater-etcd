@@ -13,9 +13,8 @@ from metaswitch.clearwater.cluster_manager.etcd_synchronizer import \
     EtcdSynchronizer
 from metaswitch.clearwater.cluster_manager.null_plugin import \
     NullPlugin
-from metaswitch.clearwater.etcd_shared.plugin_utils import run_command
 
-def make_key(site, node_type, datatore, etcd_key):
+def make_key(site, node_type, datastore, etcd_key):
     if datastore == "cassandra":
         return "/{}/{}/clustering/{}".format(etcd_key, node_type, datastore)
     else:
