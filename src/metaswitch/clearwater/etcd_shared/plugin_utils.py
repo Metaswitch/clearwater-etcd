@@ -10,6 +10,7 @@ import tempfile
 import os
 from os.path import dirname
 import subprocess
+import shlex
 import logging
 
 _log = logging.getLogger("etcd_shared.plugin_utils")
@@ -29,8 +30,7 @@ def run_command(command, namespace=None, log_error=True):
 
     # Pass the close_fds argument to avoid the pidfile lock being held by
     # child processes
-    p = subprocess.Popen(command,
-                         shell=True,
+    p = subprocess.Popen(shlex.split(command),
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE,
                          close_fds=True)
