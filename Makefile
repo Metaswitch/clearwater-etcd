@@ -79,6 +79,7 @@ $(ENV_DIR)/bin/python:
 	$(ENV_DIR)/bin/easy_install distribute
 
 include build-infra/cw-deb.mk
+include build-infra/python.mk
 
 .PHONY: build-eggs
 build-eggs: ${ENV_DIR}/.cluster-mgr-build-eggs ${ENV_DIR}/.queue-mgr-build-eggs ${ENV_DIR}/.config-mgr-build-eggs
@@ -149,3 +150,4 @@ envclean:
 	rm -rf distribute-*.tar.gz
 	rm -rf $(ENV_DIR)
 
+BANDIT_EXCLUDE_LIST = src/metaswitch/clearwater/queue_manager/test/,src/metaswitch/clearwater/plugin_tests/,src/metaswitch/clearwater/etcd_tests/,src/metaswitch/clearwater/etcd_shared/test,src/metaswitch/clearwater/config_manager/test/,src/metaswitch/clearwater/cluster_manager/test/,common,_env,.eggs,debian,build_clustermgr,build_configmgr,build_shared
