@@ -9,13 +9,14 @@ import os
 from os import sys
 import etcd
 import logging
+from metaswitch.clearwater.cluster_manager.cluster_state import \
+    ClusterInfo
 from metaswitch.clearwater.cluster_manager.etcd_synchronizer import \
     EtcdSynchronizer
 from metaswitch.clearwater.cluster_manager.null_plugin import \
     NullPlugin
-from metaswitch.clearwater.etcd_shared.plugin_utils import run_command
 
-def make_key(site, node_type, datatore, etcd_key):
+def make_key(site, node_type, datastore, etcd_key):
     if datastore == "cassandra":
         return "/{}/{}/clustering/{}".format(etcd_key, node_type, datastore)
     else:
@@ -47,6 +48,14 @@ if datastore == "cassandra":
     sys.exit(1)
 else:
   error_syncer = EtcdSynchronizer(NullPlugin(key), dead_node_ip, etcd_ip=etcd_ip, force_leave=True)
+
+# Check that the dead node is even a member of the cluster
+etcd_result, idx = error_syncer.read_from_etcd(wait=False)
+cluster_info = ClusterInfo(etcd_result)
+
+if cluster_info.local_state(dead_node_ip) is None:
+    print "Not in cluster - no work required"
+    sys.exit(0)
 
 print "Marking node as failed and removing it from the cluster - will take at least 30 seconds"
 # Move the dead node into ERROR state to allow in-progress operations to
