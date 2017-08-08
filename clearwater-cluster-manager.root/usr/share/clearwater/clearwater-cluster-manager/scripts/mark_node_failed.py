@@ -5,19 +5,27 @@
 # Otherwise no rights are granted except for those provided to you by
 # Metaswitch Networks in a separate written agreement.
 
+"""mark_node_failed
+
+Usage:
+  mark_node_failed.py <local_ip> <site> <node_type> <datastore> <dead_node_ip> <etcd_key>
+"""
+
+from docopt import docopt, DocoptExit
 import os
 from os import sys
-import etcd
+import consul
 import logging
-from metaswitch.clearwater.cluster_manager.etcd_synchronizer import \
-    EtcdSynchronizer
+import time
+from metaswitch.clearwater.cluster_manager.consul_synchronizer import ConsulSynchronizer
+from metaswitch.clearwater.cluster_manager.cluster_state import ClusterInfo
 from metaswitch.clearwater.cluster_manager.null_plugin import \
     NullPlugin
 from metaswitch.clearwater.etcd_shared.plugin_utils import run_command
 
-def make_key(site, node_type, datatore, etcd_key):
+def make_key(site, node_type, datastore, etcd_key):
     if datastore == "cassandra":
-        return "/{}/{}/clustering/{}".format(etcd_key, node_type, datastore)
+        return "{}/{}/clustering/{}".format(etcd_key, node_type, datastore)
     else:
         return "/{}/{}/{}/clustering/{}".format(etcd_key, site, node_type, datastore)
 
@@ -27,12 +35,14 @@ logging.basicConfig(filename=logfile,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.DEBUG)
 
-etcd_ip = sys.argv[1]
-site = sys.argv[2]
-node_type = sys.argv[3]
-datastore = sys.argv[4]
-dead_node_ip = sys.argv[5]
-etcd_key = sys.argv[6]
+arguments = docopt(__doc__)
+
+local_ip = arguments["<local_ip>"]
+site = arguments["<site>"]
+node_type = arguments["<node_type>"]
+datastore = arguments["<datastore>"]
+dead_node_ip = arguments["<dead_node_ip>"]
+etcd_key = arguments["<etcd_key>"]
 
 key = make_key(site, node_type, datastore, etcd_key)
 logging.info("Using etcd key %s" % (key))
@@ -40,13 +50,22 @@ logging.info("Using etcd key %s" % (key))
 if datastore == "cassandra":
   try:
     sys.path.append("/usr/share/clearwater/clearwater-cluster-manager/failed_plugins")
-    from cassandra_failed_plugin import CassandraFailedPlugin
-    error_syncer = EtcdSynchronizer(CassandraFailedPlugin(key, dead_node_ip), dead_node_ip, etcd_ip=etcd_ip, force_leave=True)
+    from ddd_failed_plugin import DddFailedPlugin
+    # @@@ sort out etcd_ip/db_ip!
+    error_syncer = ConsulSynchronizer(DddFailedPlugin(key, dead_node_ip), dead_node_ip, db_ip=local_ip, force_leave=True)
   except ImportError:
     print "You must run mark_node_failed on a node that has Cassandra installed to remove a node from a Cassandra cluster"
     sys.exit(1)
 else:
-  error_syncer = EtcdSynchronizer(NullPlugin(key), dead_node_ip, etcd_ip=etcd_ip, force_leave=True)
+  error_syncer = ConsulSynchronizer(NullPlugin(key), dead_node_ip, db_ip=local_ip, force_leave=True)
+
+(db_result, idx) = error_syncer.read_from_db(wait=False)
+
+cluster_info = ClusterInfo(db_result)
+
+if cluster_info.local_state(dead_node_ip) == None:
+    print "Not in cluster - no work required"
+    sys.exit(0)
 
 print "Marking node as failed and removing it from the cluster - will take at least 30 seconds"
 # Move the dead node into ERROR state to allow in-progress operations to
@@ -62,7 +81,15 @@ error_syncer.thread.join()
 
 print "Process complete - %s has left the cluster" % dead_node_ip
 
-c = etcd.Client(etcd_ip, 4000)
-new_state = c.get(key).value
+c = consul.Consul(host=local_ip).kv
+
+for i in range(0, 10):
+    (_index, value) = c.get(key)
+    new_state = value["Value"]
+
+    if not dead_node_ip in new_state:
+        break
+
+    time.sleep(6)
 
 logging.info("New etcd state (after removing %s) is %s" % (dead_node_ip, new_state))
