@@ -1,0 +1,48 @@
+{
+  "title": "All DNS records",
+  "type": "object",
+  "properties": {
+    "hostnames": {
+      "type": "array",
+      "items": {
+        "title": "Each DNS record",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "hostname of DNS entry"
+          },
+          "records": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "title": "DNS record for a hostname",
+              "type": "object",
+              "properties": {
+                "rrtype": {
+                  "type": "string",
+                  "pattern": "^CNAME$"
+                },
+                "target": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "rrtype",
+                "target"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "name",
+          "records"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

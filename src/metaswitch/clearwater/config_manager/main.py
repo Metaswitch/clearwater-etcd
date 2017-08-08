@@ -103,15 +103,21 @@ def main(args):
     files = [p.file() for p in plugins]
     alarm = ConfigAlarm(files)
 
+    # Load the plugins, but don't start them until we've installed the SIGTERM
+    # handler, as that handler will gracefully shut down any running
+    # synchronizers on receiving a SIGTERM
     for plugin in plugins:
         syncer = EtcdSynchronizer(plugin, local_ip, local_site, alarm, etcd_key)
-        syncer.start_thread()
-
         synchronizers.append(syncer)
         threads.append(syncer.thread)
         _log.info("Loaded plugin %s" % plugin)
 
     utils.install_sigterm_handler(synchronizers)
+
+    # Now start the plugin threads
+    for syncer in synchronizers:
+        syncer.start_thread()
+        _log.info("Started thread for plugin %s" % syncer._plugin)
 
     while any([thr.isAlive() for thr in threads]):
         for thr in threads:

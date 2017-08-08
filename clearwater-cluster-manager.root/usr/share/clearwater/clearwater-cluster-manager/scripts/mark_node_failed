@@ -15,14 +15,18 @@ etcd_key=clearwater
 
 . /usr/share/clearwater/utils/check-root-permissions 1
 
-if [ $# -ne 3 ]
+if [ $# -ne 3 ] && [ $# -ne 4 ]
 then
-  echo "Usage: mark_node_failed [node_type] [datastore] [failed_node_ip]"
+  echo "Usage: mark_node_failed <node_type> <datastore> <failed_node_ip> [<etcd_ip>]"
   exit 1
 fi
 
 node_type=$1
 datastore=$2
 dead_node_ip=$3
+# If etcd_ip is not provided, first default to management_local_ip, and then
+# default to local_ip.
+etcd_ip=${4:-$management_local_ip}
+etcd_ip=${etcd_ip:-$local_ip}
 
-/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-cluster-manager/scripts/mark_node_failed.py ${management_local_ip:-$local_ip} $local_site_name $node_type $datastore $dead_node_ip $etcd_key
+/usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-cluster-manager/scripts/mark_node_failed.py $etcd_ip $local_site_name $node_type $datastore $dead_node_ip $etcd_key
