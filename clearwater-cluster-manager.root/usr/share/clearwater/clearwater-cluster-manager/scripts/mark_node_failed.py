@@ -47,6 +47,14 @@ etcd_key = arguments["<etcd_key>"]
 key = make_key(site, node_type, datastore, etcd_key)
 logging.info("Using etcd key %s" % (key))
 
+c = consul.Consul(host=local_ip).kv
+(_index, value) = c.get(key)
+state = value["Value"]
+
+if not dead_node_ip in state:
+    print "%s not in cluster - no work required" % dead_node_ip
+    sys.exit(0)
+
 if datastore == "cassandra":
   try:
     sys.path.append("/usr/share/clearwater/clearwater-cluster-manager/failed_plugins")
@@ -58,14 +66,6 @@ if datastore == "cassandra":
     sys.exit(1)
 else:
   error_syncer = ConsulSynchronizer(NullPlugin(key), dead_node_ip, db_ip=local_ip, force_leave=True)
-
-(db_result, idx) = error_syncer.read_from_db(wait=False)
-
-cluster_info = ClusterInfo(db_result)
-
-if cluster_info.local_state(dead_node_ip) == None:
-    print "Not in cluster - no work required"
-    sys.exit(0)
 
 print "Marking node as failed and removing it from the cluster - will take at least 30 seconds"
 # Move the dead node into ERROR state to allow in-progress operations to
@@ -80,8 +80,6 @@ error_syncer.leave_cluster()
 error_syncer.thread.join()
 
 print "Process complete - %s has left the cluster" % dead_node_ip
-
-c = consul.Consul(host=local_ip).kv
 
 for i in range(0, 10):
     (_index, value) = c.get(key)
