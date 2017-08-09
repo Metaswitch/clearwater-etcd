@@ -26,7 +26,7 @@ datastore=$2
 dead_node_ip=$3
 # If etcd_ip is not provided, first default to management_local_ip, and then
 # default to local_ip.
-etcd_ip=${4:-$management_local_ip}
-etcd_ip=${etcd_ip:-$local_ip}
+local_ip=${management_local_ip:-$local_ip}
+etcd_ip=${4:-$local_ip}
 
 /usr/share/clearwater/clearwater-cluster-manager/env/bin/python /usr/share/clearwater/clearwater-cluster-manager/scripts/mark_node_failed.py $etcd_ip $local_site_name $node_type $datastore $dead_node_ip $etcd_key
