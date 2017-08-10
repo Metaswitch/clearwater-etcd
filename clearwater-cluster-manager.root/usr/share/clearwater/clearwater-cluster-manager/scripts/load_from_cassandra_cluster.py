@@ -27,22 +27,11 @@ try:
     # output as valid yaml, we need to use tr to replace tabs with spaces.
     # We remove any xss=.., as this can be printed out by 
     # cassandra-env.sh
-    nodetool_cmd = ['/usr/share/clearwater/bin/run-in-signaling-namespace',
-            'nodetool', 'describecluster']
-    grep_cmd = ['grep', '-v', '\"^xss = \"']
-    trace_cmd = ['tr',  '\"\t\" \" \""']
-
-    process_nodetool = subprocess.Popen(nodetool_cmd, stdout=subprocess.PIPE)
-    process_grep = subprocess.Popen(grep_cmd, stdin=process_nodetool.stdout,
-            stdout=subprocess.PIPE)
-    process_trace = subprocess.Popen(trace_cmd, stdin=process_grep.stdout,
-            stdout=subprocess.PIPE)
-            
-    # Allow previous process to receive a SIGPIPE if subsequent process exits.
-    process_nodetool.stdout.close()
-    process_grep.stdout.close()
-    
-    desc_cluster_output = process_trace.communicate()[0]
+    command = "/usr/share/clearwater/bin/run-in-signaling-namespace nodetool describecluster | grep -v \"^xss = \" | tr \"\t\" \" \""
+    # The following line has a comment to leave it out for Bandit analysis, as 
+    # it is syntactically marked for shell injection risk, while using a literal
+    # string as command does not actually pose a risk of it.
+    desc_cluster_output = subprocess.check_output(command, shell=True)  # nosec
     doc = yaml.load(desc_cluster_output)
     servers = doc["Cluster Information"]["Schema versions"].values()[0]
     data = json.dumps({server: "normal" for server in servers})
