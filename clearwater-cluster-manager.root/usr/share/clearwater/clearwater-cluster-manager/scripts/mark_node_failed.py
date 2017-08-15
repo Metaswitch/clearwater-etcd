@@ -8,32 +8,29 @@
 """mark_node_failed
 
 Usage:
-  mark_node_failed.py <local_ip> <site> <node_type> <datastore> <dead_node_ip> <etcd_key>
+  mark_node_failed.py <local_ip> <site> <node_type> <datastore> <dead_node_ip> <etcd_key> [--foreground]
 """
 
-from docopt import docopt, DocoptExit
-import os
+from docopt import docopt
 from os import sys
 import consul
 import logging
 import time
-from metaswitch.clearwater.cluster_manager.consul_synchronizer import ConsulSynchronizer
-from metaswitch.clearwater.cluster_manager.cluster_state import ClusterInfo
+from metaswitch.clearwater.cluster_manager.consul_synchronizer import \
+    ConsulSynchronizer
 from metaswitch.clearwater.cluster_manager.null_plugin import \
     NullPlugin
-from metaswitch.clearwater.etcd_shared.plugin_utils import run_command
+
 
 def make_key(site, node_type, datastore, etcd_key):
     if datastore == "cassandra":
         return "{}/{}/clustering/{}".format(etcd_key, node_type, datastore)
     else:
-        return "/{}/{}/{}/clustering/{}".format(etcd_key, site, node_type, datastore)
+        return "/{}/{}/{}/clustering/{}".format(etcd_key,
+                                                site,
+                                                node_type,
+                                                datastore)
 
-logfile = "/var/log/clearwater-etcd/mark_node_failed.log"
-print "Detailed output being sent to %s" % logfile
-logging.basicConfig(filename=logfile,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.DEBUG)
 
 arguments = docopt(__doc__)
 
@@ -43,6 +40,19 @@ node_type = arguments["<node_type>"]
 datastore = arguments["<datastore>"]
 dead_node_ip = arguments["<dead_node_ip>"]
 etcd_key = arguments["<etcd_key>"]
+foreground = arguments["--foreground"]
+
+if foreground:
+    # In foreground mode, write logs to stdout
+    logging.basicConfig(stream=sys.stdout,
+                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                        level=logging.DEBUG)
+else:
+    logfile = "/var/log/clearwater-etcd/mark_node_failed.log"
+    print "Detailed output being sent to %s" % logfile
+    logging.basicConfig(filename=logfile,
+                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                        level=logging.DEBUG)
 
 key = make_key(site, node_type, datastore, etcd_key)
 logging.info("Using etcd key %s" % (key))
@@ -51,21 +61,27 @@ c = consul.Consul(host=local_ip).kv
 (_index, value) = c.get(key)
 state = value["Value"]
 
-if not dead_node_ip in state:
+if dead_node_ip not in state:
     print "%s not in cluster - no work required" % dead_node_ip
     sys.exit(0)
 
 if datastore == "cassandra":
-  try:
-    sys.path.append("/usr/share/clearwater/clearwater-cluster-manager/failed_plugins")
-    from ddd_failed_plugin import DddFailedPlugin
-    # @@@ sort out etcd_ip/db_ip!
-    error_syncer = ConsulSynchronizer(DddFailedPlugin(key, dead_node_ip), dead_node_ip, db_ip=local_ip, force_leave=True)
-  except ImportError:
-    print "You must run mark_node_failed on a node that has Cassandra installed to remove a node from a Cassandra cluster"
-    sys.exit(1)
+    try:
+        sys.path.append("/usr/share/clearwater/clearwater-cluster-manager/failed_plugins")
+        from ddd_failed_plugin import DddFailedPlugin
+        error_syncer = ConsulSynchronizer(DddFailedPlugin(key, dead_node_ip),
+                                          dead_node_ip,
+                                          db_ip=local_ip,
+                                          force_leave=True)
+    except ImportError:
+        print "You must run mark_node_failed on a node that has Cassandra \
+               installed to remove a node from a Cassandra cluster"
+        sys.exit(1)
 else:
-  error_syncer = ConsulSynchronizer(NullPlugin(key), dead_node_ip, db_ip=local_ip, force_leave=True)
+    error_syncer = ConsulSynchronizer(NullPlugin(key),
+                                      dead_node_ip,
+                                      db_ip=local_ip,
+                                      force_leave=True)
 
 print "Marking node as failed and removing it from the cluster - will take at least 30 seconds"
 # Move the dead node into ERROR state to allow in-progress operations to
@@ -85,9 +101,10 @@ for i in range(0, 10):
     (_index, value) = c.get(key)
     new_state = value["Value"]
 
-    if not dead_node_ip in new_state:
+    if dead_node_ip not in new_state:
         break
 
     time.sleep(6)
 
-logging.info("New etcd state (after removing %s) is %s" % (dead_node_ip, new_state))
+logging.info("New etcd state (after removing %s) is %s" % (dead_node_ip,
+                                                           new_state))

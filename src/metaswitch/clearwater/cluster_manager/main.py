@@ -60,13 +60,15 @@ _log = logging.getLogger("cluster_manager.main")
 
 LOG_LEVELS = {'0': logging.ERROR,
               '1': logging.WARNING,
-              # INFO-level logging is really useful, and not very spammy because
-              # we're not on the call path, so produce INFO logs even at level 2
+              # INFO-level logging is really useful, and not very spammy
+              # because we're not on the call path, so produce INFO logs even
+              # at level 2
               '2': logging.INFO,
               '3': logging.INFO,
               '4': logging.DEBUG}
 
 should_quit = False
+
 
 def install_sigquit_handler(plugins):
     def sigquit_handler(sig, stack):
@@ -77,6 +79,7 @@ def install_sigquit_handler(plugins):
             plugin.leave_cluster()
         should_quit = True
     signal.signal(signal.SIGQUIT, sigquit_handler)
+
 
 def main(args):
     syslog.openlog("cluster-manager", syslog.LOG_PID)
@@ -139,16 +142,16 @@ def main(args):
         root_log.addHandler(handler)
 
     # urllib3 logs a WARNING log whenever it recreates a connection, but our
-    # etcd usage does this frequently (to allow watch timeouts), so deliberately
-    # ignore this log
+    # etcd usage does this frequently (to allow watch timeouts), so
+    # deliberately ignore this log
     urllib_logger = logging.getLogger('urllib3')
     urllib_logger.setLevel(logging.ERROR)
 
     utils.install_sigusr1_handler("cluster-manager")
 
-    # Drop a pidfile. We must keep a reference to the file object here, as this keeps
-    # the file locked and provides extra protection against two processes running at
-    # once.
+    # Drop a pidfile. We must keep a reference to the file object here, as this
+    # keeps the file locked and provides extra protection against two processes
+    # running at once.
     pidfile_lock = None
     try:
         pidfile_lock = utils.lock_and_write_pid_file(arguments['--pidfile']) # noqa
@@ -206,7 +209,6 @@ def main(args):
             synchronizers.append(syncer)
             threads.append(syncer.thread)
             _log.info("Loaded plugin %s" % plugin)
-
 
     install_sigquit_handler(synchronizers)
     utils.install_sigterm_handler(synchronizers)
