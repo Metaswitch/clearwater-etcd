@@ -15,22 +15,21 @@ import logging
 _log = logging.getLogger("etcd_shared.plugin_utils")
 
 
-def run_command(command, namespace=None, log_error=True):
+def run_command(command_args, namespace=None, log_error=True):
     """Runs the given shell command, logging the output and return code.
 
     If a namespace is supplied the command is run in the specified namespace.
 
-    Note that this runs the provided command in a new shell, which will
-    apply shell replacements.  Ensure the input string is sanitized before
-    passing to this function.
+    Note that this runs the provided array of command arguments in a subprocess
+    call without shell, to avoid shell injection. Ensure the command is passed 
+    in as an array instead of a string.
     """
     if namespace:
-        command = "ip netns exec {} ".format(namespace) + command
+        command_args = ['ip', 'netns', 'exec', namespace].extend(command_args)
 
     # Pass the close_fds argument to avoid the pidfile lock being held by
     # child processes
-    p = subprocess.Popen(command,
-                         shell=True,
+    p = subprocess.Popen(command_args,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE,
                          close_fds=True)
@@ -39,7 +38,7 @@ def run_command(command, namespace=None, log_error=True):
         # it failed, log the return code and output
         if log_error:
             _log.error("Command {} failed with return code {}, "
-                       "stdout {!r}, and stderr {!r}".format(command,
+                       "stdout {!r}, and stderr {!r}".format(' '.join(command_args),
                                                              p.returncode,
                                                              stdout,
                                                              stderr))
@@ -48,9 +47,9 @@ def run_command(command, namespace=None, log_error=True):
         # it succeeded, log out stderr of the command run if present
         if stderr:
             _log.warning("Command {} succeeded, with stderr output {!r}".
-                         format(command, stderr))
+                         format(' '.join(command_args), stderr))
         else:
-            _log.debug("Command {} succeeded".format(command))
+            _log.debug("Command {} succeeded".format(' '.join(command_args)))
 
         return 0
 

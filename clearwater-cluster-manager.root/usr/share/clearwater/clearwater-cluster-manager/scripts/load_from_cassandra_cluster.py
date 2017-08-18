@@ -28,7 +28,10 @@ try:
     # We remove any xss=.., as this can be printed out by 
     # cassandra-env.sh
     command = "/usr/share/clearwater/bin/run-in-signaling-namespace nodetool describecluster | grep -v \"^xss = \" | tr \"\t\" \" \""
-    desc_cluster_output = subprocess.check_output(command, shell=True)
+    # The following line has a comment to leave it out for Bandit analysis, as 
+    # it is syntactically marked for shell injection risk, while using a literal
+    # string as command does not actually pose a risk of it.
+    desc_cluster_output = subprocess.check_output(command, shell=True)  # nosec
     doc = yaml.load(desc_cluster_output)
     servers = doc["Cluster Information"]["Schema versions"].values()[0]
     data = json.dumps({server: "normal" for server in servers})
