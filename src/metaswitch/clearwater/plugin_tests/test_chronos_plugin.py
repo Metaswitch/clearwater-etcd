@@ -76,7 +76,7 @@ class TestChronosPlugin(unittest.TestCase):
         args = mock_safely_write.call_args
 
         # Catch the call to reload chronos
-        mock_run_command.assert_called_once_with('service chronos reload')
+        mock_run_command.assert_called_once_with(['service', 'chronos', 'reload'])
 
         # Check the plugin is attempting to write to the correct location
         self.assertEqual("/etc/chronos/chronos_cluster.conf", args[0][0])

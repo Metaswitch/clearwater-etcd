@@ -37,5 +37,6 @@ class TestConfigManagerPlugin(unittest.TestCase):
         # Test assertions
         mock_open.assert_called_once_with(plugin.file(), "r")
         mock_safely_write.assert_called_once_with(plugin.file(), new_config_string)
-        mock_run_command.assert_called_once_with("/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue add apply_chronos_shared_config")
+        mock_run_command.assert_called_once_with(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue", \
+        "add", "apply_chronos_shared_config"])
         mock_alarm.update_file.assert_called_once_with(plugin.file())

@@ -65,7 +65,7 @@ class TestMemcachedPlugin(unittest.TestCase):
         args = mock_safely_write.call_args
 
         # Catch the call to reload memcached
-        mock_run_command.assert_called_once_with("/usr/share/clearwater/bin/reload_memcached_users")
+        mock_run_command.assert_called_once_with(["/usr/share/clearwater/bin/reload_memcached_users"])
 
         # Check the plugin is attempting to write to the correct location
         self.assertEqual("/etc/clearwater/cluster_settings", args[0][0])
@@ -136,7 +136,7 @@ class TestMemcachedPlugin(unittest.TestCase):
         args = mock_safely_write.call_args
 
         # Catch the call to reload memcached
-        mock_run_command.assert_called_once_with("/usr/share/clearwater/bin/reload_memcached_users")
+        mock_run_command.assert_called_once_with(["/usr/share/clearwater/bin/reload_memcached_users"])
 
         # Check the plugin is attempting to write to the correct location
         self.assertEqual("/etc/clearwater/cluster_settings", args[0][0])
@@ -188,7 +188,7 @@ class TestMemcachedPlugin(unittest.TestCase):
         args = mock_safely_write.call_args
 
         # Catch the call to reload memcached
-        mock_run_command.assert_called_once_with("/usr/share/clearwater/bin/reload_memcached_users")
+        mock_run_command.assert_called_once_with(["/usr/share/clearwater/bin/reload_memcached_users"])
 
         # Check the plugin is attempting to write to the correct location
         self.assertEqual("/etc/clearwater/remote_cluster_settings", args[0][0])
