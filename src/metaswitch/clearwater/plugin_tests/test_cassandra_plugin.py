@@ -143,9 +143,11 @@ seed_provider:\n\
         # These calls cover restarting cassandra, and the commands called by 
         # the plugin in wait_for_cassandra.
         run_command_call_list = \
-            [mock.call("start-stop-daemon -K -p /var/run/cassandra/cassandra.pid -R TERM/30/KILL/5"),
-             mock.call("/usr/share/clearwater/bin/poll_cassandra.sh --no-grace-period", log_error=False),
-             mock.call("sudo service clearwater-infrastructure restart")]
+            [mock.call(['start-stop-daemon', '-K', '-p', \
+            '/var/run/cassandra/cassandra.pid', '-R', 'TERM/30/KILL/5']),
+             mock.call(['/usr/share/clearwater/bin/poll_cassandra.sh', \
+             '--no-grace-period'], log_error=False),
+             mock.call(['sudo', 'service', 'clearwater-infrastructure', 'restart'])]
 
         mock_os_path.assert_has_calls(path_exists_call_list)
         mock_os_remove.assert_has_calls(path_remove_call_list)
@@ -223,10 +225,11 @@ seed_provider:\n\
 
         # Check the additional calls that we should make when destructive_restart = True actually happen.
         run_command_call_list = \
-            [mock.call("start-stop-daemon -K -p /var/run/cassandra/cassandra.pid -R TERM/30/KILL/5"),
-             mock.call("rm -rf /var/lib/cassandra/"),
-             mock.call("mkdir -m 755 /var/lib/cassandra"),
-             mock.call("chown -R cassandra /var/lib/cassandra")]
+            [mock.call(['start-stop-daemon', '-K', '-p', \
+            '/var/run/cassandra/cassandra.pid', '-R', 'TERM/30/KILL/5']),
+             mock.call(['rm', '-rf', '/var/lib/cassandra/']),
+             mock.call(['mkdir', '-m', '755', '/var/lib/cassandra']),
+             mock.call(['chown', '-R', 'cassandra', '/var/lib/cassandra'])]
         mock_run_command.assert_has_calls(run_command_call_list)
 
 
@@ -343,7 +346,8 @@ seed_provider:\n\
         # Check that the only call to run_command was to stop
         # cassandra, not to remove the data directory
         mock_run_command.assert_called_once_with(\
-            "start-stop-daemon -K -p /var/run/cassandra/cassandra.pid -R TERM/30/KILL/5")
+            ['start-stop-daemon', '-K', '-p', \
+            '/var/run/cassandra/cassandra.pid', '-R', 'TERM/30/KILL/5'])
 
 
     # run_command returns 0 if a command completes successfully, but python mocks
@@ -384,8 +388,9 @@ seed_provider:\n\
         # Set the expected calls to the mock commands, making sure that we run
         # the nodetool decommission command
         run_command_call_list = \
-            [mock.call("/usr/share/clearwater/bin/poll_cassandra.sh --no-grace-period", log_error=False),
-             mock.call("nodetool decommission", self.plugin._sig_namespace)]
+            [mock.call(["/usr/share/clearwater/bin/poll_cassandra.sh", \
+                "--no-grace-period"], log_error=False),
+             mock.call(["nodetool", "decommission"], self.plugin._sig_namespace)]
 
         mock_run_command.assert_has_calls(run_command_call_list)
 

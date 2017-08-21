@@ -37,7 +37,7 @@ class TestFallbackIFCsXMLPlugin(unittest.TestCase):
         # Test assertions
         mock_open.assert_called_once_with(plugin.file(), "r")
         mock_safely_write.assert_called_once_with(plugin.file(), new_config_string)
-        mock_run_command.assert_called_once_with("/usr/share/clearwater/bin/reload_fallback_ifcs_xml")
+        mock_run_command.assert_called_once_with(["/usr/share/clearwater/bin/reload_fallback_ifcs_xml"])
         mock_alarm.update_file.assert_called_once_with(plugin.file())
 
 
@@ -84,5 +84,5 @@ class TestFallbackIFCsXMLPlugin(unittest.TestCase):
         # Test assertions
         mock_open.assert_called_once_with(plugin.file(), "r")
         mock_safely_write.assert_called_once_with(plugin.file(), plugin.default_value())
-        mock_run_command.assert_called_once_with("/usr/share/clearwater/bin/reload_fallback_ifcs_xml")
+        mock_run_command.assert_called_once_with(["/usr/share/clearwater/bin/reload_fallback_ifcs_xml"])
         mock_alarm.update_file.assert_called_once_with(plugin.file())
