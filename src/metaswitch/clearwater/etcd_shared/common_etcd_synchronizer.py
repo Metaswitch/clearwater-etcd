@@ -284,12 +284,12 @@ class CommonEtcdSynchronizer(object):
 
     # Read the state of the cluster from etcd (optionally waiting for a changed
     # state). Returns None if nothing could be read.
-    def read_from_etcd(self, wait=True):
+    def read_from_etcd(self, wait=True, timeout=None):
         result = None
         wait_index = None
 
         try:
-            result = self._client.read(self.key(), quorum=True)
+            result = self._client.read(self.key(), quorum=True, timeout=timeout)
             wait_index = result.etcd_index + 1
 
             if wait:
