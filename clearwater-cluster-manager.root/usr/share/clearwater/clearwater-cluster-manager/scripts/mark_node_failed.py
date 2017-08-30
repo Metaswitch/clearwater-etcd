@@ -50,7 +50,12 @@ else:
   error_syncer = EtcdSynchronizer(NullPlugin(key), dead_node_ip, etcd_ip=etcd_ip, force_leave=True)
 
 # Check that the dead node is even a member of the cluster
-etcd_result, idx = error_syncer.read_from_etcd(wait=False)
+etcd_result, idx = error_syncer.read_from_etcd(wait=False, timeout=10)
+
+if etcd_result is None:
+    print "Failed to contact etcd cluster on '{}' - node not removed".format(etcd_ip)
+    sys.exit(1)
+
 cluster_info = ClusterInfo(etcd_result)
 
 if cluster_info.local_state(dead_node_ip) is None:
