@@ -53,7 +53,7 @@ else:
 etcd_result, idx = error_syncer.read_from_etcd(wait=False, timeout=10)
 
 if etcd_result is None:
-    print "ERROR:  Failed to contact etcd cluster on '{}' - node not removed".format(etcd_ip)
+    print "Failed to contact etcd cluster on '{}' - node not removed".format(etcd_ip)
     sys.exit(1)
 
 cluster_info = ClusterInfo(etcd_result)
