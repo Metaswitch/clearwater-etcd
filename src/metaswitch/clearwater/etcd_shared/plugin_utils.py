@@ -25,7 +25,7 @@ def run_command(command_args, namespace=None, log_error=True):
     in as an array instead of a string.
     """
     if namespace:
-        command_args = ['ip', 'netns', 'exec', namespace].extend(command_args)
+        command_args[0:0] = ['ip', 'netns', 'exec', namespace]
 
     # Pass the close_fds argument to avoid the pidfile lock being held by
     # child processes
