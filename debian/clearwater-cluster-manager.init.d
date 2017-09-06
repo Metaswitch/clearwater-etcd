@@ -147,7 +147,7 @@ do_decommission()
 	#   1 if daemon was already stopped
 	#   2 if daemon could not be stopped within 20 minutes
 	#   other if a failure occurred
-	start-stop-daemon --stop --quiet --retry=QUIT/1200 --exec $ACTUAL_EXEC --pidfile $PIDFILE
+	start-stop-daemon --stop --quiet --retry=QUIT/30 --exec $ACTUAL_EXEC --pidfile $PIDFILE
 	RETVAL="$?"
 	return "$RETVAL"
 }
@@ -247,6 +247,7 @@ case "$1" in
   decommission)
 	log_daemon_msg "Decommissioning $DESC" "$NAME"
 	do_decommission
+	return $?
 	;;
   abort-restart)
         log_daemon_msg "Abort-Restarting $DESC" "$NAME"
