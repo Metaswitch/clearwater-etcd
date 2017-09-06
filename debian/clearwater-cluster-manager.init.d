@@ -147,7 +147,7 @@ do_decommission()
 	#   1 if daemon was already stopped
 	#   2 if daemon could not be stopped within 20 minutes
 	#   other if a failure occurred
-	start-stop-daemon --stop --quiet --retry=QUIT/30 --exec $ACTUAL_EXEC --pidfile $PIDFILE
+	start-stop-daemon --stop --quiet --retry=QUIT/1200 --exec $ACTUAL_EXEC --pidfile $PIDFILE
 	RETVAL="$?"
 	return "$RETVAL"
 }
@@ -245,7 +245,7 @@ case "$1" in
 	do_abort
 	;;
   decommission)
-	log_daemon_msg "Decommissioning $DESC" "$NAME"
+	log_daemon_msg "Decommissioning the cluster manager"
 	do_decommission
 	return $?
 	;;

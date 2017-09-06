@@ -620,8 +620,7 @@ case "$1" in
         do_abort
         ;;
   decommission)
-        log_daemon_msg "Decommissioning $DESC" "$NAME"
-        log_debug "Decommissioning $DESC" "$NAME"
+        log_daemon_msg "Decommissioning the etcd processes"
 
         service clearwater-cluster-manager decommission
         if [ $? != 0 ]; then
@@ -641,6 +640,7 @@ case "$1" in
           exit 1
         fi
 
+        log_daemon_msg "Decommissioning etcd"
         do_decommission
         return $?
         ;;
