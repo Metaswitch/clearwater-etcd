@@ -1,0 +1,10 @@
+docopt==0.6.2
+futures==3.0.5
+prctl==1.0.1
+# Note - if you are updating the version of python-etcd, check if you should
+# remove the monkeypatch in the common_etcd_synchronizer
+python-etcd==0.4.3
+py2_ipaddress==3.4.1
+pyyaml==3.11
+six==1.10.0
+urllib3==1.21.1

@@ -21,20 +21,18 @@ setup(
     package_data={
         '': ['*.eml'],
         },
-    # Note - if you are updating the version of python-etcd, check if you should
-    # remove the monkeypatch in the common_etcd_synchronizer
     install_requires=[
-        "docopt==0.6.2",
-        "futures==3.0.5",
-        "prctl==1.0.1",
-        "python-etcd==0.4.3",
-        "py2_ipaddress==3.4.1",
-        "pyyaml==3.11",
-        "six==1.10.0",
-        "urllib3==1.21.1"],
+        "docopt",
+        "futures",
+        "prctl",
+        "python-etcd",
+        "py2_ipaddress",
+        "pyyaml",
+        "six",
+        "urllib3"],
     tests_require=[
-        "funcsigs==1.0.2",
-        "Mock==2.0.0",
-        "pbr==1.6",
-        "six==1.10.0"],
+        "funcsigs",
+        "Mock",
+        "pbr",
+        "six"],
     )

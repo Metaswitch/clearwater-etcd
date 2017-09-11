@@ -1,4 +1,4 @@
-queue_mgr_eggs/* usr/share/clearwater/clearwater-queue-manager/eggs/
+queue_mgr_wheelhouse/* usr/share/clearwater/clearwater-queue-manager/wheelhouse/
 clearwater-queue-manager.root/* /
 
 # Install the etcd plugin

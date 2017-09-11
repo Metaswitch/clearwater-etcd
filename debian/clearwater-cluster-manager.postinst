@@ -40,7 +40,13 @@ case "$1" in
 
         # Set up the virtual env
         virtualenv --python=$(which python) $BASE_DIR/env
-        $BASE_DIR/env/bin/easy_install --allow-hosts=None --always-unzip -f $BASE_DIR/eggs/ $BASE_DIR/eggs/clearwater_cluster_manager-1.0-py2.7.egg
+        $BASE_DIR/env/bin/pip install --compile \
+                    --no-index \
+                    --upgrade \
+                    --pre \
+                    --force-reinstall \
+                    --find-links $BASE_DIR/wheelhouse \
+                    clearwater_cluster_manager
         chown -R $NAME:root $BASE_DIR/env
         
         # Start monit monitoring

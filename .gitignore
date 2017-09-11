@@ -1,7 +1,7 @@
-/.eggs/
-/cluster_mgr_eggs/
-/queue_mgr_eggs/
-/config_mgr_eggs/
+/.wheelhouse/
+/cluster_mgr_wheelhouse/
+/queue_mgr_wheelhouse/
+/config_mgr_wheelhouse/
 /build_clustermgr/
 /build_configmgr/
 /build_shared/
