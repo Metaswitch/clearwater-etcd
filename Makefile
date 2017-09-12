@@ -70,7 +70,7 @@ coverage: ${ENV_DIR}/bin/coverage cluster_mgr_setup.py queue_mgr_setup.py config
 	${ENV_DIR}/bin/coverage xml
 
 .PHONY: env
-env: cluster_mgr_setup.py queue_mgr_setup.py config_mgr_setup.py shared_setup.py plugins_setup.py $(ENV_DIR)/bin/python build-eggs
+env: cluster_mgr_setup.py queue_mgr_setup.py config_mgr_setup.py shared_setup.py plugins_setup.py $(ENV_DIR)/bin/python build-wheelhouse
 
 $(ENV_DIR)/bin/python:
 	# Set up the virtual environment
@@ -78,51 +78,41 @@ $(ENV_DIR)/bin/python:
 	$(ENV_DIR)/bin/easy_install "setuptools==24"
 	$(ENV_DIR)/bin/easy_install distribute
 
-BANDIT_EXCLUDE_LIST = src/metaswitch/clearwater/queue_manager/test/,src/metaswitch/clearwater/plugin_tests/,src/metaswitch/clearwater/etcd_tests/,src/metaswitch/clearwater/etcd_shared/test,src/metaswitch/clearwater/config_manager/test/,src/metaswitch/clearwater/cluster_manager/test/,common,_env,.eggs,debian,build_clustermgr,build_configmgr,build_shared
+BANDIT_EXCLUDE_LIST = src/metaswitch/clearwater/queue_manager/test/,src/metaswitch/clearwater/plugin_tests/,src/metaswitch/clearwater/etcd_tests/,src/metaswitch/clearwater/etcd_shared/test,src/metaswitch/clearwater/config_manager/test/,src/metaswitch/clearwater/cluster_manager/test/,common,_env,.wheelhouse,debian,build_clustermgr,build_configmgr,build_shared
 include build-infra/cw-deb.mk
 include build-infra/python.mk
 
-.PHONY: build-eggs
-build-eggs: ${ENV_DIR}/.cluster-mgr-build-eggs ${ENV_DIR}/.queue-mgr-build-eggs ${ENV_DIR}/.config-mgr-build-eggs
+.PHONY: build-wheelhouse
 
-${ENV_DIR}/.queue-mgr-build-eggs: queue_mgr_setup.py shared_setup.py common/setup.py $(shell find src/metaswitch -type f -not -name "*.pyc") $(shell find common/metaswitch -type f -not -name "*.pyc") src/metaswitch/clearwater/queue_manager/alarm_constants.py
-        # Generate .egg files
-	${ENV_DIR}/bin/python queue_mgr_setup.py build -b build_queuemgr bdist_egg -d queue_mgr_eggs
-	${ENV_DIR}/bin/python shared_setup.py build -b build_shared bdist_egg -d queue_mgr_eggs
-	cd common && EGG_DIR=../queue_mgr_eggs make build_common_egg
+define python_component
+# 1 Component Name - dash separated
 
-        # Download the egg files they depend upon
-	${ENV_DIR}/bin/easy_install -zmaxd queue_mgr_eggs/ queue_mgr_eggs/clearwater_queue_manager-1.0-py2.7.egg
-	${ENV_DIR}/bin/easy_install -zmaxd queue_mgr_eggs/ queue_mgr_eggs/clearwater_etcd_shared-1.0-py2.7.egg
-	${ENV_DIR}/bin/easy_install -zmaxd queue_mgr_eggs/ queue_mgr_eggs/metaswitchcommon-0.1-py2.7-linux-x86_64.egg
+build-wheelhouse: ${ENV_DIR}/.$1-build-wheelhouse
 
-	touch $@
+${ENV_DIR}/.$1-build-wheelhouse: $$(subst -,_,$1)_setup.py shared_setup.py common/setup.py $(shell find src/metaswitch -type f -not -name "*.pyc") $(shell find common/metaswitch -type f -not -name "*.pyc") src/metaswitch/clearwater/queue_manager/alarm_constants.py
 
-${ENV_DIR}/.config-mgr-build-eggs: config_mgr_setup.py shared_setup.py common/setup.py $(shell find src/metaswitch -type f -not -name "*.pyc") $(shell find common/metaswitch -type f -not -name "*.pyc") src/metaswitch/clearwater/config_manager/alarm_constants.py
-	# Generate .egg files
-	${ENV_DIR}/bin/python config_mgr_setup.py build -b build_configmgr bdist_egg -d config_mgr_eggs
-	${ENV_DIR}/bin/python shared_setup.py build -b build_shared bdist_egg -d config_mgr_eggs
-	cd common && EGG_DIR=../config_mgr_eggs make build_common_egg
+	rm -f $$@
 
-	# Download the egg files they depend upon
-	${ENV_DIR}/bin/easy_install -zmaxd config_mgr_eggs/ config_mgr_eggs/clearwater_config_manager-1.0-py2.7.egg
-	${ENV_DIR}/bin/easy_install -zmaxd config_mgr_eggs/ config_mgr_eggs/clearwater_etcd_shared-1.0-py2.7.egg
-	${ENV_DIR}/bin/easy_install -zmaxd config_mgr_eggs/ config_mgr_eggs/metaswitchcommon-0.1-py2.7-linux-x86_64.egg
+	# Generate wheels
+	${PYTHON} $$(subst -,_,$1)_setup.py build -b build_queuemgr bdist_wheel -d $$(subst -,_,$1)_wheelhouse
+	${PYTHON} shared_setup.py build -b build_shared bdist_wheel -d $$(subst -,_,$1)_wheelhouse
+	cd common && WHEELHOUSE=../$$(subst -,_,$1)_wheelhouse make build_common_wheel
 
-	touch $@
+	# Download the required dependencies
+	${PIP} wheel -w $$(subst -,_,$1)_wheelhouse -r $$(subst -,_,$1)-requirements.txt -r shared-requirements.txt -r common/requirements.txt --find-links $$(subst -,_,$1)_wheelhouse
 
-${ENV_DIR}/.cluster-mgr-build-eggs: cluster_mgr_setup.py shared_setup.py common/setup.py $(shell find src/metaswitch -type f -not -name "*.pyc") $(shell find common/metaswitch -type f -not -name "*.pyc") src/metaswitch/clearwater/cluster_manager/alarm_constants.py
-	# Generate .egg files
-	${ENV_DIR}/bin/python cluster_mgr_setup.py build -b build_clustermgr bdist_egg -d cluster_mgr_eggs
-	${ENV_DIR}/bin/python shared_setup.py build -b build_shared bdist_egg -d cluster_mgr_eggs
-	cd common && EGG_DIR=../cluster_mgr_eggs make build_common_egg
+	# Install the dependencies in the local environment for testing
+	${INSTALLER} --find-links $(subst -,_,$1)_wheelhouse -r $$(subst -,_,$1)-requirements.txt -r shared-requirements.txt -r common/requirements.txt
 
-	# Download the egg files they depend upon
-	${ENV_DIR}/bin/easy_install -zmaxd cluster_mgr_eggs/ cluster_mgr_eggs/clearwater_cluster_manager-1.0-py2.7.egg
-	${ENV_DIR}/bin/easy_install -zmaxd cluster_mgr_eggs/ cluster_mgr_eggs/clearwater_etcd_shared-1.0-py2.7.egg
-	${ENV_DIR}/bin/easy_install -zmaxd cluster_mgr_eggs/ cluster_mgr_eggs/metaswitchcommon-0.1-py2.7-linux-x86_64.egg
+	# Install test only requirements
+	${PIP} install -r common/requirements-test.txt fv-requirements.txt
 
-	touch $@
+	touch $$@
+endef
+
+$(eval $(call python_component,queue-mgr))
+$(eval $(call python_component,config-mgr))
+$(eval $(call python_component,cluster-mgr))
 
 src/metaswitch/clearwater/queue_manager/alarm_constants.py: clearwater-queue-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_queue_manager_alarms.json common/metaswitch/common/alarms_writer.py common/metaswitch/common/alarms_parser.py common/metaswitch/common/alarm_severities.py
 	python common/metaswitch/common/alarms_writer.py --json-file="clearwater-queue-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_queue_manager_alarms.json" --constants-file=$@
@@ -132,7 +122,7 @@ src/metaswitch/clearwater/cluster_manager/alarm_constants.py: clearwater-cluster
 	python common/metaswitch/common/alarms_writer.py --json-file="clearwater-cluster-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_cluster_manager_alarms.json" --constants-file=$@
 
 .PHONY: deb
-deb: env build-eggs deb-only
+deb: env build-wheelhouse deb-only
 
 .PHONY: clean
 clean: envclean pyclean
@@ -147,7 +137,7 @@ pyclean:
 
 .PHONY: envclean
 envclean:
-	rm -rf bin cluster_mgr_eggs queue_mgr_eggs config_mgr_eggs develop-eggs parts .installed.cfg bootstrap.py .downloads .buildout_downloads *.egg .eggs *.egg-info
+	rm -rf bin cluster_mgr_wheelhouse queue_mgr_wheelhouse config_mgr_wheelhouse develop-wheelhouse parts .installed.cfg bootstrap.py .downloads .buildout_downloads *.egg .wheelhouse *.egg-info
 	rm -rf distribute-*.tar.gz
 	rm -rf $(ENV_DIR)
 
