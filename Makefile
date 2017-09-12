@@ -98,6 +98,10 @@ ${ENV_DIR}/.$1-build-wheelhouse: $$(subst -,_,$1)_setup.py \
 
 	rm -f $$@
 
+	# Ensure we have an up to date version of pip with wheel support
+	${PIP} install --upgrade pip==9.0.1
+	${PIP} install wheel
+
 	# Generate wheels
 	${PYTHON} $$(subst -,_,$1)_setup.py build -b build_$$(subst -,,$1) bdist_wheel -d $$(subst -,_,$1)_wheelhouse
 	${PYTHON} shared_setup.py build -b build_shared bdist_wheel -d $$(subst -,_,$1)_wheelhouse
