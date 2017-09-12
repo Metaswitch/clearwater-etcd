@@ -175,12 +175,22 @@ setup_etcdctl_peers()
           # We want to stip anything up to and including the first = character
           # so we can select etcd_cluster or etcd_proxy appropriately
           healthy_cluster=$(sed -e 's/.*=//' < $HEALTHY_CLUSTER_VIEW)
-          if [ -n "$etcd_cluster" ]
+
+          # We also want to ensure that the file was not just empty, so verify
+          # that stripping white space still leaves something
+          if [[ -z "${healthy_cluster// /}" ]]
           then
-            etcd_cluster=$healthy_cluster
-          elif [ -n "$etcd_proxy" ]
-          then
-            etcd_proxy=$healthy_cluster
+            log_debug "healthy cluster view was empty, using config values instead"
+          else
+            # Set etcd_cluster or etcd_proxy to the values we found in the
+            # healthy cluster view, based on what is provided in config
+            if [ -n "$etcd_cluster" ]
+            then
+              etcd_cluster=$healthy_cluster
+            elif [ -n "$etcd_proxy" ]
+            then
+              etcd_proxy=$healthy_cluster
+            fi
           fi
         fi
 
