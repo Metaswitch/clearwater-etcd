@@ -14,6 +14,7 @@ Usage:
 from docopt import docopt
 from os import sys
 import consul
+import json
 import logging
 import time
 from metaswitch.clearwater.cluster_manager.consul_synchronizer import \
@@ -30,6 +31,17 @@ def make_key(site, node_type, datastore, etcd_key):
                                                 site,
                                                 node_type,
                                                 datastore)
+
+
+def get_from_kv(kv, key):
+    """Get a value from the Consul datastore. Produces a dict - e.g.
+    {"172.16.0.117": "normal", "172.16.0.145": "normal"}
+    """
+    (_index, value) = c.get(key)
+    raw_value = value["Value"]
+
+    # Values are stored as a Json(?) dict
+    return json.loads(raw_value)
 
 
 arguments = docopt(__doc__)
@@ -60,8 +72,7 @@ key = make_key(site, node_type, datastore, etcd_key)
 logging.info("Using etcd key %s" % (key))
 
 c = consul.Consul(host=local_ip).kv
-(_index, value) = c.get(key)
-state = value["Value"]
+state = get_from_kv(c, key)
 
 if dead_node_ip not in state:
     print "%s not in cluster - no work required" % dead_node_ip
@@ -105,8 +116,7 @@ logging.info(
     .format(dead_node_ip))
 
 for i in range(0, 100):
-    (_index, value) = c.get(key)
-    new_value = value["Value"].get(dead_node_ip)
+    new_value = get_from_kv(c, dead_node_ip)
 
     if new_value is None:
         logging.info("Success: removed from Consul")
