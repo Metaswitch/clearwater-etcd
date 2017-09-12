@@ -120,7 +120,7 @@ for i in range(0, 100):
 
     if new_value is None:
         logging.info("Success: removed from Consul")
-        break
+        sys.exit(0)
     elif new_value != "finished":
         logging.error("Unexpected state: {}".format(new_value))
         sys.exit(1)
