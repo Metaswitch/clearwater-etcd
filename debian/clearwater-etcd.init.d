@@ -181,8 +181,7 @@ setup_etcdctl_peers()
           if [[ -z "${healthy_cluster// /}" ]]
           then
             log_debug "healthy cluster view was empty, using config values instead"
-          elif
-          then
+          else
             # Set etcd_cluster or etcd_proxy to the values we found in the
             # healthy cluster view, based on what is provided in config
             if [ -n "$etcd_cluster" ]
