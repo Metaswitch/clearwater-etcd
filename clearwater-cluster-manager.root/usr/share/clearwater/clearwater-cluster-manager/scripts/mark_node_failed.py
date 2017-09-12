@@ -116,7 +116,7 @@ logging.info(
     .format(dead_node_ip))
 
 for i in range(0, 100):
-    new_value = get_from_kv(c, dead_node_ip)
+    new_value = get_from_kv(c, key).get(dead_node_ip)
 
     if new_value is None:
         logging.info("Success: removed from Consul")
