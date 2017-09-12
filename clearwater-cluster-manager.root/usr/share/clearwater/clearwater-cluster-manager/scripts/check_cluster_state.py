@@ -59,24 +59,30 @@ def describe_clusters():
     else:
         print "This node ({}) should not be in any cluster.\n".format(local_node_ip)
 
-    for (key, value) in sorted(cluster_values.items()):
+    start_with_store = {}               # organize cluster key by store type
+    for (key, value) in cluster_values.items():
         # Check if the key relates to clustering. The clustering key has the format
         # /clearwater*[</optional site name>]/<node type>/clustering/<store type>
         key_parts = key.split('/')
 
-        if len(key_parts) > 5 and key_parts[4] == 'clustering':
-            site = key_parts[2]
-            node_type = key_parts[3]
-            store_name = key_parts[5]
-        elif len(key_parts) > 4 and key_parts[3] == 'clustering':
-            site = ""
-            node_type = key_parts[2]
-            store_name = key_parts[4]
+        if 'clustering' in key_parts:
+            if len(key_parts) > 5:
+                site = key_parts[2]
+                store_name = key_parts[5]
+            elif len(key_parts) > 4:
+                site = ""
+                store_name = key_parts[4]
+            start_with_store["{}-{}".format(store_name, site)] = value
         else:
             # The key isn't to do with clustering, skip it
             continue
 
-        if site != "" and sites != "" and etcd_version == "2.2.5":
+    for (key, value) in sorted(start_with_store.items()):
+        key_parts = key.split('-')
+        store_name = key_parts[0]
+
+        if len(key_parts) == 2 and sites != "" and etcd_version == "2.2.5":
+            site = key_parts[1]
             print "Describing the {} cluster in site {}:".format(store_name.capitalize(), site)
         else:
             print "Describing the {} cluster:".format(store_name.capitalize())
