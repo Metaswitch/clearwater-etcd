@@ -105,7 +105,7 @@ ${ENV_DIR}/.$1-build-wheelhouse: $$(subst -,_,$1)_setup.py shared_setup.py commo
 	${INSTALLER} --find-links $(subst -,_,$1)_wheelhouse -r $$(subst -,_,$1)-requirements.txt -r shared-requirements.txt -r common/requirements.txt
 
 	# Install test only requirements
-	${PIP} install -r common/requirements-test.txt fv-requirements.txt
+	${PIP} install -r common/requirements-test.txt -r fv-requirements.txt
 
 	touch $$@
 endef
