@@ -89,12 +89,17 @@ define python_component
 
 build-wheelhouse: ${ENV_DIR}/.$1-build-wheelhouse
 
-${ENV_DIR}/.$1-build-wheelhouse: $$(subst -,_,$1)_setup.py shared_setup.py common/setup.py $(shell find src/metaswitch -type f -not -name "*.pyc") $(shell find common/metaswitch -type f -not -name "*.pyc") src/metaswitch/clearwater/queue_manager/alarm_constants.py
+${ENV_DIR}/.$1-build-wheelhouse: $$(subst -,_,$1)_setup.py \
+	shared_setup.py \
+	common/setup.py \
+	$(shell find src/metaswitch -type f -not -name "*.pyc") \
+	$(shell find common/metaswitch -type f -not -name "*.pyc") \
+	src/metaswitch/clearwater/$$(subst mgr,manager,$$(subst -,_,$1))/alarm_constants.py
 
 	rm -f $$@
 
 	# Generate wheels
-	${PYTHON} $$(subst -,_,$1)_setup.py build -b build_queuemgr bdist_wheel -d $$(subst -,_,$1)_wheelhouse
+	${PYTHON} $$(subst -,_,$1)_setup.py build -b build_$$(subst -,,$1) bdist_wheel -d $$(subst -,_,$1)_wheelhouse
 	${PYTHON} shared_setup.py build -b build_shared bdist_wheel -d $$(subst -,_,$1)_wheelhouse
 	cd common && WHEELHOUSE=../$$(subst -,_,$1)_wheelhouse make build_common_wheel
 
