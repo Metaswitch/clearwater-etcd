@@ -83,7 +83,6 @@ include build-infra/cw-deb.mk
 include build-infra/python.mk
 
 .PHONY: build-wheelhouse
-build-wheelhouse: ${ENV_DIR}/.cluster-mgr-build-wheelhouse ${ENV_DIR}/.queue-mgr-build-wheelhouse ${ENV_DIR}/.config-mgr-build-wheelhouse
 
 define python_component
 # 1 Component Name - dash separated
@@ -101,6 +100,12 @@ ${ENV_DIR}/.$1-build-wheelhouse: $$(subst -,_,$1)_setup.py shared_setup.py commo
 
 	# Download the required dependencies
 	${PIP} wheel -w $$(subst -,_,$1)_wheelhouse -r $$(subst -,_,$1)-requirements.txt -r shared-requirements.txt -r common/requirements.txt --find-links $$(subst -,_,$1)_wheelhouse
+
+	# Install the dependencies in the local environment for testing
+	${INSTALLER} --find-links $(subst -,_,$1)_wheelhouse -r $$(subst -,_,$1)-requirements.txt -r shared-requirements.txt -r common/requirements.txt
+
+	# Install test only requirements
+	${PIP} install -r common/requirements-test.txt fv-requirements.txt
 
 	touch $$@
 endef
