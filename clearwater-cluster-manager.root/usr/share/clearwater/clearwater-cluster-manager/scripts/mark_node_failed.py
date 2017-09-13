@@ -8,7 +8,7 @@
 """mark_node_failed
 
 Usage:
-  mark_node_failed.py <local_ip> <site> <node_type> <datastore> <dead_node_ip> <etcd_key> [--foreground] [--cassandra-container-id <ID>]
+  mark_node_failed.py <local_ip> <site> <node_type> <datastore> <dead_node_ip> <etcd_key> [--foreground] [--cassandra-container-id <CONTAINER_ID>]
 """
 
 from docopt import docopt
@@ -53,7 +53,7 @@ datastore = arguments["<datastore>"]
 dead_node_ip = arguments["<dead_node_ip>"]
 etcd_key = arguments["<etcd_key>"]
 foreground = arguments["--foreground"]
-cassandra_id = arguments["--cassandra-container-id"]
+cassandra_id = arguments["<CONTAINER_ID>"]
 
 if foreground:
     # In foreground mode, write logs to stdout
@@ -84,12 +84,9 @@ if datastore == "cassandra":
         sys.path.append(
             "/usr/share/clearwater/clearwater-cluster-manager/failed_plugins")
         from ddd_failed_plugin import DddFailedPlugin
-        if cassandra_id:
-            plugin = DddFailedPlugin(key,
-                                     dead_node_ip,
-                                     cassandra_container_id=cassandra_id)
-        else:
-            plugin = DddFailedPlugin(key, dead_node_ip)
+        plugin = DddFailedPlugin(key,
+                                 dead_node_ip,
+                                 cassandra_container_id=cassandra_id)
 
         error_syncer = ConsulSynchronizer(plugin,
                                           dead_node_ip,
