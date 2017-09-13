@@ -26,6 +26,12 @@ set -e
 
 NAME=clearwater-queue-manager
 BASE_DIR=/usr/share/clearwater/clearwater-queue-manager
+INSTALLER="$BASE_DIR/env/bin/pip install --compile \
+                    --no-index \
+                    --upgrade \
+                    --pre \
+                    --force-reinstall \
+                    --find-links $BASE_DIR/wheelhouse"
 
 case "$1" in
     configure)
@@ -39,14 +45,11 @@ case "$1" in
         chown -R $NAME:root /var/log/$NAME
 
         # Set up the virtual env
+        rm -rf $BASE_DIR/env
         virtualenv --python=$(which python) $BASE_DIR/env
-        $BASE_DIR/env/bin/pip install --compile \
-                    --no-index \
-                    --upgrade \
-                    --pre \
-                    --force-reinstall \
-                    --find-links $BASE_DIR/wheelhouse \
-                    clearwater_queue_manager
+        $INSTALLER pip
+        $INSTALLER wheel
+        $INSTALLER clearwater_queue_manager
         chown -R $NAME:root $BASE_DIR/env
 
         # Start monit monitoring
