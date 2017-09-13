@@ -73,7 +73,21 @@ key = make_key(site, node_type, datastore, etcd_key)
 logging.info("Using etcd key %s" % (key))
 
 c = consul.Consul(host=local_ip).kv
-state = get_from_kv(c, key)
+try:
+    state = get_from_kv(c, key)
+except consul.ConsulException as e:
+    # If the node with the Consul leader is the one that failed, the Consul
+    # cluster may take several seconds to notice this and elect a new leader.
+    # Before a new leader is elected, Consul will throw `ConsulException: 500
+    # No cluster leader`. Thus, on a `ConsulException` we wait 60 seconds and
+    # try again. If the problem was one of cluster leadership, that should give
+    # it enough time to elect a new leader. If the second call fails, there's
+    # probably something wrong with the Consul cluster that will require manual
+    # intervention to sort out.
+    logging.warning("Failed to read from Consul, waiting to retry: {}"
+                    .format(e))
+    time.sleep(60)
+    state = get_from_kv(c, key)
 
 if dead_node_ip not in state:
     print "%s not in cluster - no work required" % dead_node_ip
