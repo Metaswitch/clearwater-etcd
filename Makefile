@@ -89,12 +89,18 @@ define python_component
 
 build-wheelhouse: ${ENV_DIR}/.$1-build-wheelhouse
 
-${ENV_DIR}/.$1-build-wheelhouse: $$(subst -,_,$1)_setup.py \
+${ENV_DIR}/.$1-build-wheelhouse: \
+	$$(subst -,_,$1)_setup.py \
 	shared_setup.py \
 	common/setup.py \
 	$(shell find src/metaswitch -type f -not -name "*.pyc") \
 	$(shell find common/metaswitch -type f -not -name "*.pyc") \
-	src/metaswitch/clearwater/$$(subst mgr,manager,$$(subst -,_,$1))/alarm_constants.py
+	src/metaswitch/clearwater/$$(subst mgr,manager,$$(subst -,_,$1))/alarm_constants.py \
+	$$(subst -,_,$1)-requirements.txt \
+	common/requirements-test.txt \
+	fv-requirements.txt \
+	requirements-test.txt \
+	shared-requirements.txt
 
 	rm -f $$@
 
