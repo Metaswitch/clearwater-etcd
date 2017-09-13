@@ -98,8 +98,8 @@ ${ENV_DIR}/.$1-build-wheelhouse: \
 	src/metaswitch/clearwater/$$(subst mgr,manager,$$(subst -,_,$1))/alarm_constants.py \
 	$$(subst -,_,$1)-requirements.txt \
 	common/requirements-test.txt \
+	common/requirements.txt \
 	fv-requirements.txt \
-	requirements-test.txt \
 	shared-requirements.txt
 
 	rm -f $$@
