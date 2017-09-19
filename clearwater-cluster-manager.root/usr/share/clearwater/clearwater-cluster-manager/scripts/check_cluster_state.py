@@ -14,7 +14,6 @@ mgmt_node = sys.argv[1]
 local_node_ip = sys.argv[2]
 local_site = sys.argv[3]
 sites = sys.argv[4]
-etcd_version = sys.argv[5]
 
 client = etcd.Client(mgmt_node, 4000)
 
@@ -31,21 +30,16 @@ def describe_clusters():
     cluster_values = {subkey.key: subkey.value for subkey in result.leaves}
 
     local_site_info = ""
-    if sites != "" and local_site != sites and etcd_version != "2.2.5":
+    if sites != "" and local_site != sites:
         local_site_info = " in the local site (" + local_site + ")"
 
-    # Put the cluster name in alphabetical order
-    print "This script prints the status of the Cassandra, Chronos, and Memcached clusters{}.".format(local_site_info)
+    print "This script prints the status of the data store clusters{}.\n".format(local_site_info)
 
     plugin_dir = '/usr/share/clearwater/clearwater-cluster-manager/plugins'
     if os.path.isdir(plugin_dir):
         plugins = [(plugin_name[:-10]).capitalize() for plugin_name in os.listdir(plugin_dir) if
                 plugin_name.endswith('_plugin.py')]
 
-        # Memcached_remote is now deprecated with the new GR support
-        if 'Memcached_remote' in plugins:
-            plugins.remove('Memcached_remote')
-        
         plugins.sort()
 
         if len(plugins) >= 2:
@@ -80,24 +74,27 @@ def describe_clusters():
     for (key, value) in sorted(start_with_store.items()):
         key_parts = key.split('-')
         store_name = key_parts[0]
+        cluster_value = ""
 
-        if len(key_parts) == 2 and sites != "" and etcd_version == "2.2.5":
+        if len(key_parts) == 2 and sites != "":
             site = key_parts[1]
-            print "Describing the {} cluster in site {}:".format(store_name.capitalize(), site)
+            cluster_value += "Describing the {} cluster in site {}:\n".format(store_name.capitalize(), site)
         else:
-            print "Describing the {} cluster:".format(store_name.capitalize())
+            cluster_value += "Describing the {} cluster:\n".format(store_name.capitalize())
 
         cluster = json.loads(value)
         cluster_ok = all([state == "normal"
                           for node, state in cluster.iteritems()])
 
         if cluster_ok:
-            print "  The cluster is stable"
+            cluster_value += "  The cluster is stable.\n"
         else:
-            print "  The cluster is *not* stable"
+            cluster_value += "  The cluster is *not* stable.\n"
 
-        for node, state in cluster.iteritems():
-            print "    {} is in state {}".format(node, state)
-        print ""
+        if len(cluster) != 0:
+            for node, state in cluster.iteritems():
+                cluster_value += "    {} is in state {}.\n".format(node, state)
+
+            print cluster_value
 
 describe_clusters()
