@@ -630,12 +630,29 @@ case "$1" in
         do_abort
         ;;
   decommission)
-        log_daemon_msg "Decommissioning $DESC" "$NAME"
-        log_debug "Decommissioning $DESC" "$NAME"
-        service clearwater-cluster-manager decommission || /bin/true
-        service clearwater-queue-manager decommission || /bin/true
-        service clearwater-config-manager decommission || /bin/true
+        log_daemon_msg "Decommissioning the etcd processes"
+
+        service clearwater-cluster-manager decommission
+        if [ $? != 0 ]; then
+          log_info "Failure: Unable to decommission the cluster manager"
+          exit 1
+        fi
+
+        service clearwater-queue-manager decommission
+        if [ $? != 0 ]; then
+          log_info "Failure: Unable to decommission the queue manager"
+          exit 1
+        fi
+
+        service clearwater-config-manager decommission
+        if [ $? != 0 ]; then
+          log_info "Failure: Unable to decommission the config manager"
+          exit 1
+        fi
+
+        log_daemon_msg "Decommissioning etcd"
         do_decommission
+        return $?
         ;;
   abort-restart)
         log_daemon_msg "Abort-Restarting $DESC" "$NAME"

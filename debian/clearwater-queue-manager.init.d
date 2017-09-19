@@ -197,9 +197,10 @@ case "$1" in
 	do_abort
 	;;
   decommission)
-	log_daemon_msg "Decommissioning $DESC" "$NAME"
+	log_daemon_msg "Decommissioning the queue manager"
   # There's no special function for decommissioning so just call stop
 	do_stop
+	return $?
 	;;
   abort-restart)
         log_daemon_msg "Abort-Restarting $DESC" "$NAME"
