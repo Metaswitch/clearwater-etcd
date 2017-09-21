@@ -71,6 +71,7 @@ def describe_clusters():
             # The key isn't to do with clustering, skip it
             continue
 
+    exit_value = 0
     for (key, value) in sorted(start_with_store.items()):
         key_parts = key.split('-')
         store_name = key_parts[0]
@@ -90,6 +91,7 @@ def describe_clusters():
             cluster_value += "  The cluster is stable.\n"
         else:
             cluster_value += "  The cluster is *not* stable.\n"
+            exit_value = 1
 
         if len(cluster) != 0:
             for node, state in cluster.iteritems():
@@ -97,4 +99,5 @@ def describe_clusters():
 
             print cluster_value
 
+    sys.exit(exit_value)
 describe_clusters()
