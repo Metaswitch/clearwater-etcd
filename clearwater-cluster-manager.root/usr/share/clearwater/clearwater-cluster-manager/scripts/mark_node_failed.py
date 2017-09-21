@@ -33,14 +33,30 @@ def make_key(site, node_type, datastore, etcd_key):
                                                 datastore)
 
 
-def get_from_kv(kv, key):
+def get_from_kv(kv, key, retry=10):
     """Get a value from the Consul datastore. Produces a dict - e.g.
     {"172.16.0.117": "normal", "172.16.0.145": "normal"}
     """
-    (_index, value) = c.get(key)
+    try:
+        (_index, value) = kv.get(key)
+    except consul.ConsulException as e:
+        # If the node with the Consul leader is the one that failed, the Consul
+        # cluster may take several seconds to notice this and elect a new
+        # leader.  Before a new leader is elected, Consul will throw
+        # `ConsulException: 500 No cluster leader`. Thus, on a
+        # `ConsulException` we wait a few seconds and try again. If the problem
+        # was one of cluster leadership, that should give it enough time to
+        # elect a new leader. If the second call fails, there's probably
+        # something wrong with the Consul cluster that will require manual
+        # intervention to sort out.
+        logging.warning("Failed to read from Consul, waiting to retry: {}"
+                        .format(e))
+        time.sleep(retry)
+        (_index, value) = kv.get(key)
+
     raw_value = value["Value"]
 
-    # Values are stored as a Json(?) dict
+    # Values are stored as a JSON dict
     return json.loads(raw_value)
 
 
@@ -73,21 +89,7 @@ key = make_key(site, node_type, datastore, etcd_key)
 logging.info("Using etcd key %s" % (key))
 
 c = consul.Consul(host=local_ip).kv
-try:
-    state = get_from_kv(c, key)
-except consul.ConsulException as e:
-    # If the node with the Consul leader is the one that failed, the Consul
-    # cluster may take several seconds to notice this and elect a new leader.
-    # Before a new leader is elected, Consul will throw `ConsulException: 500
-    # No cluster leader`. Thus, on a `ConsulException` we wait 60 seconds and
-    # try again. If the problem was one of cluster leadership, that should give
-    # it enough time to elect a new leader. If the second call fails, there's
-    # probably something wrong with the Consul cluster that will require manual
-    # intervention to sort out.
-    logging.warning("Failed to read from Consul, waiting to retry: {}"
-                    .format(e))
-    time.sleep(60)
-    state = get_from_kv(c, key)
+state = get_from_kv(c, key, retry=60)
 
 if dead_node_ip not in state:
     print "%s not in cluster - no work required" % dead_node_ip
