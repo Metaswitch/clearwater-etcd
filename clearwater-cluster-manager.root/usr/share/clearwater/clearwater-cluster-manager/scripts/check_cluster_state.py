@@ -99,5 +99,8 @@ def describe_clusters():
 
             print cluster_value
 
+    # This makes sure an error value is returned when the clusters are not
+    # stable
     sys.exit(exit_value)
+
 describe_clusters()
