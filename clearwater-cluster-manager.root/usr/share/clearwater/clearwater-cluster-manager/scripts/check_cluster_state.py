@@ -17,7 +17,10 @@ sites = sys.argv[4]
 
 client = etcd.Client(mgmt_node, 4000)
 
+
 def describe_clusters():
+    """This function returns the the number of unstable clusters it is
+     checking """
     # Pull out all the clearwater keys.
     key = "/?recursive=True"
 
@@ -71,6 +74,7 @@ def describe_clusters():
             # The key isn't to do with clustering, skip it
             continue
 
+    unstable_clusters = 0
     for (key, value) in sorted(start_with_store.items()):
         key_parts = key.split('-')
         store_name = key_parts[0]
@@ -90,6 +94,7 @@ def describe_clusters():
             cluster_value += "  The cluster is stable.\n"
         else:
             cluster_value += "  The cluster is *not* stable.\n"
+            unstable_clusters += 1
 
         if len(cluster) != 0:
             for node, state in cluster.iteritems():
@@ -97,4 +102,13 @@ def describe_clusters():
 
             print cluster_value
 
-describe_clusters()
+    # This makes sure an error value is returned when the clusters are not
+    # stable
+    return unstable_clusters
+
+return_code = describe_clusters()
+if return_code == 0:
+    sys.exit()
+else:
+    clusters_state = "{} unstable cluster(s)".format(return_code)
+    sys.exit(clusters_state)
