@@ -9,6 +9,7 @@ import os
 from os import sys
 import etcd
 import logging
+import time
 from metaswitch.clearwater.cluster_manager.cluster_state import \
     ClusterInfo
 from metaswitch.clearwater.cluster_manager.etcd_synchronizer import \
@@ -24,9 +25,16 @@ def make_key(site, node_type, datastore, etcd_key):
 
 logfile = "/var/log/clearwater-etcd/mark_node_failed.log"
 print "Detailed output being sent to %s" % logfile
-logging.basicConfig(filename=logfile,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.DEBUG)
+_log = logging.getLogger("cluster_manager.mark_node_failed")
+_log.setLevel(logging.DEBUG)
+
+handler = logging.FileHandler(logfile)
+handler.setLevel(logging.DEBUG)
+log_format = logging.Formatter(fmt="%(asctime)s UTC - %(name)s - %(levelname)s - %(message)s",
+                               datefmt="%d-%m-%Y %H:%M:%S")
+log_format.converter = time.gmtime
+handler.setFormatter(log_format)
+_log.addHandler(handler)
 
 etcd_ip = sys.argv[1]
 site = sys.argv[2]
@@ -36,7 +44,7 @@ dead_node_ip = sys.argv[5]
 etcd_key = sys.argv[6]
 
 key = make_key(site, node_type, datastore, etcd_key)
-logging.info("Using etcd key %s" % (key))
+_log.info("Using etcd key %s" % (key))
 
 if datastore == "cassandra":
   try:
@@ -79,4 +87,4 @@ print "Process complete - %s has left the cluster" % dead_node_ip
 c = etcd.Client(etcd_ip, 4000)
 new_state = c.get(key).value
 
-logging.info("New etcd state (after removing %s) is %s" % (dead_node_ip, new_state))
+_log.info("New etcd state (after removing %s) is %s" % (dead_node_ip, new_state))
