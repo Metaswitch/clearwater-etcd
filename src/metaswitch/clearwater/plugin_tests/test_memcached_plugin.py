@@ -16,7 +16,6 @@ from collections import Counter
 _log = logging.getLogger()
 
 from clearwater_etcd_plugins.clearwater_memcached.memcached_plugin import MemcachedPlugin
-from clearwater_etcd_plugins.clearwater_memcached.memcached_remote_plugin import RemoteMemcachedPlugin
 from metaswitch.clearwater.cluster_manager.plugin_base import PluginParams
 from metaswitch.clearwater.cluster_manager import alarm_constants
 
@@ -160,35 +159,3 @@ class TestMemcachedPlugin(unittest.TestCase):
         # Set expectations, and assert that the correct ips made it into servers list
         expected_server_ips = Counter(['10.0.0.5', '10.0.0.6', '10.0.0.7'])
         self.assertTrue(server_ips == expected_server_ips)
-
-
-    @mock.patch('clearwater_etcd_plugins.clearwater_memcached.memcached_remote_plugin.run_command')
-    @mock.patch('clearwater_etcd_plugins.clearwater_memcached.memcached_utils.safely_write')
-    def test_remote_plugin_write_config(self, mock_safely_write, mock_run_command):
-        """Test remote_memcached_plugin writes settings correctly"""
-
-        # Create a plugin with dummy parameters
-        plugin = RemoteMemcachedPlugin(PluginParams(ip='10.0.0.1',
-                                                    mgmt_ip='10.0.1.1',
-                                                    local_site='local_site',
-                                                    remote_site='remote_site',
-                                                    remote_cassandra_seeds='',
-                                                    signaling_namespace='',
-                                                    uuid=uuid.UUID('92a674aa-a64b-4549-b150-596fd466923f'),
-                                                    etcd_key='etcd_key',
-                                                    etcd_cluster_key='etcd_cluster_key'))
-
-        # Config writing is properly tested above, so run with simple cluster
-        cluster_view = {"10.0.0.5": "normal"}
-
-        # Call the plugin to write the settings itself
-        plugin.write_cluster_settings(cluster_view)
-        mock_safely_write.assert_called_once()
-        # Save off the arguments the plugin called our mock with
-        args = mock_safely_write.call_args
-
-        # Catch the call to reload memcached
-        mock_run_command.assert_called_once_with(["/usr/share/clearwater/bin/reload_memcached_users"])
-
-        # Check the plugin is attempting to write to the correct location
-        self.assertEqual("/etc/clearwater/remote_cluster_settings", args[0][0])
