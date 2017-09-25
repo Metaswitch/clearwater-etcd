@@ -64,12 +64,10 @@ def describe_clusters():
 
         if 'clustering' in key_parts:
             if len(key_parts) > 5:
-                site = key_parts[2]
                 store_name = key_parts[5]
             elif len(key_parts) > 4:
-                site = ""
                 store_name = key_parts[4]
-            start_with_store["{}-{}".format(store_name, site)] = value
+            start_with_store["{}-{}".format(store_name, local_site)] = value
         else:
             # The key isn't to do with clustering, skip it
             continue
