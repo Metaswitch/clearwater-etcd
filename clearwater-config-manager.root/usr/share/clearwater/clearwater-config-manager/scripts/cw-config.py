@@ -142,8 +142,8 @@ def main(args):
 
     if args.action == "upload":
         try:
-            validate_config()
-            upload_config(etcd_client)
+            validate_config(args.force)
+            upload_config(etcd_client, args.force)
         except UserAbort:
             # Abort and tell user
             pass
