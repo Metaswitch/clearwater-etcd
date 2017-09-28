@@ -155,6 +155,12 @@ def upload_config(client):
     # Upload the configuration to the etcd cluster.
     client.upload_config(CONFIG_TYPE)
 
+    # Add the node to the restart queue(s)
+    apply_config_key = subprocess.check_output("/usr/share/clearwater/clearwater-queue-manager/scripts/get_apply_config_key")
+    subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
+                     "add",
+                     apply_config_key])
+
 
 
 
