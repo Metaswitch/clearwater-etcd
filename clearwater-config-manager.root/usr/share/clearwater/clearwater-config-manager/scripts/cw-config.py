@@ -1,3 +1,4 @@
+#!/usr/share/clearwater/clearwater-config-manager/env/bin/python
 # Copyright (C) Metaswitch Networks 2016
 # If license terms are provided to you in a COPYING file in the root directory
 # of the source code repository by which you are accessing this code, then
