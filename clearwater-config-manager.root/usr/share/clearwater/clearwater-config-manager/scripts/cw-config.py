@@ -20,6 +20,28 @@ MODIFIED_WHILE_EDITING = """Another user has modified the configuration since
 cw-download_shared_config was last run. Please download the latest version of
 shared config, re-apply the changes and try again."""
 
+
+# Exceptions
+class ConfigAlreadyDownloaded(Exception):
+    pass
+
+
+class ConfigDownloadFailed(Exception):
+    pass
+
+
+class UserAbort(Exception):
+    pass
+
+
+class EtcdMasterConfigChanged(Exception):
+    pass
+
+
+class ConfigUploadFailed(Exception):
+    pass
+
+
 class etcdClient(etcd.Client):
     """Wrapper around etcd.Client to include information about where to find
     config files in the database."""
@@ -75,14 +97,25 @@ def main(args):
     if args.action == "download":
         try:
             download_config(etcd_client)
-        except:
+        except ConfigAlreadyDownloaded:
+            # Ask user if the downloaded version can be overwritten
+            pass
+        except ConfigDownloadFailed:
+            # Abort and tell user
             pass
 
     if args.action == "upload":
         try:
             validate_config()
             upload_config(etcd_client)
-        except:
+        except UserAbort:
+            # Abort and tell user
+            pass
+        except EtcdMasterConfigChanged:
+            # Tell user to redownload and abort
+            pass
+        except ConfigUploadFailed:
+            # Tell user and abort
             pass
 
 
