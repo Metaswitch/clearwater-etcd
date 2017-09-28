@@ -55,22 +55,52 @@ class etcdClient(etcd.Client):
 
     def download_config(self, config_type):
         """Save a copy of a given config type to the download directory.
-        This function will throw an etcd.EtcdKeyNotFound exception if the
-        config file is not available in the etcd database to be downloaded."""
-        download = self.get("/".join([self.prefix, config_type]))
+        Raises a ConfigDownloadFailed exception if unsuccessful."""
+        try:
+            # First we pull the data down from the etcd cluster. This will
+            # throw an etcd.EtcdKeyNotFound exception if the config type
+            # does not exist in the database.
+            download = self.read("/".join([self.prefix, config_type]))
+        except etcd.EtcdKeyNotFound:
+            raise ConfigDownloadFailed(
+                "Failed to download {}".format(config_type))
 
-        with open(os.path.join(self.download_dir, config_type), 'w') as fl:
-            fl.write(download)
+        # Write the config to file.
+        try:
+            with open(os.path.join(self.download_dir,
+                                   config_type), 'w') as config_file:
+                config_file.write(download.value)
+        except IOError:
+            raise ConfigDownloadFailed(
+                "Couldn't save {} to file".format(config_type))
+
+        # We want to keep track of the index the config had in the etcd cluster
+        # so we know if it is up to date.
+        try:
+            with open(os.path.join(self.download_dir,
+                                   config_type + ".index"), 'w') as index_file:
+                index_file.write(download.modifiedIndex)
+        except IOError:
+            raise ConfigDownloadFailed(
+                "Couldn't save {} to file".format(config_type))
 
     def upload_config(self, config_type, **kwargs):
         """Upload config contained in the specified file to the etcd database.
-        Raises an IOError exception if the file is not available.
-        Raises an etcd.EtcdConnectionFailed exception if etcd is not available.
+        Raises a ConfigUploadFailed exception if unsuccessful.
         """
-        with open(os.path.join(self.download_dir, config_type), 'r') as fl:
-            upload = fl.read(MAXIMUM_CONFIG_SIZE)
+        try:
+            with open(os.path.join(self.download_dir,
+                                   config_type), 'r') as config_file:
+                upload = config_file.read(MAXIMUM_CONFIG_SIZE)
+        except IOError:
+            raise ConfigUploadFailed(
+                "Failed to retrieve {} from file".format(config_type))
 
-        self.set("/".join([self.prefix, config_type]), upload, **kwargs)
+        try:
+            self.write("/".join([self.prefix, config_type]), upload, **kwargs)
+        except etcd.EtcdConnectionFailed:
+            raise ConfigUploadFailed(
+                "Unable to upload {} to etcd cluster".format(config_type))
 
     # We need this property for the step in upload_config where we log the
     # change in config to file.
@@ -165,7 +195,7 @@ def download_config(client):
 
 def validate_config():
     """
-    Validates the config.
+    Validates the config by calling all scripts in the validation folder.
     :return:
     """
     pass
@@ -179,6 +209,13 @@ def upload_config(client, force=False):
     """
     # For now, shared_config is the only config type controlled by this code.
     CONFIG_TYPE = "shared_config"
+
+    # THERE MAY BE SOMETHING MISSING HERE! In the bash script
+    # `upload_shared_config`, we check that the port we expect etcd to be
+    # listening on is actually open before doing anything else. It's possible
+    # that we don't actually need to do that in this case, because we'll
+    # always be doing some sort of initial verification that the connection
+    # can be made. But need to confirm that is in fact the case.
 
     # Check that the file exists.
     if not os.path.exists(os.path.join(DOWNLOADED_CONFIG_PATH,
