@@ -13,11 +13,34 @@ import argparse
 # Constants
 SHARED_CONFIG_PATH = "/etc/clearwater/shared_config"
 DOWNLOADED_CONFIG_PATH = " ~/clearwater-config-manager/staging"
+MAXIMUM_CONFIG_SIZE = 100000
 
 # Error messages
 MODIFIED_WHILE_EDITING = """Another user has modified the configuration since
 cw-download_shared_config was last run. Please download the latest version of
 shared config, re-apply the changes and try again."""
+
+
+# Exceptions
+class ConfigAlreadyDownloaded(Exception):
+    pass
+
+
+class ConfigDownloadFailed(Exception):
+    pass
+
+
+class UserAbort(Exception):
+    pass
+
+
+class EtcdMasterConfigChanged(Exception):
+    pass
+
+
+class ConfigUploadFailed(Exception):
+    pass
+
 
 class etcdClient(etcd.Client):
     """Wrapper around etcd.Client to include information about where to find
@@ -27,14 +50,25 @@ class etcdClient(etcd.Client):
         etcd API that will get us our config."""
         super(etcdClient, self).__init__(self, args, kwargs)
         self.prefix = "/".join(["", etcd_key, site, "configuration"])
+        self.download_dir = os.path.join(DOWNLOADED_CONFIG_PATH,
+                                         get_user_name())
 
-    def get_config(self, config_type):
-        """Wrapper around the get() method to include the specified prefix."""
-        return self.get("/".join([self.prefix, config_type]))
+    def download_config(self, config_type):
+        """Save a copy of a given config type to the download directory.
+        This function will throw an etcd.EtcdKeyNotFound exception if the
+        config file is not available in the etcd database to be downloaded."""
+        download = self.get("/".join([self.prefix, config_type]))
+        with open(os.path.join(self.download_dir, config_type), 'w') as fl:
+            fl.write(download)
 
-    def write_config(self, config_type, *args, **kwargs):
-        """Wrapper around the set() method to include the specified prefix."""
-        return self.set("/".join([self.prefix, config_type]), *args, **kwargs)
+    def upload_config(self, config_type, **kwargs):
+        """Upload config contained in the specified file to the etcd database.
+        Raises an IOError exception if the file is not available.
+        Raises an etcd.EtcdConnectionFailed exception if etcd is not available.
+        """
+        with open(os.path.join(self.download_dir, config_type), 'r') as fl:
+            upload = fl.read(MAXIMUM_CONFIG_SIZE)
+        self.set("/".join([self.prefix, config_type]), upload, **kwargs)
 
     @property
     def full_uri(self):
@@ -63,14 +97,25 @@ def main(args):
     if args.action == "download":
         try:
             download_config(etcd_client)
-        except:
+        except ConfigAlreadyDownloaded:
+            # Ask user if the downloaded version can be overwritten
+            pass
+        except ConfigDownloadFailed:
+            # Abort and tell user
             pass
 
     if args.action == "upload":
         try:
             validate_config()
             upload_config(etcd_client)
-        except:
+        except UserAbort:
+            # Abort and tell user
+            pass
+        except EtcdMasterConfigChanged:
+            # Tell user to redownload and abort
+            pass
+        except ConfigUploadFailed:
+            # Tell user and abort
             pass
 
 
@@ -128,15 +173,26 @@ def upload_config(client):
     .
     :return:
     """
+    # For now, shared_config is the only config type controlled by this code.
+    CONFIG_TYPE = "shared_config"
+
     # Check that the file exists.
     if not os.path.exists(os.path.join(DOWNLOADED_CONFIG_PATH,
-                                       USER_NAME,
-                                       "shared_config")):
-        log.error("No shared configuration detected, unable to upload")
-        return False
+                                       get_user_name(),
+                                       CONFIG_TYPE)):
+        raise IOError("No shared config found, unable to upload")
 
     # Log the changes.
     log_shared_config.log_config(client.full_uri)
+
+    # Upload the configuration to the etcd cluster.
+    client.upload_config(CONFIG_TYPE)
+
+    # Add the node to the restart queue(s)
+    apply_config_key = subprocess.check_output("/usr/share/clearwater/clearwater-queue-manager/scripts/get_apply_config_key")
+    subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
+                     "add",
+                     apply_config_key])
 
 
 def get_user_name():
