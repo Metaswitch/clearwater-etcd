@@ -13,6 +13,7 @@ import argparse
 # Constants
 SHARED_CONFIG_PATH = "/etc/clearwater/shared_config"
 DOWNLOADED_CONFIG_PATH = "/var/tmp/config"
+MAXIMUM_CONFIG_SIZE = 100000
 
 # Error messages
 MODIFIED_WHILE_EDITING = """Another user has modified the configuration since
@@ -27,14 +28,25 @@ class etcdClient(etcd.Client):
         etcd API that will get us our config."""
         super(etcdClient, self).__init__(self, args, kwargs)
         self.prefix = "/".join(["", etcd_key, site, "configuration"])
+        self.download_dir = os.path.join(DOWNLOADED_CONFIG_PATH,
+                                         get_user_name())
 
-    def get_config(self, config_type):
-        """Wrapper around the get() method to include the specified prefix."""
-        return self.get("/".join([self.prefix, config_type]))
+    def download_config(self, config_type):
+        """Save a copy of a given config type to the download directory.
+        This function will throw an etcd.EtcdKeyNotFound exception if the
+        config file is not available in the etcd database to be downloaded."""
+        download = self.get("/".join([self.prefix, config_type]))
+        with open(os.path.join(self.download_dir, config_type), 'w') as fl:
+            fl.write(download)
 
-    def write_config(self, config_type, *args, **kwargs):
-        """Wrapper around the set() method to include the specified prefix."""
-        return self.set("/".join([self.prefix, config_type]), *args, **kwargs)
+    def upload_config(self, config_type, **kwargs):
+        """Upload config contained in the specified file to the etcd database.
+        Raises an IOError exception if the file is not available.
+        Raises an etcd.EtcdConnectionFailed exception if etcd is not available.
+        """
+        with open(os.path.join(self.download_dir, config_type), 'r') as fl:
+            upload = fl.read(MAXIMUM_CONFIG_SIZE)
+        self.set("/".join([self.prefix, config_type]), upload, **kwargs)
 
     @property
     def full_uri(self):
@@ -128,15 +140,20 @@ def upload_config(client):
     .
     :return:
     """
+    # For now, shared_config is the only config type controlled by this code.
+    CONFIG_TYPE = "shared_config"
+
     # Check that the file exists.
     if not os.path.exists(os.path.join(DOWNLOADED_CONFIG_PATH,
-                                       USER_NAME,
-                                       "shared_config")):
-        log.error("No shared configuration detected, unable to upload")
-        return False
+                                       get_user_name(),
+                                       CONFIG_TYPE)):
+        raise IOError("No shared config found, unable to upload")
 
     # Log the changes.
     log_shared_config.log_config(client.full_uri)
+
+    # Upload the configuration to the etcd cluster.
+    client.upload_config(CONFIG_TYPE)
 
 
 
