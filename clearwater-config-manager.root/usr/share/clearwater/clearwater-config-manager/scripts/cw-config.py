@@ -36,6 +36,7 @@ class etcdClient(etcd.Client):
         This function will throw an etcd.EtcdKeyNotFound exception if the
         config file is not available in the etcd database to be downloaded."""
         download = self.get("/".join([self.prefix, config_type]))
+
         with open(os.path.join(self.download_dir, config_type), 'w') as fl:
             fl.write(download)
 
@@ -46,8 +47,11 @@ class etcdClient(etcd.Client):
         """
         with open(os.path.join(self.download_dir, config_type), 'r') as fl:
             upload = fl.read(MAXIMUM_CONFIG_SIZE)
+
         self.set("/".join([self.prefix, config_type]), upload, **kwargs)
 
+    # We need this property for the step in upload_config where we log the
+    # change in config to file.
     @property
     def full_uri(self):
         """Returns a URI that represents the folder containing the config
@@ -134,7 +138,7 @@ def validate_config():
     pass
 
 
-def upload_config(client):
+def upload_config(client, force=False):
     """
     Uploads the config from DOWNLOADED_CONFIG_PATH/<USER_NAME> to etcd.
     .
@@ -159,6 +163,11 @@ def upload_config(client):
     apply_config_key = subprocess.check_output("/usr/share/clearwater/clearwater-queue-manager/scripts/get_apply_config_key")
     subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
                      "add",
+                     apply_config_key])
+
+    # We need to modify the queue if we're forcing.
+    subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
+                     "force_true" if force else "force_false",
                      apply_config_key])
 
 
