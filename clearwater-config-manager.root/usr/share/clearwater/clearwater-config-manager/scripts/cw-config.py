@@ -60,13 +60,13 @@ def main(args):
     # leave unused files on disk.
     delete_outdated_config_files()
 
-    if args["action"] == "download":
+    if args.action == "download":
         try:
             download_config(etcd_client)
         except:
             pass
 
-    if args["action"] == "upload":
+    if args.action == "upload":
         try:
             validate_config()
             upload_config(etcd_client)
@@ -92,10 +92,8 @@ def parse_arguments():
                               " - only one option currently"))
     parser.add_argument("management_IP",
                         help="The IP address to contact etcd with")
-    args = parser.parse_args()
 
-    return (args.autoconfirm, args.force, args.action,
-            args.config_type, args.management_IP)
+    return parser.parse_args()
 
 
 def delete_outdated_config_files():
