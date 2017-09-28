@@ -6,6 +6,9 @@
 # Metaswitch Networks in a separate written agreement.
 import submodule
 import etcd
+import os
+import log_shared_config
+import argparse
 
 # Constants
 SHARED_CONFIG_PATH = "/etc/clearwater/shared_config"
@@ -32,6 +35,14 @@ class etcdClient(etcd.Client):
     def write_config(self, config_type, *args, **kwargs):
         """Wrapper around the set() method to include the specified prefix."""
         return self.set("/".join([self.prefix, config_type]), *args, **kwargs)
+
+    @property
+    def full_uri(self):
+        """Returns a URI that represents the folder containing the config
+        files."""
+        return "/".join([self.base_uri,
+                         self.key_endpoint,
+                         self.prefix])
 
 def main(args):
     """
@@ -68,7 +79,23 @@ def parse_arguments():
     Parse the arguments passed to the script.
     :return:
     """
-    pass
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--autoconfirm", action="store_true",
+                        help="Turns autoconfirm on [default=off]")
+    parser.add_argument("--force", action="store_true",
+                        help="Turns forcing on [default=off]")
+    parser.add_argument("action", type=str, choices=['upload', 'download'],
+                        help="The action to perform - upload or download")
+    parser.add_argument("config_type", nargs='?', default='shared', type=str,
+                        choices=['shared'],
+                        help=("The config type to use - shared"
+                              " - only one option currently"))
+    parser.add_argument("management_IP",
+                        help="The IP address to contact etcd with")
+    args = parser.parse_args()
+
+    return (args.autoconfirm, args.force, args.action,
+            args.config_type, args.management_IP)
 
 
 def delete_outdated_config_files():
@@ -103,7 +130,18 @@ def upload_config(client):
     .
     :return:
     """
-    pass
+    # Check that the file exists.
+    if not os.path.exists(os.path.join(DOWNLOADED_CONFIG_PATH,
+                                       USER_NAME,
+                                       "shared_config")):
+        log.error("No shared configuration detected, unable to upload")
+        return False
+
+    # Log the changes.
+    log_shared_config.log_config(client.full_uri)
+
+
+
 
 
 def get_user_name():

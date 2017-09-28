@@ -13,14 +13,11 @@ import requests
 import syslog
 import codecs
 
-def main():
+def log_config(url):
     '''
     Print a readable diff of changes between etcd's shared_config and a newer
     local copy, and log to syslog.
     '''
-
-    # URL of shared_config etcd key
-    url = sys.argv[1]
 
     old_config_lines = []
     new_config_lines = []
@@ -89,4 +86,6 @@ def main():
     else:
         print "No changes detected in shared configuration file"
 
-main()
+if __name__ == "__main__":
+    url = sys.argv[1]
+    log_config(url)
