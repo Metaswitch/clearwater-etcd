@@ -4,7 +4,7 @@
 # the license outlined in that COPYING file applies to your use.
 # Otherwise no rights are granted except for those provided to you by
 # Metaswitch Networks in a separate written agreement.
-import submodule
+import subprocess
 import etcd
 import os
 import log_shared_config
@@ -12,7 +12,7 @@ import argparse
 
 # Constants
 SHARED_CONFIG_PATH = "/etc/clearwater/shared_config"
-DOWNLOADED_CONFIG_PATH = "/var/tmp/config"
+DOWNLOADED_CONFIG_PATH = " ~/clearwater-config-manager/staging"
 MAXIMUM_CONFIG_SIZE = 100000
 
 # Error messages
@@ -162,15 +162,18 @@ def upload_config(client):
                      apply_config_key])
 
 
-
-
-
 def get_user_name():
     """
-    Returns the current user name.
+    Returns the local user name if no RADIUS server was used and returns the
+    user name that was used to authenticate with a RADIUS server, if used.
     :return:
     """
-    pass
+    # Worth noting that `whoami` behaves differently to `who am i`, we need the
+    # latter.
+    process = subprocess.Popen(["who", "am", "i"], stdout=subprocess.PIPE)
+    output, error = process.communicate()
+    return output.split()[0]
+
 
 # Call main function if script is executed stand-alone
 if __name__ == "__main__":
