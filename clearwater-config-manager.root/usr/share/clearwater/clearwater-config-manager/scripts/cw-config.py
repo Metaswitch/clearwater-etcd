@@ -14,6 +14,7 @@ import argparse
 SHARED_CONFIG_PATH = "/etc/clearwater/shared_config"
 DOWNLOADED_CONFIG_PATH = " ~/clearwater-config-manager/staging"
 MAXIMUM_CONFIG_SIZE = 100000
+VALIDATION_SCRIPTS_FOLDER = "/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/"
 
 # Error messages
 MODIFIED_WHILE_EDITING = """Another user has modified the configuration since
@@ -193,12 +194,30 @@ def download_config(client):
     pass
 
 
-def validate_config():
+def validate_config(force):
     """
     Validates the config by calling all scripts in the validation folder.
     :return:
     """
-    pass
+    script_dir = os.listdir(VALIDATION_SCRIPTS_FOLDER)
+
+    # We can only execute scripts that have execute permissions.
+    scripts = [os.path.join(VALIDATION_SCRIPTS_FOLDER, s)
+               for s in script_dir
+               if os.access(os.path.join(VALIDATION_SCRIPTS_FOLDER, s),
+                            os.X_OK)]
+    for script in scripts:
+        try:
+            subprocess.check_call(script)
+        except subprocess.CalledProcessError:
+            if force:
+                # In force mode, we override issues with the validation.
+                continue
+            else:
+                raise ConfigUploadError(
+                    "Validation failed while executing script {}".format(
+                        os.path.basename(script)))
+
 
 
 def upload_config(client, force=False):
