@@ -7,6 +7,7 @@
 
 # Constants
 SHARED_CONFIG_PATH = "/etc/clearwater/shared_config"
+DOWNLOADED_CONFIG_PATH = "/var/tmp/config"
 
 # Error messages
 MODIFIED_WHILE_EDITING = """Another user has modified the configuration since
@@ -18,12 +19,72 @@ def main(args):
     """
     Main entry point for script.
     """
-    pass
+    # Set up logging
+
+    # Regardless of passed arguments we want to delete outdated config to not
+    # leave unused files on disk.
+    delete_outdated_config_files()
+
+    if args["action"] == "download":
+        try:
+            download_config()
+        except:
+            pass
+
+    if args["action"] == "upload":
+        try:
+            validate_config()
+            upload_config()
+        except:
+            pass
 
 
 def parse_arguments():
     """
     Parse the arguments passed to the script.
+    :return:
+    """
+    pass
+
+
+def delete_outdated_config_files():
+    """
+    Deletes all config files in any subfolder of DOWNLOADED_CONFIG_PATH that is
+    older than 30 days.
+    :return:
+    """
+    pass
+
+
+def download_config():
+    """
+    Downloads the config from etcd and saves a copy to
+    DOWNLOADED_CONFIG_PATH/<USER_NAME>.
+    :return:
+    """
+    pass
+
+
+def validate_config():
+    """
+    Validates the config.
+    :return:
+    """
+    pass
+
+
+def upload_config():
+    """
+    Uploads the config from DOWNLOADED_CONFIG_PATH/<USER_NAME> to etcd.
+    .
+    :return:
+    """
+    pass
+
+
+def get_user_name():
+    """
+    Returns the current user name.
     :return:
     """
     pass
