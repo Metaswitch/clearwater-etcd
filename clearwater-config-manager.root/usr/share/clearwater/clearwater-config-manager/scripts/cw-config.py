@@ -6,13 +6,19 @@
 # Metaswitch Networks in a separate written agreement.
 
 # Constants
+SHARED_CONFIG_PATH = "/etc/clearwater/shared_config"
+
+# Error messages
+MODIFIED_WHILE_EDITING = """Another user has modified the configuration since
+cw-download_shared_config was last run. Please download the latest version of
+shared config, re-apply the changes and try again."""
 
 
-def main():
+def main(args):
     """
     Main entry point for script.
     """
-    args = parse_arguments()
+    pass
 
 
 def parse_arguments():
@@ -22,5 +28,7 @@ def parse_arguments():
     """
     pass
 
-# Call main function
-main()
+# Call main function if script is executed stand-alone
+if __name__ == "__main__":
+    arguments = parse_arguments()
+    main(arguments)
