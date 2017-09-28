@@ -20,13 +20,17 @@ class etcdClient(etcd.Client):
     """Wrapper around etcd.Client to include information about where to find
     config files in the database."""
     def __init__(self, etcd_key, site, *args, **kwargs):
+        """In addition to standard init, we store off the URL to query on the
+        etcd API that will get us our config."""
         super(etcdClient, self).__init__(self, args, kwargs)
         self.prefix = "/".join(["", etcd_key, site, "configuration"])
 
     def get_config(self, config_type):
+        """Wrapper around the get() method to include the specified prefix."""
         return self.get("/".join([self.prefix, config_type]))
 
     def write_config(self, config_type, *args, **kwargs):
+        """Wrapper around the set() method to include the specified prefix."""
         return self.set("/".join([self.prefix, config_type]), *args, **kwargs)
 
 def main(args):
