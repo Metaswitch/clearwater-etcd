@@ -195,7 +195,7 @@ def download_config(client):
     pass
 
 
-def validate_config(force):
+def validate_config(force=False):
     """
     Validates the config by calling all scripts in the validation folder.
     :return:
