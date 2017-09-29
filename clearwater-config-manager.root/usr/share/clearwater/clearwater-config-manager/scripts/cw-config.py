@@ -7,6 +7,7 @@
 # Metaswitch Networks in a separate written agreement.
 import subprocess
 import etcd
+import etcd.client
 import os
 import log_shared_config
 import argparse
@@ -44,7 +45,7 @@ class ConfigUploadFailed(Exception):
     pass
 
 
-class etcdClient(etcd.Client):
+class etcdClient(etcd.client.Client):
     """Wrapper around etcd.Client to include information about where to find
     config files in the database."""
     def __init__(self, etcd_key, site, *args, **kwargs):
