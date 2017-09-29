@@ -12,6 +12,8 @@ X86_64_ONLY=0
 
 .DEFAULT_GOAL = deb
 
+COVERAGE_SETUP_PY = cluster_mgr_setup.py queue_mgr_setup.py config_mgr_setup.py plugins_setup.py
+COVERAGE_PYTHON_PATH = src:common
 SRC_DIR = src/
 FLAKE8_INCLUDE_DIR = src/
 FLAKE8_EXCLUDE_DIR = src/clearwater_etcd_plugins/
@@ -47,22 +49,6 @@ test_plugins: plugins_setup.py env ${ENV_DIR}/.test_requirements
 run_test: queue_mgr_setup.py config_mgr_setup.py cluster_mgr_setup.py env ${ENV_DIR}/.test_requirements
 	PYTHONPATH=src:common ${PYTHON} cluster_mgr_setup.py test -v && PYTHONPATH=src:common ${PYTHON} queue_mgr_setup.py test -v && PYTHONPATH=src:common ${PYTHON} config_mgr_setup.py test -v && PYTHONPATH=src:common ${PYTHON} plugins_setup.py test -v
 
-${ENV_DIR}/bin/coverage: env
-	${ENV_DIR}/bin/pip install coverage==4.1
-
-
-# TODO Remove plugin exclusions from .coveragerc, and ensure full coverage of all plugins
-.PHONY: coverage
-coverage: ${ENV_DIR}/bin/coverage cluster_mgr_setup.py queue_mgr_setup.py config_mgr_setup.py plugins_setup.py ${ENV_DIR}/.test_requirements
-	rm -rf htmlcov/
-	${ENV_DIR}/bin/coverage erase
-	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run cluster_mgr_setup.py test
-	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run -a queue_mgr_setup.py test
-	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run -a config_mgr_setup.py test
-	PYTHONPATH=src:common ${ENV_DIR}/bin/coverage run -a plugins_setup.py test
-	${ENV_DIR}/bin/coverage combine
-	${ENV_DIR}/bin/coverage report -m --fail-under 100
-	${ENV_DIR}/bin/coverage xml
 
 
 ${ENV_DIR}/.test_requirements: common/requirements-test.txt fv-requirements.txt ${ENV_DIR}/.wheels-installed
