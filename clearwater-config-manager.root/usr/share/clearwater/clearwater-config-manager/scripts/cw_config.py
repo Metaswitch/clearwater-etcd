@@ -25,6 +25,9 @@ MODIFIED_WHILE_EDITING = """Another user has modified the configuration since
 cw-download_shared_config was last run. Please download the latest version of
 shared config, re-apply the changes and try again."""
 
+# Set up logging
+logging.basicConfig(filename=LOG_PATH, level=logging.DEBUG)
+log = logging.getLogger(__name__)
 
 # Exceptions
 class ConfigAlreadyDownloaded(Exception):
@@ -128,11 +131,6 @@ class ConfigLoader(object):
         return "/".join([self._etcd_client.base_uri,
                          self._etcd_client.key_endpoint,
                          self.prefix])
-
-
-# Set up logging
-logging.basicConfig(filename=LOG_PATH, level=logging.DEBUG)
-log = logging.getLogger(__name__)
 
 
 def main(args):
@@ -290,15 +288,30 @@ def upload_config(config_loader, config_type, force=False):
     # Audit logging?
     # log_shared_config.log_config(client.full_uri)
 
-    # TODO Download latest version to get up-to-date revision number
-
     # Compare local and etcd revision number
+    with open(os.path.join(config_loader.download_dir,
+                           config_type), "r") as f:
+        local_config = f.read()
     with open(os.path.join(config_loader.download_dir,
                            config_type + ".index"), "r") as f:
         local_revision = f.read()
-    remote_revision = config_loader.get_config_and_index(config_type).modifiedIndex
+    remote_config_and_index = config_loader.get_config_and_index(config_type)
+    remote_revision = remote_config_and_index.modifiedIndex
+    remote_config = remote_config_and_index.value
+
     if local_revision != remote_revision:
-        raise EtcdMasterConfigChanged
+        raise EtcdMasterConfigChanged("The remote config changed while editing"
+                                      "the config locally. Please redownload"
+                                      "the config and reapply your changes.")
+
+    # Provide a diff of the changes and ask user to confirm
+    print_diff(local_config, remote_config)
+
+    # TODO: Add skipping
+    confirmed = confirm_yn("Please check the config changes and confirm that "
+                           "you wish to continue with the config upload.")
+    if not confirmed:
+        raise UserAbort
 
     # Upload the configuration to the etcd cluster.
     config_loader.upload_config(config_type)
@@ -316,7 +329,7 @@ def upload_config(config_loader, config_type, force=False):
                      apply_config_key])
 
 
-def confirm_yn(prompt, autoskip):
+def confirm_yn(prompt, autoskip=False):
     """Asks the user to confirm they want to make the changes described by the
     prompt passed in. This keeps asking the user until a valid response is
     given. True or false is returned for a yes no input respectively"""
@@ -346,6 +359,11 @@ def get_user_name():
     process = subprocess.Popen(["who", "am", "i"], stdout=subprocess.PIPE)
     output, error = process.communicate()
     return output.split()[0]
+
+
+def print_diff(string_1, string_2):
+    """Prints the diff of two texts."""
+    pass
 
 
 # Call main function if script is executed stand-alone
