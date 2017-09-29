@@ -104,7 +104,7 @@ class ConfigLoader(object):
 
         return download
 
-    def upload_config(self, config_type, **kwargs):
+    def upload_config(self, config_type, cas_revision):
         """Upload config contained in the specified file to the etcd database.
         Raises a ConfigUploadFailed exception if unsuccessful.
         """
@@ -117,7 +117,9 @@ class ConfigLoader(object):
                 "Failed to retrieve {} from file".format(config_type))
 
         try:
-            self._etcd_client.write("/".join([self.prefix, config_type]), upload, **kwargs)
+            self._etcd_client.write("/".join([self.prefix, config_type]),
+                                    upload,
+                                    prevIndex=cas_revision)
         except etcd.EtcdConnectionFailed:
             raise ConfigUploadFailed(
                 "Unable to upload {} to etcd cluster".format(config_type))
@@ -314,7 +316,8 @@ def upload_config(config_loader, config_type, force=False):
         raise UserAbort
 
     # Upload the configuration to the etcd cluster.
-    config_loader.upload_config(config_type)
+    config_loader.upload_config(config_type,
+                                remote_revision)
 
     # Add the node to the restart queue(s)
     apply_config_key = subprocess.check_output(
