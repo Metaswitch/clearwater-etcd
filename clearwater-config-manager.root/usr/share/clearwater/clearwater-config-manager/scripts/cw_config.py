@@ -9,7 +9,6 @@ import subprocess
 import etcd
 import etcd.client
 import os
-#import log_shared_config
 import argparse
 import logging
 import sys
@@ -231,7 +230,7 @@ def download_config(config_loader, config_type, autoskip):
         # Ask user to confirm if they want to overwrite the file
         # Continue with download if user confirms
         confirmed = confirm_yn("A local copy of shared_config is already present. "
-                   "Continuing will overwrite the file.", autoskip)
+                               "Continuing will overwrite the file.", autoskip)
         if not confirmed:
             raise UserAbort
 
@@ -305,7 +304,8 @@ def upload_config(config_loader, config_type, force=False):
     config_loader.upload_config(config_type)
 
     # Add the node to the restart queue(s)
-    apply_config_key = subprocess.check_output("/usr/share/clearwater/clearwater-queue-manager/scripts/get_apply_config_key")
+    apply_config_key = subprocess.check_output(
+        "/usr/share/clearwater/clearwater-queue-manager/scripts/get_apply_config_key")
     subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
                      "add",
                      apply_config_key])
