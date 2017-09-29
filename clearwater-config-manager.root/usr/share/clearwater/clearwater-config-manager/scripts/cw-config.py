@@ -216,7 +216,8 @@ def validate_config(force=False):
                 # In force mode, we override issues with the validation.
                 continue
             else:
-                raise ConfigUploadError(
+                # KAF: Changed this to Failed from Error - MD6 to confirm OK.
+                raise ConfigUploadFailed(
                     "Validation failed while executing script {}".format(
                         os.path.basename(script)))
 
