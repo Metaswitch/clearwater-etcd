@@ -173,6 +173,8 @@ def parse_arguments():
                               " - only one option currently"))
     parser.add_argument("management_IP",
                         help="The IP address to contact etcd with")
+    parser.add_argument("site", help="TODO")
+    parser.add_argument("etcd_key", help="TODO")
 
     return parser.parse_args()
 
