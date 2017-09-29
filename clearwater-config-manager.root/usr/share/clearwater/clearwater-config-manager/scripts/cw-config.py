@@ -208,7 +208,7 @@ def download_config(client, config_type):
         # Ask user to confirm if they want to overwrite the file
         # Continue with download if user confirms
 
-    client.download_config(config_type)
+        client.download_config(config_type)
 
 
 def validate_config(force=False):
