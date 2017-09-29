@@ -14,6 +14,10 @@ import argparse
 import logging
 import sys
 
+# Set up logging
+logging.basicConfig(filename=LOG_PATH, level=logging.DEBUG)
+log = logging.getLogger(__name__)
+
 # Constants
 SHARED_CONFIG_PATH = "/etc/clearwater/shared_config"
 DOWNLOADED_CONFIG_PATH = " ~/clearwater-config-manager/staging"
@@ -130,9 +134,6 @@ class etcdClient(etcd.client.Client):
                          self.key_endpoint,
                          self.prefix])
 
-# Set up logging
-logging.basicConfig(filename=LOG_PATH, level=logging.DEBUG)
-log = logging.getLogger(__name__)
 
 def main(args):
     """
@@ -288,15 +289,28 @@ def upload_config(client, config_type, force=False):
     # Audit logging?
     # log_shared_config.log_config(client.full_uri)
 
-    # TODO Download latest version to get up-to-date revision number
-
     # Compare local and etcd revision number
+    with open(os.path.join(client.download_dir,
+                           config_type), "r") as f:
+        local_config = f.read()
     with open(os.path.join(client.download_dir,
                            config_type + ".index"), "r") as f:
         local_revision = f.read()
-    remote_revision = client.get_config_and_index(config_type).modifiedIndex
+    remote_config_and_index = client.get_config_and_index(config_type)
+    remote_revision = remote_config_and_index.modifiedIndex
+    remote_config = remote_config_and_index.value
+
     if local_revision != remote_revision:
-        raise EtcdMasterConfigChanged
+        raise EtcdMasterConfigChanged("The remote config changed while editing"
+                                      "the config locally. Please redownload"
+                                      "the config and reapply your changes.")
+
+    # Provide a diff of the changes and ask user to confirm
+    print_diff(local_config, remote_config)
+    confirmed = confirm_yn("Please check the config changes and confirm that "
+                           "you wish to continue with the config upload.")
+    if not confirmed:
+        raise UserAbort
 
     # Upload the configuration to the etcd cluster.
     client.upload_config(config_type)
@@ -343,6 +357,11 @@ def get_user_name():
     process = subprocess.Popen(["who", "am", "i"], stdout=subprocess.PIPE)
     output, error = process.communicate()
     return output.split()[0]
+
+
+def print_diff(string_1, string_2):
+    """Prints the diff of two texts."""
+    pass
 
 
 # Call main function if script is executed stand-alone
