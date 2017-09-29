@@ -9,14 +9,17 @@ import subprocess
 import etcd
 import etcd.client
 import os
-import log_shared_config
+#import log_shared_config
 import argparse
+import logging
+import sys
 
 # Constants
 SHARED_CONFIG_PATH = "/etc/clearwater/shared_config"
 DOWNLOADED_CONFIG_PATH = " ~/clearwater-config-manager/staging"
 MAXIMUM_CONFIG_SIZE = 100000
 VALIDATION_SCRIPTS_FOLDER = "/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/"
+LOG_PATH = "/var/log/clearwater-etcd/cw-config.log"
 
 # Error messages
 MODIFIED_WHILE_EDITING = """Another user has modified the configuration since
@@ -123,41 +126,53 @@ class etcdClient(etcd.client.Client):
                          self.key_endpoint,
                          self.prefix])
 
+# Set up logging
+logging.basicConfig(filename=LOG_PATH, level=logging.DEBUG)
+log = logging.getLogger(__name__)
 
 def main(args):
     """
     Main entry point for script.
     """
-    # TODO Set up logging
-
     # Regardless of passed arguments we want to delete outdated config to not
     # leave unused files on disk.
     delete_outdated_config_files()
 
     # Define an etcd client for interacting with the database.
     try:
+        log.debug("Getting etcdClient with parameters {}, {}, {}"
+                  .format(args.etcd_key, args.site, args.management_ip))
         etcd_client = etcdClient(etcd_key=args.etcd_key,
                                  site=args.site,
                                  host=args.management_ip,
                                  port=4000)
         #TODO we should check the connection to etcd.
     except:
-        raise EtcdConnectionFailed
+        sys.exit("Unable to contact the etcd cluster.")
 
     if args.action == "download":
+        log.info("Running in download mode.")
         try:
-            download_config(etcd_client, args.config_type)
-        except ConfigDownloadFailed:
-            # Abort and tell user
-            pass
+            download_config(etcd_client, args.config_type, args.autoconfirm)
+        except ConfigDownloadFailed as e:
+            sys.exit(e)
+        except UserAbort:
+            sys.exit("User aborted.")
+        except IOError as e:
+            sys.exit(e)
 
     if args.action == "upload":
+        log.info("Running in upload mode.")
+
         try:
             validate_config(args.force)
+        except ConfigValidationFailed as exc:
+            sys.exit(exc)
+
+        try:
             upload_config(etcd_client, args.config_type, args.force)
         except UserAbort:
-            # Abort and tell user
-            pass
+            sys.exit("User aborted.")
         except EtcdMasterConfigChanged:
             # Tell user to redownload and abort
             pass
@@ -197,24 +212,32 @@ def delete_outdated_config_files():
     pass
 
 
-def download_config(client, config_type):
+def download_config(client, config_type, autoskip):
     """
     Downloads the config from etcd and saves a copy to
     DOWNLOADED_CONFIG_PATH/<USER_NAME>.
     """
-    if os.path.exists(os.path.join(DOWNLOADED_CONFIG_PATH,
-                                       get_user_name(),
-                                       config_type)):
+    local_config_path = os.path.join(DOWNLOADED_CONFIG_PATH,
+                                     get_user_name(),
+                                     config_type)
+    if os.path.exists(local_config_path):
         # Ask user to confirm if they want to overwrite the file
         # Continue with download if user confirms
+        confirmed = confirm_yn("A local copy of shared_config is already present. "
+                   "Continuing will overwrite the file.", autoskip)
+        if not confirmed:
+            raise UserAbort
 
-        client.download_config(config_type)
+    client.download_config(config_type)
+    print("Shared configuration downloaded to {}".format(local_config_path))
 
 
 def validate_config(force=False):
     """
     Validates the config by calling all scripts in the validation folder.
+    TODO: also call our validation script
     """
+    log.info("Start validating config using user scripts.")
     script_dir = os.listdir(VALIDATION_SCRIPTS_FOLDER)
 
     # We can only execute scripts that have execute permissions.
@@ -230,10 +253,11 @@ def validate_config(force=False):
                 # In force mode, we override issues with the validation.
                 continue
             else:
-                # KAF: Changed this to Failed from Error - MD6 to confirm OK.
-                raise ConfigUploadFailed(
+                raise ConfigValidationFailed(
                     "Validation failed while executing script {}".format(
                         os.path.basename(script)))
+
+    #TODO: add our validation script that should always be run
 
 
 def upload_config(client, config_type, force=False):
@@ -254,7 +278,15 @@ def upload_config(client, config_type, force=False):
         raise IOError("No shared config found, unable to upload")
 
     # Log the changes.
-    log_shared_config.log_config(client.full_uri)
+    # TODO: This probably won't work, the script compares
+    # /etc/clearwater/shared_config to the etcd version, which we're not doing
+    # anymore. What do we actually want to get out of calling this script?
+    # Audit logging?
+    # log_shared_config.log_config(client.full_uri)
+
+    # TODO Download latest version to get up-to-date revision number
+
+    # Compare local and etcd revision number -
 
     # Upload the configuration to the etcd cluster.
     client.upload_config(config_type)
@@ -269,6 +301,26 @@ def upload_config(client, config_type, force=False):
     subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
                      "force_true" if force else "force_false",
                      apply_config_key])
+
+
+def confirm_yn(prompt, autoskip):
+    """Asks the user to confirm they want to make the changes described by the
+    prompt passed in. This keeps asking the user until a valid response is
+    given. True or false is returned for a yes no input respectively"""
+
+    if autoskip is True:
+        log.info('skipping confirmation enabled')
+        return True
+
+    question = "Do you want to continue?  [yes/no] "
+
+    while True:
+        print('\n{0} '.format(prompt))
+        supplied_input = raw_input(question)
+        if supplied_input.strip().lower() not in ['y', 'yes', 'n', 'no']:
+                print('\n Answer must be yes or no')
+        else:
+            return supplied_input.strip().lower().startswith('y')
 
 
 def get_user_name():
