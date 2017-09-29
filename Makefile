@@ -14,7 +14,7 @@ X86_64_ONLY=0
 
 COVERAGE_SETUP_PY = cluster_mgr_setup.py queue_mgr_setup.py config_mgr_setup.py plugins_setup.py
 COVERAGE_PYTHON_PATH = src:common
-SRC_DIR = src/
+CLEAN_SRC_DIR = src/
 FLAKE8_INCLUDE_DIR = src/
 FLAKE8_EXCLUDE_DIR = src/clearwater_etcd_plugins/
 BANDIT_EXCLUDE_LIST = src/metaswitch/clearwater/queue_manager/test/,src/metaswitch/clearwater/plugin_tests/,src/metaswitch/clearwater/etcd_tests/,src/metaswitch/clearwater/etcd_shared/test,src/metaswitch/clearwater/config_manager/test/,src/metaswitch/clearwater/cluster_manager/test/,common,_env,.wheelhouse,debian,build_clustermgr,build_configmgr,build_shared
