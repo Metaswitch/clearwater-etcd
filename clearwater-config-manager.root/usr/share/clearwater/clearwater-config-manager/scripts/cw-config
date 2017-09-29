@@ -11,4 +11,4 @@
 # from the config file.
 . /etc/clearwater/config
 
-/usr/share/clearwater/clearwater-config-manager/scripts/cw-config.py "$@" ${management_local_ip:-$local_ip} ${local_site_name:-"site1"} ${etcd_key:-"clearwater"}
+/usr/share/clearwater/clearwater-config-manager/_env/bin.python -m metaswitch.clearwater.config_manager.move_config "$@" ${management_local_ip:-$local_ip} ${local_site_name:-"site1"} ${etcd_key:-"clearwater"}
