@@ -29,6 +29,8 @@ fvtest: fvtest_setup.py env ${ENV_DIR}/.test_requirements
 .PHONY: test
 test: coverage
 
+coverage: ${ENV_DIR}/.test_requirements
+
 .PHONY: test_cluster_mgr
 test_cluster_mgr: cluster_mgr_setup.py env ${ENV_DIR}/.test_requirements
 	PYTHONPATH=src:common ${PYTHON} cluster_mgr_setup.py test -v
