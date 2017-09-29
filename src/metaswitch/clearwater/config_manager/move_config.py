@@ -14,7 +14,6 @@ import logging
 import sys
 
 # Constants
-SHARED_CONFIG_PATH = "/etc/clearwater/shared_config"
 DOWNLOADED_CONFIG_PATH = " ~/clearwater-config-manager/staging"
 MAXIMUM_CONFIG_SIZE = 100000
 VALIDATION_SCRIPTS_FOLDER = "/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/"
@@ -28,6 +27,7 @@ shared config, re-apply the changes and try again."""
 # Set up logging
 logging.basicConfig(filename=LOG_PATH, level=logging.DEBUG)
 log = logging.getLogger(__name__)
+
 
 # Exceptions
 class ConfigAlreadyDownloaded(Exception):
@@ -66,8 +66,7 @@ class ConfigLoader(object):
         # etcd API that will get us our config.
         self._etcd_client = etcd_client
         self.prefix = "/".join(["", etcd_key, site, "configuration"])
-        self.download_dir = os.path.join(DOWNLOADED_CONFIG_PATH,
-                                         get_user_name())
+        self.download_dir = get_user_download_dir()
 
     def download_config(self, config_type):
         """Save a copy of a given config type to the download directory.
@@ -214,8 +213,15 @@ def parse_arguments():
                         choices=['shared'],
                         help=("The config type to use - shared"
                               " - only one option currently"))
-    parser.add_argument("management_IP",
-                        help="The IP address to contact etcd with")
+    parser.add_argument("management_ip",
+                        help=("The IP address to contact etcd with - this is"
+                              "read from the config - do not enter"))
+    parser.add_argument("site", help=("always the site you are at, this is"
+                                      " read from config - do not enter"))
+    parser.add_argument("etcd_key",
+                        help=("this is currently always 'clearwater' but may"
+                              "be able to be 'CCF' as well in the future - "
+                              "this is read from config - do not enter"))
 
     return parser.parse_args()
 
@@ -234,9 +240,8 @@ def download_config(config_loader, config_type, autoskip):
     Downloads the config from etcd and saves a copy to
     DOWNLOADED_CONFIG_PATH/<USER_NAME>.
     """
-    local_config_path = os.path.join(DOWNLOADED_CONFIG_PATH,
-                                     get_user_name(),
-                                     config_type)
+    local_config_path = os.path.join(get_user_download_dir(), config_type)
+
     if os.path.exists(local_config_path):
         # Ask user to confirm if they want to overwrite the file
         # Continue with download if user confirms
@@ -289,9 +294,7 @@ def upload_config(config_loader, config_type, force=False, autoconfirm=False):
     # can be made. But need to confirm that is in fact the case.
 
     # Check that the file exists.
-    if not os.path.exists(os.path.join(DOWNLOADED_CONFIG_PATH,
-                                       get_user_name(),
-                                       config_type)):
+    if not os.path.exists(os.path.join(get_user_download_dir(), config_type)):
         raise IOError("No shared config found, unable to upload")
 
     # Log the changes.
@@ -375,6 +378,11 @@ def get_user_name():
     process = subprocess.Popen(["who", "am", "i"], stdout=subprocess.PIPE)
     output, error = process.communicate()
     return output.split()[0]
+
+
+def get_user_download_dir():
+    """Returns the user-specific directory for downloaded config."""
+    return os.path.join(DOWNLOADED_CONFIG_PATH, get_user_name())
 
 
 def print_diff(string_1, string_2):
