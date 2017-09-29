@@ -1,3 +1,4 @@
+#!/usr/share/clearwater/clearwater-config-manager/env/bin/python
 # Copyright (C) Metaswitch Networks 2016
 # If license terms are provided to you in a COPYING file in the root directory
 # of the source code repository by which you are accessing this code, then
@@ -6,7 +7,6 @@
 # Metaswitch Networks in a separate written agreement.
 import subprocess
 import etcd
-import etcd.client
 import os
 import log_shared_config
 import argparse
@@ -15,6 +15,7 @@ import argparse
 SHARED_CONFIG_PATH = "/etc/clearwater/shared_config"
 DOWNLOADED_CONFIG_PATH = " ~/clearwater-config-manager/staging"
 MAXIMUM_CONFIG_SIZE = 100000
+VALIDATION_SCRIPTS_FOLDER = "/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/"
 
 # Error messages
 MODIFIED_WHILE_EDITING = """Another user has modified the configuration since
@@ -43,7 +44,7 @@ class ConfigUploadFailed(Exception):
     pass
 
 
-class etcdClient(etcd.client.Client):
+class etcdClient(etcd.Client):
     """Wrapper around etcd.Client to include information about where to find
     config files in the database."""
     def __init__(self, etcd_key, site, *args, **kwargs):
@@ -56,21 +57,55 @@ class etcdClient(etcd.client.Client):
 
     def download_config(self, config_type):
         """Save a copy of a given config type to the download directory.
-        This function will throw an etcd.EtcdKeyNotFound exception if the
-        config file is not available in the etcd database to be downloaded."""
-        download = self.get("/".join([self.prefix, config_type]))
-        with open(os.path.join(self.download_dir, config_type), 'w') as fl:
-            fl.write(download)
+        Raises a ConfigDownloadFailed exception if unsuccessful."""
+        try:
+            # First we pull the data down from the etcd cluster. This will
+            # throw an etcd.EtcdKeyNotFound exception if the config type
+            # does not exist in the database.
+            download = self.read("/".join([self.prefix, config_type]))
+        except etcd.EtcdKeyNotFound:
+            raise ConfigDownloadFailed(
+                "Failed to download {}".format(config_type))
+
+        # Write the config to file.
+        try:
+            with open(os.path.join(self.download_dir,
+                                   config_type), 'w') as config_file:
+                config_file.write(download.value)
+        except IOError:
+            raise ConfigDownloadFailed(
+                "Couldn't save {} to file".format(config_type))
+
+        # We want to keep track of the index the config had in the etcd cluster
+        # so we know if it is up to date.
+        try:
+            with open(os.path.join(self.download_dir,
+                                   config_type + ".index"), 'w') as index_file:
+                index_file.write(download.modifiedIndex)
+        except IOError:
+            raise ConfigDownloadFailed(
+                "Couldn't save {} to file".format(config_type))
 
     def upload_config(self, config_type, **kwargs):
         """Upload config contained in the specified file to the etcd database.
-        Raises an IOError exception if the file is not available.
-        Raises an etcd.EtcdConnectionFailed exception if etcd is not available.
+        Raises a ConfigUploadFailed exception if unsuccessful.
         """
-        with open(os.path.join(self.download_dir, config_type), 'r') as fl:
-            upload = fl.read(MAXIMUM_CONFIG_SIZE)
-        self.set("/".join([self.prefix, config_type]), upload, **kwargs)
+        try:
+            with open(os.path.join(self.download_dir,
+                                   config_type), 'r') as config_file:
+                upload = config_file.read(MAXIMUM_CONFIG_SIZE)
+        except IOError:
+            raise ConfigUploadFailed(
+                "Failed to retrieve {} from file".format(config_type))
 
+        try:
+            self.write("/".join([self.prefix, config_type]), upload, **kwargs)
+        except etcd.EtcdConnectionFailed:
+            raise ConfigUploadFailed(
+                "Unable to upload {} to etcd cluster".format(config_type))
+
+    # We need this property for the step in upload_config where we log the
+    # change in config to file.
     @property
     def full_uri(self):
         """Returns a URI that represents the folder containing the config
@@ -107,8 +142,8 @@ def main(args):
 
     if args.action == "upload":
         try:
-            validate_config()
-            upload_config(etcd_client)
+            validate_config(args.force)
+            upload_config(etcd_client, args.force)
         except UserAbort:
             # Abort and tell user
             pass
@@ -160,15 +195,33 @@ def download_config(client):
     pass
 
 
-def validate_config():
+def validate_config(force=False):
     """
-    Validates the config.
+    Validates the config by calling all scripts in the validation folder.
     :return:
     """
-    pass
+    script_dir = os.listdir(VALIDATION_SCRIPTS_FOLDER)
+
+    # We can only execute scripts that have execute permissions.
+    scripts = [os.path.join(VALIDATION_SCRIPTS_FOLDER, s)
+               for s in script_dir
+               if os.access(os.path.join(VALIDATION_SCRIPTS_FOLDER, s),
+                            os.X_OK)]
+    for script in scripts:
+        try:
+            subprocess.check_call(script)
+        except subprocess.CalledProcessError:
+            if force:
+                # In force mode, we override issues with the validation.
+                continue
+            else:
+                raise ConfigUploadError(
+                    "Validation failed while executing script {}".format(
+                        os.path.basename(script)))
 
 
-def upload_config(client):
+
+def upload_config(client, force=False):
     """
     Uploads the config from DOWNLOADED_CONFIG_PATH/<USER_NAME> to etcd.
     .
@@ -176,6 +229,13 @@ def upload_config(client):
     """
     # For now, shared_config is the only config type controlled by this code.
     CONFIG_TYPE = "shared_config"
+
+    # THERE MAY BE SOMETHING MISSING HERE! In the bash script
+    # `upload_shared_config`, we check that the port we expect etcd to be
+    # listening on is actually open before doing anything else. It's possible
+    # that we don't actually need to do that in this case, because we'll
+    # always be doing some sort of initial verification that the connection
+    # can be made. But need to confirm that is in fact the case.
 
     # Check that the file exists.
     if not os.path.exists(os.path.join(DOWNLOADED_CONFIG_PATH,
@@ -193,6 +253,11 @@ def upload_config(client):
     apply_config_key = subprocess.check_output("/usr/share/clearwater/clearwater-queue-manager/scripts/get_apply_config_key")
     subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
                      "add",
+                     apply_config_key])
+
+    # We need to modify the queue if we're forcing.
+    subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
+                     "force_true" if force else "force_false",
                      apply_config_key])
 
 
