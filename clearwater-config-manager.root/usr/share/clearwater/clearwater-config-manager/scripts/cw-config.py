@@ -70,15 +70,7 @@ class etcdClient(etcd.client.Client):
     def download_config(self, config_type):
         """Save a copy of a given config type to the download directory.
         Raises a ConfigDownloadFailed exception if unsuccessful."""
-        try:
-            # First we pull the data down from the etcd cluster. This will
-            # throw an etcd.EtcdKeyNotFound exception if the config type
-            # does not exist in the database.
-            download = self.read("/".join([self.prefix, config_type]))
-        except etcd.EtcdKeyNotFound:
-            raise ConfigDownloadFailed(
-                "Failed to download {}".format(config_type))
-
+        download = self.get_config_and_index(config_type)
         # Write the config to file.
         try:
             with open(os.path.join(self.download_dir,
@@ -97,6 +89,18 @@ class etcdClient(etcd.client.Client):
         except IOError:
             raise ConfigDownloadFailed(
                 "Couldn't save {} to file".format(config_type))
+
+    def get_config_and_index(self, config_type):
+        try:
+            # First we pull the data down from the etcd cluster. This will
+            # throw an etcd.EtcdKeyNotFound exception if the config type
+            # does not exist in the database.
+            download = self.read("/".join([self.prefix, config_type]))
+        except etcd.EtcdKeyNotFound:
+            raise ConfigDownloadFailed(
+                "Failed to download {}".format(config_type))
+
+        return download
 
     def upload_config(self, config_type, **kwargs):
         """Upload config contained in the specified file to the etcd database.
@@ -286,7 +290,13 @@ def upload_config(client, config_type, force=False):
 
     # TODO Download latest version to get up-to-date revision number
 
-    # Compare local and etcd revision number -
+    # Compare local and etcd revision number
+    with open(os.path.join(client.download_dir,
+                           config_type + ".index"), "r") as f:
+        local_revision = f.read()
+    remote_revision = client.get_config_and_index(config_type).modifiedIndex
+    if local_revision != remote_revision:
+        raise EtcdMasterConfigChanged
 
     # Upload the configuration to the etcd cluster.
     client.upload_config(config_type)
