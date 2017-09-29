@@ -12,6 +12,7 @@ X86_64_ONLY=0
 
 .DEFAULT_GOAL = deb
 
+SRC_DIR = src/
 FLAKE8_INCLUDE_DIR = src/
 FLAKE8_EXCLUDE_DIR = src/clearwater_etcd_plugins/
 BANDIT_EXCLUDE_LIST = src/metaswitch/clearwater/queue_manager/test/,src/metaswitch/clearwater/plugin_tests/,src/metaswitch/clearwater/etcd_tests/,src/metaswitch/clearwater/etcd_shared/test,src/metaswitch/clearwater/config_manager/test/,src/metaswitch/clearwater/cluster_manager/test/,common,_env,.wheelhouse,debian,build_clustermgr,build_configmgr,build_shared
@@ -121,18 +122,4 @@ deb: env deb-only
 
 .PHONY: clean
 clean: envclean pyclean
-
-.PHONY: pyclean
-pyclean:
-	find src -name \*.pyc -exec rm -f {} \;
-	rm -rf src/*.egg-info dist
-	rm -rf build build_*
-	rm -f .coverage
-	rm -rf htmlcov/
-
-.PHONY: envclean
-envclean:
-	rm -rf bin *_wheelhouse develop-wheelhouse parts .installed.cfg bootstrap.py .downloads .buildout_downloads *.egg .wheelhouse *.egg-info
-	rm -rf distribute-*.tar.gz
-	rm -rf $(ENV_DIR)
 
