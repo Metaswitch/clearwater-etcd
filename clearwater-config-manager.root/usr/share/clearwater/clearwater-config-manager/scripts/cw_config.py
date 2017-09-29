@@ -56,13 +56,13 @@ class UserAbort(Exception):
     pass
 
 
-class etcdClient(etcd.client.Client):
+class ConfigLoader(object):
     """Wrapper around etcd.Client to include information about where to find
     config files in the database."""
-    def __init__(self, etcd_key, site, *args, **kwargs):
-        """In addition to standard init, we store off the URL to query on the
-        etcd API that will get us our config."""
-        super(etcdClient, self).__init__(self, args, kwargs)
+    def __init__(self, etcd_client, etcd_key, site):
+        # In addition to standard init, we store off the URL to query on the
+        # etcd API that will get us our config.
+        self._etcd_client = etcd_client
         self.prefix = "/".join(["", etcd_key, site, "configuration"])
         self.download_dir = os.path.join(DOWNLOADED_CONFIG_PATH,
                                          get_user_name())
@@ -95,7 +95,7 @@ class etcdClient(etcd.client.Client):
             # First we pull the data down from the etcd cluster. This will
             # throw an etcd.EtcdKeyNotFound exception if the config type
             # does not exist in the database.
-            download = self.read("/".join([self.prefix, config_type]))
+            download = self._etcd_client.read("/".join([self.prefix, config_type]))
         except etcd.EtcdKeyNotFound:
             raise ConfigDownloadFailed(
                 "Failed to download {}".format(config_type))
@@ -115,7 +115,7 @@ class etcdClient(etcd.client.Client):
                 "Failed to retrieve {} from file".format(config_type))
 
         try:
-            self.write("/".join([self.prefix, config_type]), upload, **kwargs)
+            self._etcd_client.write("/".join([self.prefix, config_type]), upload, **kwargs)
         except etcd.EtcdConnectionFailed:
             raise ConfigUploadFailed(
                 "Unable to upload {} to etcd cluster".format(config_type))
@@ -126,13 +126,15 @@ class etcdClient(etcd.client.Client):
     def full_uri(self):
         """Returns a URI that represents the folder containing the config
         files."""
-        return "/".join([self.base_uri,
-                         self.key_endpoint,
+        return "/".join([self._etcd_client.base_uri,
+                         self._etcd_client.key_endpoint,
                          self.prefix])
+
 
 # Set up logging
 logging.basicConfig(filename=LOG_PATH, level=logging.DEBUG)
 log = logging.getLogger(__name__)
+
 
 def main(args):
     """
@@ -146,18 +148,19 @@ def main(args):
     try:
         log.debug("Getting etcdClient with parameters {}, {}, {}"
                   .format(args.etcd_key, args.site, args.management_ip))
-        etcd_client = etcdClient(etcd_key=args.etcd_key,
-                                 site=args.site,
-                                 host=args.management_ip,
-                                 port=4000)
-        #TODO we should check the connection to etcd.
-    except:
+        etcd_client = etcd.client.Client(host=args.management_ip,
+                                         port=4000)
+        config_loader = ConfigLoader(etcd_client=etcd_client,
+                                     etcd_key=args.etcd_key,
+                                     site=args.site)
+        # TODO we should check the connection to etcd.
+    except Exception:
         sys.exit("Unable to contact the etcd cluster.")
 
     if args.action == "download":
         log.info("Running in download mode.")
         try:
-            download_config(etcd_client, args.config_type, args.autoconfirm)
+            download_config(config_loader, args.config_type, args.autoconfirm)
         except ConfigDownloadFailed as e:
             sys.exit(e)
         except UserAbort:
@@ -174,7 +177,7 @@ def main(args):
             sys.exit(exc)
 
         try:
-            upload_config(etcd_client, args.config_type, args.force)
+            upload_config(config_loader, args.config_type, args.force)
         except UserAbort:
             sys.exit("User aborted.")
         except EtcdMasterConfigChanged:
@@ -216,7 +219,7 @@ def delete_outdated_config_files():
     pass
 
 
-def download_config(client, config_type, autoskip):
+def download_config(config_loader, config_type, autoskip):
     """
     Downloads the config from etcd and saves a copy to
     DOWNLOADED_CONFIG_PATH/<USER_NAME>.
@@ -232,7 +235,7 @@ def download_config(client, config_type, autoskip):
         if not confirmed:
             raise UserAbort
 
-    client.download_config(config_type)
+    config_loader.download_config(config_type)
     print("Shared configuration downloaded to {}".format(local_config_path))
 
 
@@ -261,10 +264,10 @@ def validate_config(force=False):
                     "Validation failed while executing script {}".format(
                         os.path.basename(script)))
 
-    #TODO: add our validation script that should always be run
+    # TODO: add our validation script that should always be run
 
 
-def upload_config(client, config_type, force=False):
+def upload_config(config_loader, config_type, force=False):
     """
     Uploads the config from DOWNLOADED_CONFIG_PATH/<USER_NAME> to etcd.
     """
@@ -291,15 +294,15 @@ def upload_config(client, config_type, force=False):
     # TODO Download latest version to get up-to-date revision number
 
     # Compare local and etcd revision number
-    with open(os.path.join(client.download_dir,
+    with open(os.path.join(config_loader.download_dir,
                            config_type + ".index"), "r") as f:
         local_revision = f.read()
-    remote_revision = client.get_config_and_index(config_type).modifiedIndex
+    remote_revision = config_loader.get_config_and_index(config_type).modifiedIndex
     if local_revision != remote_revision:
         raise EtcdMasterConfigChanged
 
     # Upload the configuration to the etcd cluster.
-    client.upload_config(config_type)
+    config_loader.upload_config(config_type)
 
     # Add the node to the restart queue(s)
     apply_config_key = subprocess.check_output("/usr/share/clearwater/clearwater-queue-manager/scripts/get_apply_config_key")
