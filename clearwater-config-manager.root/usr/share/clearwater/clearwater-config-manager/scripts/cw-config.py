@@ -33,7 +33,15 @@ class ConfigDownloadFailed(Exception):
     pass
 
 
-class UserAbort(Exception):
+class ConfigUploadFailed(Exception):
+    pass
+
+
+class ConfigValidationFailed(Exception):
+    pass
+
+
+class EtcdConnectionFailed(Exception):
     pass
 
 
@@ -41,7 +49,7 @@ class EtcdMasterConfigChanged(Exception):
     pass
 
 
-class ConfigUploadFailed(Exception):
+class UserAbort(Exception):
     pass
 
 
@@ -115,28 +123,30 @@ class etcdClient(etcd.client.Client):
                          self.key_endpoint,
                          self.prefix])
 
+
 def main(args):
     """
     Main entry point for script.
     """
-    # Set up logging
-
-    # Define an etcd client for interacting with the database.
-    etcd_client = etcdClient(etcd_key=args.etcd_key,
-                             site=args.site,
-                             host=args.management_ip,
-                             port=4000)
+    # TODO Set up logging
 
     # Regardless of passed arguments we want to delete outdated config to not
     # leave unused files on disk.
     delete_outdated_config_files()
 
+    # Define an etcd client for interacting with the database.
+    try:
+        etcd_client = etcdClient(etcd_key=args.etcd_key,
+                                 site=args.site,
+                                 host=args.management_ip,
+                                 port=4000)
+        #TODO we should check the connection to etcd.
+    except:
+        raise EtcdConnectionFailed
+
     if args.action == "download":
         try:
-            download_config(etcd_client)
-        except ConfigAlreadyDownloaded:
-            # Ask user if the downloaded version can be overwritten
-            pass
+            download_config(etcd_client, args.config_type)
         except ConfigDownloadFailed:
             # Abort and tell user
             pass
@@ -144,7 +154,7 @@ def main(args):
     if args.action == "upload":
         try:
             validate_config(args.force)
-            upload_config(etcd_client, args.force)
+            upload_config(etcd_client, args.config_type, args.force)
         except UserAbort:
             # Abort and tell user
             pass
@@ -187,19 +197,23 @@ def delete_outdated_config_files():
     pass
 
 
-def download_config(client):
+def download_config(client, config_type):
     """
     Downloads the config from etcd and saves a copy to
     DOWNLOADED_CONFIG_PATH/<USER_NAME>.
-    :return:
     """
-    pass
+    if os.path.exists(os.path.join(DOWNLOADED_CONFIG_PATH,
+                                       get_user_name(),
+                                       config_type)):
+        # Ask user to confirm if they want to overwrite the file
+        # Continue with download if user confirms
+
+    client.download_config(config_type)
 
 
 def validate_config(force=False):
     """
     Validates the config by calling all scripts in the validation folder.
-    :return:
     """
     script_dir = os.listdir(VALIDATION_SCRIPTS_FOLDER)
 
@@ -222,16 +236,10 @@ def validate_config(force=False):
                         os.path.basename(script)))
 
 
-
-def upload_config(client, force=False):
+def upload_config(client, config_type, force=False):
     """
     Uploads the config from DOWNLOADED_CONFIG_PATH/<USER_NAME> to etcd.
-    .
-    :return:
     """
-    # For now, shared_config is the only config type controlled by this code.
-    CONFIG_TYPE = "shared_config"
-
     # THERE MAY BE SOMETHING MISSING HERE! In the bash script
     # `upload_shared_config`, we check that the port we expect etcd to be
     # listening on is actually open before doing anything else. It's possible
@@ -242,14 +250,14 @@ def upload_config(client, force=False):
     # Check that the file exists.
     if not os.path.exists(os.path.join(DOWNLOADED_CONFIG_PATH,
                                        get_user_name(),
-                                       CONFIG_TYPE)):
+                                       config_type)):
         raise IOError("No shared config found, unable to upload")
 
     # Log the changes.
     log_shared_config.log_config(client.full_uri)
 
     # Upload the configuration to the etcd cluster.
-    client.upload_config(CONFIG_TYPE)
+    client.upload_config(config_type)
 
     # Add the node to the restart queue(s)
     apply_config_key = subprocess.check_output("/usr/share/clearwater/clearwater-queue-manager/scripts/get_apply_config_key")
@@ -267,7 +275,6 @@ def get_user_name():
     """
     Returns the local user name if no RADIUS server was used and returns the
     user name that was used to authenticate with a RADIUS server, if used.
-    :return:
     """
     # Worth noting that `whoami` behaves differently to `who am i`, we need the
     # latter.
