@@ -171,10 +171,15 @@ def parse_arguments():
                         choices=['shared'],
                         help=("The config type to use - shared"
                               " - only one option currently"))
-    parser.add_argument("management_IP",
-                        help="The IP address to contact etcd with")
-    parser.add_argument("site", help="TODO")
-    parser.add_argument("etcd_key", help="TODO")
+    parser.add_argument("management_ip",
+                        help=("The IP address to contact etcd with - this is"
+                              "read from the config - do not enter"))
+    parser.add_argument("site", help=("always the site you are at, this is"
+                                      "read from config - do not enter"))
+    parser.add_argument("etcd_key",
+                        help=("this is currently always 'clearwater' but may"
+                              "be able to be 'CCF' as well in the future -"
+                              "this read from config - do not enter"))
 
     return parser.parse_args()
 
