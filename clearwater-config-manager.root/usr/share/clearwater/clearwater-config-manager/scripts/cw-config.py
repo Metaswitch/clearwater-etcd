@@ -50,7 +50,7 @@ class etcdClient(etcd.Client):
     def __init__(self, etcd_key, site, *args, **kwargs):
         """In addition to standard init, we store off the URL to query on the
         etcd API that will get us our config."""
-        super(etcdClient, self).__init__(self, args, kwargs)
+        super(etcdClient, self).__init__(*args, **kwargs)
         self.prefix = "/".join(["", etcd_key, site, "configuration"])
         self.download_dir = os.path.join(DOWNLOADED_CONFIG_PATH,
                                          get_user_name())
@@ -175,11 +175,11 @@ def parse_arguments():
                         help=("The IP address to contact etcd with - this is"
                               "read from the config - do not enter"))
     parser.add_argument("site", help=("always the site you are at, this is"
-                                      "read from config - do not enter"))
+                                      " read from config - do not enter"))
     parser.add_argument("etcd_key",
                         help=("this is currently always 'clearwater' but may"
-                              "be able to be 'CCF' as well in the future -"
-                              "this read from config - do not enter"))
+                              "be able to be 'CCF' as well in the future - "
+                              "this is read from config - do not enter"))
 
     return parser.parse_args()
 
