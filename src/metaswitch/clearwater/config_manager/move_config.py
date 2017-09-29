@@ -176,7 +176,12 @@ def main(args):
             sys.exit(exc)
 
         try:
-            upload_config(config_loader, args.config_type, args.force)
+            # TODO - force is different to autoconfirm so we need to pass
+            # them separately, right?
+            upload_config(config_loader,
+                          args.config_type,
+                          args.force,
+                          args.autoconfirm)
         except UserAbort:
             sys.exit("User aborted.")
         except EtcdMasterConfigChanged:
@@ -266,7 +271,7 @@ def validate_config(force=False):
     # TODO: add our validation script that should always be run
 
 
-def upload_config(config_loader, config_type, force=False):
+def upload_config(config_loader, config_type, force=False, autoconfirm=False):
     """
     Uploads the config from DOWNLOADED_CONFIG_PATH/<USER_NAME> to etcd.
     """
@@ -309,11 +314,11 @@ def upload_config(config_loader, config_type, force=False):
     # Provide a diff of the changes and ask user to confirm
     print_diff(local_config, remote_config)
 
-    # TODO: Add skipping
-    confirmed = confirm_yn("Please check the config changes and confirm that "
-                           "you wish to continue with the config upload.")
-    if not confirmed:
-        raise UserAbort
+    if not autoconfirm:
+        confirmed = confirm_yn("Please check the config changes and confirm that "
+                               "you wish to continue with the config upload.")
+        if not confirmed:
+            raise UserAbort
 
     # Upload the configuration to the etcd cluster.
     config_loader.upload_config(config_type,
