@@ -143,7 +143,7 @@ def main(args):
     # leave unused files on disk.
     delete_outdated_config_files()
 
-    # Define an etcd client for interacting with the database.
+    # Create an etcd client for interacting with the database.
     try:
         log.debug("Getting etcdClient with parameters {}, {}, {}"
                   .format(args.etcd_key, args.site, args.management_ip))
@@ -152,14 +152,17 @@ def main(args):
         config_loader = ConfigLoader(etcd_client=etcd_client,
                                      etcd_key=args.etcd_key,
                                      site=args.site)
-        # TODO we should check the connection to etcd.
+        # TODO we should check the connection to etcd as the bash script did.
+    # TODO Handle exceptions properly here
     except Exception:
         sys.exit("Unable to contact the etcd cluster.")
 
     if args.action == "download":
         log.info("Running in download mode.")
         try:
-            download_config(config_loader, args.config_type, args.autoconfirm)
+            download_config(config_loader,
+                            args.config_type,
+                            args.autoconfirm)
         except ConfigDownloadFailed as e:
             sys.exit(e)
         except UserAbort:
@@ -171,6 +174,9 @@ def main(args):
         log.info("Running in upload mode.")
 
         try:
+            # TODO - upload and download functions are really
+            # massive great big scripts and should hold all the logic
+            # for their mode.
             validate_config(args.force)
         except ConfigValidationFailed as exc:
             sys.exit(exc)
@@ -185,10 +191,10 @@ def main(args):
         except UserAbort:
             sys.exit("User aborted.")
         except EtcdMasterConfigChanged:
-            # Tell user to redownload and abort
+            # TODO Tell user to redownload and abort
             pass
         except ConfigUploadFailed:
-            # Tell user and abort
+            # TODO Tell user and abort
             pass
 
 
@@ -325,6 +331,7 @@ def upload_config(config_loader, config_type, force=False, autoconfirm=False):
                                 remote_revision)
 
     # Add the node to the restart queue(s)
+    # TODO - why are we doing this?
     apply_config_key = subprocess.check_output(
         "/usr/share/clearwater/clearwater-queue-manager/scripts/get_apply_config_key")
     subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
@@ -332,6 +339,7 @@ def upload_config(config_loader, config_type, force=False, autoconfirm=False):
                      apply_config_key])
 
     # We need to modify the queue if we're forcing.
+    # TODO - what does this do? Do we need to do it?
     subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
                      "force_true" if force else "force_false",
                      apply_config_key])
