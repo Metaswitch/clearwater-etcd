@@ -27,6 +27,7 @@ cw-download_shared_config was last run. Please download the latest version of
 shared config, re-apply the changes and try again."""
 
 # Set up logging
+# TODO: Make sure that logging wraps properly - use python common's logging infra?
 logging.basicConfig(filename=LOG_PATH, level=logging.DEBUG)
 log = logging.getLogger(__name__)
 
@@ -265,8 +266,8 @@ def download_config(config_loader, config_type, autoskip):
 def validate_config(force=False):
     """
     Validates the config by calling all scripts in the validation folder.
-    TODO: also call our validation script
     """
+    #TODO: also call our validation script
     log.info("Start validating config using user scripts.")
     script_dir = os.listdir(VALIDATION_SCRIPTS_FOLDER)
 
@@ -275,6 +276,11 @@ def validate_config(force=False):
                for s in script_dir
                if os.access(os.path.join(VALIDATION_SCRIPTS_FOLDER, s),
                             os.X_OK)]
+    # TODO: log a warning if we are skipping validation scripts.
+    # TODO: Make sure that useful diags are printed by the
+    #       validation scripts.
+    # TODO: Run all the scripts to give customers full warning
+    #       of all errors.
     for script in scripts:
         try:
             subprocess.check_call(script)
