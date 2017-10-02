@@ -361,7 +361,7 @@ def upload_config(config_loader, config_type, force=False, autoconfirm=False):
                                       "the config and reapply your changes.")
 
     # Provide a diff of the changes and log to syslog
-    if not print_diff_and_syslog(local_config, remote_config):
+    if not print_diff_and_syslog(remote_config, local_config):
         raise NoConfigChanges
 
     if not autoconfirm:
