@@ -16,7 +16,6 @@ import syslog
 import sys
 
 # Constants
-DOWNLOADED_CONFIG_PATH = " ~/clearwater-config-manager/staging"
 MAXIMUM_CONFIG_SIZE = 100000
 VALIDATION_SCRIPTS_FOLDER = "/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/"
 LOG_PATH = "/var/log/clearwater-config-manager/allow/cw-config.log"
@@ -81,8 +80,10 @@ class ConfigLoader(object):
         download = self.get_config_and_index(config_type)
         # Write the config to file.
         try:
-            with open(os.path.join(self.download_dir,
-                                   config_type), 'w') as config_file:
+            config_file_path = os.path.join(self.download_dir,
+                                            config_type)
+            log.debug("Writing config to '%s'.", config_file_path)
+            with open(config_file_path, 'w') as config_file:
                 config_file.write(str(download.value))
         except IOError:
             raise ConfigDownloadFailed(
@@ -91,8 +92,9 @@ class ConfigLoader(object):
         # We want to keep track of the index the config had in the etcd cluster
         # so we know if it is up to date.
         try:
-            with open(os.path.join(self.download_dir,
-                                   config_type + ".index"), 'w') as index_file:
+            index_file_path = config_file_path + ".index"
+            log.debug("Writing config to '%s'.", index_file_path)
+            with open(index_file_path, 'w') as index_file:
                 index_file.write(str(download.modifiedIndex))
         except IOError:
             raise ConfigDownloadFailed(
@@ -103,7 +105,9 @@ class ConfigLoader(object):
             # First we pull the data down from the etcd cluster. This will
             # throw an etcd.EtcdKeyNotFound exception if the config type
             # does not exist in the database.
-            download = self._etcd_client.read("/".join([self.prefix, config_type]))
+            key_path = "/".join([self.prefix, config_type])
+            log.debug("Reading etcd config from '%s", key_path)
+            download = self._etcd_client.read(key_path)
         except etcd.EtcdKeyNotFound:
             raise ConfigDownloadFailed(
                 "Failed to download {}".format(config_type))
@@ -115,15 +119,19 @@ class ConfigLoader(object):
         Raises a ConfigUploadFailed exception if unsuccessful.
         """
         try:
-            with open(os.path.join(self.download_dir,
-                                   config_type), 'r') as config_file:
+            config_file_path = os.path.join(self.download_dir,
+                                            config_type)
+            log.debug("Reading local config from '%s'", config_file_path)
+            with open(config_file_path, 'r') as config_file:
                 upload = config_file.read(MAXIMUM_CONFIG_SIZE)
         except IOError:
             raise ConfigUploadFailed(
                 "Failed to retrieve {} from file".format(config_type))
 
         try:
-            self._etcd_client.write("/".join([self.prefix, config_type]),
+            key_path = "/".join([self.prefix, config_type])
+            log.debug("Writing etcd config to '%s'", key_path)
+            self._etcd_client.write(key_path,
                                     upload,
                                     prevIndex=cas_revision)
         except etcd.EtcdConnectionFailed:
@@ -392,7 +400,15 @@ def get_user_name():
 
 def get_user_download_dir():
     """Returns the user-specific directory for downloaded config."""
-    return os.path.join(DOWNLOADED_CONFIG_PATH, get_user_name())
+    return os.path.join(get_base_download_dir(), get_user_name())
+
+
+def get_base_download_dir():
+    """Returns the base directory for downloaded config."""
+    home = os.getenv("HOME")
+    if home is None:
+        raise RuntimeError("No home directory found.")
+    return os.path.join(home, 'clearwater-config-manager/staging')
 
 
 def print_diff_and_syslog(config_1, config_2):
