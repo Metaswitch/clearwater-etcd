@@ -336,3 +336,47 @@ class TestConfigLoader(unittest.TestCase):
                 config_loader.upload_config,
                 "shared_config",
                 1234)
+
+    @mock.patch('confirm_process.raw_input')
+    def test_yes(self, mock_raw_input):
+        mock_raw_input.return_value = 'yes'
+        answer = move_config.confirm_yn('Test 1 ', False)
+        self.assertIs(answer, True)
+
+    @mock.patch('confirm_process.raw_input')
+    def test_no(self, mock_raw_input):
+        mock_raw_input.return_value = 'no'
+        answer = move_config.confirm_yn('Test 2 ', False)
+        self.assertIs(answer, False)
+
+    @mock.patch('confirm_process.raw_input')
+    def test_skip(self, mock_raw_input):
+        mock_raw_input.return_value = 'no'
+        answer = move_config.confirm_yn('Test 3 ', True)
+        self.assertIs(answer, True)
+
+    @mock.patch('confirm_process.raw_input')
+    def test_upper_yes(self, mock_raw_input):
+        mock_raw_input.return_value = 'YeS'
+        answer = move_config.confirm_yn('Test 4 ', False)
+        self.assertIs(answer, True)
+
+    @mock.patch('confirm_process.raw_input')
+    def test_upper_no(self, mock_raw_input):
+        mock_raw_input.return_value = 'nO'
+        answer = move_config.confirm_yn('Test 5 ', False)
+        self.assertIs(answer, False)
+
+    @mock.patch('confirm_process.raw_input')
+    def test_wrong_in1(self, mock_raw_input):
+        mock_raw_input.side_effect = ['noo', 'yese', '1', '2e', 'y', 'notneed']
+        answer = move_config.confirm_yn('Test 6 ', False)
+        self.assertEqual(mock_raw_input.call_count, 5)
+        self.assertIs(answer, True)
+
+    @mock.patch('confirm_process.raw_input')
+    def test_wrong_in2(self, mock_raw_input):
+        mock_raw_input.side_effect = ['AS', '1WY1', 'Y3s', 'fo{}', '[]2e', 'n']
+        answer = move_config.confirm_yn('Test 7 ', False)
+        self.assertEqual(mock_raw_input.call_count, 6)
+        self.assertIs(answer, False)

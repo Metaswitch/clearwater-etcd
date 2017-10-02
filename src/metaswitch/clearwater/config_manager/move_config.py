@@ -194,15 +194,6 @@ def main(args):
 
     if args.action == "upload":
         log.info("Running in upload mode.")
-
-        try:
-            # TODO - upload and download functions are really
-            # massive great big scripts and should hold all the logic
-            # for their mode.
-            validate_config(args.force)
-        except ConfigValidationFailed as exc:
-            sys.exit(exc)
-
         try:
             # TODO - force is different to autoconfirm so we need to pass
             # them separately, right?
@@ -218,6 +209,8 @@ def main(args):
         except ConfigUploadFailed:
             # TODO Tell user and abort
             pass
+        except ConfigValidationFailed as exc:
+            sys.exit(exc)
 
 
 def parse_arguments():
@@ -344,6 +337,9 @@ def upload_config(config_loader, config_type, force=False, autoconfirm=False):
     if not os.path.exists(revision_path):
         raise IOError("No shared config revision file found, unable to "
                       "upload. Please re-download the shared config again.")
+
+    # Validate the config
+    validate_config(force)
 
     # Compare local and etcd revision number
     # TODO: Error handling for corrupt storage.
