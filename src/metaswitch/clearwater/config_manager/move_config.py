@@ -14,6 +14,8 @@ import logging
 import difflib
 import syslog
 import sys
+import datetime
+import time
 
 # Constants
 DOWNLOADED_CONFIG_PATH = " ~/clearwater-config-manager/staging"
@@ -239,7 +241,21 @@ def delete_outdated_config_files():
     older than 30 days.
     :return:
     """
-    pass
+
+    date_now = datetime.date.today()
+    delete_date = date_now - datetime.timedelta(days=5)
+    # TODO find the filepath name!
+    shared_config_folder = ''
+    for root, dirs, files in os.walk(shared_config_folder, topdown=False):
+        for name in files:
+            filepath = (os.path.join(root, name))
+            file_time = time.localtime(os.path.getmtime(filepath))
+            file_date = datetime.date(file_time.tm_year, file_time.tm_mon,
+                                      file_time.tm_mday)
+            if file_date > delete_date:
+                pass
+            else:
+                os.remove(filepath)
 
 
 def download_config(config_loader, config_type, autoskip):
