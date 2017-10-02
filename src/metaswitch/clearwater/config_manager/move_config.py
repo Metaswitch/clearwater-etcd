@@ -125,6 +125,7 @@ class ConfigLoader(object):
                                             config_type)
             log.debug("Reading local config from '%s'", config_file_path)
             with open(config_file_path, 'r') as config_file:
+                # TODO: If the config is longer than we expect we need to handle this
                 upload = config_file.read(MAXIMUM_CONFIG_SIZE)
         except IOError:
             raise ConfigUploadFailed(
@@ -139,7 +140,10 @@ class ConfigLoader(object):
         except etcd.EtcdConnectionFailed:
             raise ConfigUploadFailed(
                 "Unable to upload {} to etcd cluster".format(config_type))
-        # TODO: Error handling for CAS
+        except etcd.EtcdCompareFailed:
+            raise ConfigUploadFailed(
+                "Unable to upload {} to etcd cluster as the version changed "
+                "while editing locally.".format(config_type))
 
     # We need this property for the step in upload_config where we log the
     # change in config to file.
@@ -331,8 +335,12 @@ def upload_config(config_loader, config_type, force=False, autoconfirm=False):
 
     # Check that the file exists.
     config_path = os.path.join(config_loader.download_dir, config_type)
+    config_revision_path = os.path.join(config_path, ".index")
     if not os.path.exists(config_path):
         raise IOError("No shared config found, unable to upload")
+    if not os.path.exists(config_revision_path):
+        raise IOError("No shared config revision file found, unable to "
+                      "upload. Please re-download the shared config again.")
 
     # Compare local and etcd revision number
     # TODO: Error handling for corrupt storage.
