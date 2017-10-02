@@ -226,8 +226,8 @@ def parse_arguments():
                         help="Turns forcing on [default=off]")
     parser.add_argument("action", type=str, choices=['upload', 'download'],
                         help="The action to perform - upload or download")
-    parser.add_argument("config_type", type=str, choices=['shared'],
-                        help=("The config type to use - shared"
+    parser.add_argument("config_type", type=str, choices=['shared_config'],
+                        help=("The config type to use - shared_config"
                               " - only one option currently"))
     parser.add_argument("management_ip",
                         help=("The IP address to contact etcd with - this is"
