@@ -29,7 +29,9 @@ class TestValidation(unittest.TestCase):
         mock_access.return_value = [True, True]
 
         move_config.validate_config(False)
-        mock_listdir.assert_called_once_with(move_config.VALIDATION_SCRIPTS_FOLDER)
+
+        # Make sure we are looking in the right place.
+        mock_listdir.assert_called_with(move_config.VALIDATION_SCRIPTS_FOLDER)
 
         for call_info, script in zip(mock_subprocess.call_args_list,mock_listdir.return_value):
             args = call_info[0]
@@ -61,7 +63,7 @@ class TestValidation(unittest.TestCase):
         mock_access.return_value = [True, True]
         mock_subprocess.side_effect = [None, subprocess.CalledProcessError("A", "B")]
 
-        self.assertRaises(move_config.ConfigUploadFailed, move_config.validate_config, False)
+        self.assertRaises(move_config.ConfigValidationFailed, move_config.validate_config, False)
 
         for call_info, script in zip(mock_subprocess.call_args_list,mock_listdir.return_value):
             args = call_info[0]

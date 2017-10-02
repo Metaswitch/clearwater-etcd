@@ -128,6 +128,7 @@ class ConfigLoader(object):
         except etcd.EtcdConnectionFailed:
             raise ConfigUploadFailed(
                 "Unable to upload {} to etcd cluster".format(config_type))
+        # TODO: Error handling for CAS
 
     # We need this property for the step in upload_config where we log the
     # change in config to file.
@@ -139,7 +140,6 @@ class ConfigLoader(object):
                 '/' +
                 self._etcd_client.key_endpoint +
                 self.prefix)
-
 
 
 def main(args):
