@@ -76,7 +76,7 @@ class ConfigLoader(object):
         try:
             with open(os.path.join(self.download_dir,
                                    config_type), 'w') as config_file:
-                config_file.write(download.value)
+                config_file.write(str(download.value))
         except IOError:
             raise ConfigDownloadFailed(
                 "Couldn't save {} to file".format(config_type))
@@ -86,7 +86,7 @@ class ConfigLoader(object):
         try:
             with open(os.path.join(self.download_dir,
                                    config_type + ".index"), 'w') as index_file:
-                index_file.write(download.modifiedIndex)
+                index_file.write(str(download.modifiedIndex))
         except IOError:
             raise ConfigDownloadFailed(
                 "Couldn't save {} to file".format(config_type))
@@ -129,9 +129,11 @@ class ConfigLoader(object):
     def full_uri(self):
         """Returns a URI that represents the folder containing the config
         files."""
-        return "/".join([self._etcd_client.base_uri,
-                         self._etcd_client.key_endpoint,
-                         self.prefix])
+        return (self._etcd_client.base_uri +
+                '/' +
+                self._etcd_client.key_endpoint +
+                self.prefix)
+
 
 
 def main(args):
@@ -305,12 +307,13 @@ def upload_config(config_loader, config_type, force=False, autoconfirm=False):
     # log_shared_config.log_config(client.full_uri)
 
     # Compare local and etcd revision number
+    # TODO: Error handling for corrupt storage.
     with open(os.path.join(config_loader.download_dir,
                            config_type), "r") as f:
         local_config = f.read()
     with open(os.path.join(config_loader.download_dir,
                            config_type + ".index"), "r") as f:
-        local_revision = f.read()
+        local_revision = int(f.read())
     remote_config_and_index = config_loader.get_config_and_index(config_type)
     remote_revision = remote_config_and_index.modifiedIndex
     remote_config = remote_config_and_index.value
