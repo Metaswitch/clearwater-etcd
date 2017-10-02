@@ -133,7 +133,11 @@ class TestConfigLoader(unittest.TestCase):
                           config_loader.get_config_and_index,
                           "shared_config")
 
-    def test_download_config(self):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name",
+                return_value="ubuntu")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.getenv",
+                return_value="/home/ubuntu")
+    def test_download_config(self, mock_getenv, mock_user):
         """Check that we can write config from etcd to file."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
         etcd_result = mock.MagicMock()
@@ -141,17 +145,15 @@ class TestConfigLoader(unittest.TestCase):
         etcd_result.modifiedIndex = 123
         etcd_client.read.return_value = etcd_result
 
-        mock_user_name = mock.MagicMock(return_value="ubuntu")
-
         mock_config_file = mock.MagicMock()
         mock_index_file = mock.MagicMock()
         mock_config_file.__enter__.return_value = mock_config_file
         mock_index_file.__enter__.return_value = mock_index_file
 
         def fake_open(file, mode):
-            if file == " ~/clearwater-config-manager/staging/ubuntu/shared_config":
+            if file == "/home/ubuntu/clearwater-config-manager/staging/ubuntu/shared_config":
                 return mock_config_file
-            if file == " ~/clearwater-config-manager/staging/ubuntu/shared_config.index":
+            if file == "/home/ubuntu/clearwater-config-manager/staging/ubuntu/shared_config.index":
                 return mock_index_file
             else:
                 self.fail("Incorrect File Accessed: {}".format(file))
@@ -162,19 +164,22 @@ class TestConfigLoader(unittest.TestCase):
             etcd_client, "clearwater", "site")
 
         with mock.patch("metaswitch.clearwater.config_manager.move_config.open", mock_open):
-            with mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name", mock_user_name):
-                config_loader.download_config("shared_config")
+            config_loader.download_config("shared_config")
 
         mock_config_file.write.assert_called_with("Some Config")
         mock_index_file.write.assert_called_with("123")
 
         calls = [
-            mock.call(" ~/clearwater-config-manager/staging/ubuntu/shared_config", "w"),
-            mock.call(" ~/clearwater-config-manager/staging/ubuntu/shared_config.index", "w"),
+            mock.call("/home/ubuntu/clearwater-config-manager/staging/ubuntu/shared_config", "w"),
+            mock.call("/home/ubuntu/clearwater-config-manager/staging/ubuntu/shared_config.index", "w"),
         ]
         mock_open.assert_has_calls(calls)
 
-    def test_download_no_config_file(self):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name",
+                return_value="ubuntu")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.getenv",
+                return_value="/home/ubuntu")
+    def test_download_no_config_file(self, mock_getenv, mock_user):
         """Check for the correct exception on failure.
 
         Check that failing to open the config file causes the correct
@@ -185,10 +190,8 @@ class TestConfigLoader(unittest.TestCase):
         etcd_result.modifiedIndex = 123
         etcd_client.read.return_value = etcd_result
 
-        mock_user_name = mock.MagicMock(return_value="ubuntu")
-
         def fake_open(file, mode):
-            if file == " ~/clearwater-config-manager/staging/ubuntu/shared_config":
+            if file == "/home/ubuntu/clearwater-config-manager/staging/ubuntu/shared_config":
                 raise IOError
             else:
                 self.fail("Incorrect File Accessed: {}".format(file))
@@ -199,13 +202,16 @@ class TestConfigLoader(unittest.TestCase):
             etcd_client, "clearwater", "site")
 
         with mock.patch("metaswitch.clearwater.config_manager.move_config.open", mock_open):
-            with mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name", mock_user_name):
-                self.assertRaises(
-                    move_config.ConfigDownloadFailed,
-                    config_loader.download_config,
-                    "shared_config")
+            self.assertRaises(
+                move_config.ConfigDownloadFailed,
+                config_loader.download_config,
+                "shared_config")
 
-    def test_download_no_index_file(self):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name",
+                return_value="ubuntu")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.getenv",
+                return_value="/home/ubuntu")
+    def test_download_no_index_file(self, mock_getenv, mock_user):
         """Check for the correct exception on failure.
 
         Check that failing to open the index file causes the correct
@@ -216,12 +222,10 @@ class TestConfigLoader(unittest.TestCase):
         etcd_result.modifiedIndex = 123
         etcd_client.read.return_value = etcd_result
 
-        mock_user_name = mock.MagicMock(return_value="ubuntu")
-
         def fake_open(file, mode):
-            if file == " ~/clearwater-config-manager/staging/ubuntu/shared_config":
+            if file == "/home/ubuntu/clearwater-config-manager/staging/ubuntu/shared_config":
                 return mock.MagicMock()
-            if file == " ~/clearwater-config-manager/staging/ubuntu/shared_config.index":
+            if file == "/home/ubuntu/clearwater-config-manager/staging/ubuntu/shared_config.index":
                 raise IOError
             else:
                 self.fail("Incorrect File Accessed: {}".format(file))
@@ -232,24 +236,25 @@ class TestConfigLoader(unittest.TestCase):
             etcd_client, "clearwater", "site")
 
         with mock.patch("metaswitch.clearwater.config_manager.move_config.open", mock_open):
-            with mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name", mock_user_name):
-                self.assertRaises(
-                    move_config.ConfigDownloadFailed,
-                    config_loader.download_config,
-                    "shared_config")
+            self.assertRaises(
+                move_config.ConfigDownloadFailed,
+                config_loader.download_config,
+                "shared_config")
 
-    def test_upload_config(self):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name",
+                return_value="ubuntu")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.getenv",
+                return_value="/home/ubuntu")
+    def test_upload_config(self, mock_getenv, mock_user):
         """Check that we can write config to etcd from file."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
-
-        mock_user_name = mock.MagicMock(return_value="ubuntu")
 
         mock_config_file = mock.MagicMock()
         mock_config_file.__enter__.return_value = mock_config_file
         mock_config_file.read.return_value = "Fake Config"
 
         def fake_open(file, mode):
-            if file == " ~/clearwater-config-manager/staging/ubuntu/shared_config":
+            if file == "/home/ubuntu/clearwater-config-manager/staging/ubuntu/shared_config":
                 return mock_config_file
             else:
                 self.fail("Incorrect File Accessed: {}".format(file))
@@ -260,10 +265,9 @@ class TestConfigLoader(unittest.TestCase):
             etcd_client, "clearwater", "site")
 
         with mock.patch("metaswitch.clearwater.config_manager.move_config.open", mock_open):
-            with mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name", mock_user_name):
-                # Need to provide a cas revision on etcd uploads to
-                # avoid conflicts.
-                config_loader.upload_config("shared_config", 123)
+            # Need to provide a cas revision on etcd uploads to
+            # avoid conflicts.
+            config_loader.upload_config("shared_config", 123)
 
         etcd_client.write.assert_called_with(
             "/clearwater/site/configuration/shared_config",
@@ -271,17 +275,19 @@ class TestConfigLoader(unittest.TestCase):
             prevIndex=123
         )
 
-    def test_upload_no_config_file(self):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name",
+                return_value="ubuntu")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.getenv",
+                return_value="/home/ubuntu")
+    def test_upload_no_config_file(self, mock_getenv, mock_user):
         """Check for the correct exception on failure.
 
         Check that failing to open the config file causes the correct
         exception to be raised."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
 
-        mock_user_name = mock.MagicMock(return_value="ubuntu")
-
         def fake_open(file, mode):
-            if file == " ~/clearwater-config-manager/staging/ubuntu/shared_config":
+            if file == "/home/ubuntu/clearwater-config-manager/staging/ubuntu/shared_config":
                 raise IOError
             else:
                 self.fail("Incorrect File Accessed: {}".format(file))
@@ -292,14 +298,17 @@ class TestConfigLoader(unittest.TestCase):
             etcd_client, "clearwater", "site")
 
         with mock.patch("metaswitch.clearwater.config_manager.move_config.open", mock_open):
-            with mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name", mock_user_name):
-                self.assertRaises(
-                    move_config.ConfigUploadFailed,
-                    config_loader.upload_config,
-                    "shared_config",
-                    123)
+            self.assertRaises(
+                move_config.ConfigUploadFailed,
+                config_loader.upload_config,
+                "shared_config",
+                123)
 
-    def test_upload_no_connection(self):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name",
+                return_value="ubuntu")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.getenv",
+                return_value="/home/ubuntu")
+    def test_upload_no_connection(self, mock_getenv, mock_user):
         """Check for the correct exception on failure.
 
         Check that failing to connect to etcd causes the correct
@@ -307,13 +316,11 @@ class TestConfigLoader(unittest.TestCase):
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
         etcd_client.write.side_effect = etcd.EtcdConnectionFailed
 
-        mock_user_name = mock.MagicMock(return_value="ubuntu")
-
         mock_config_file = mock.MagicMock()
         mock_config_file.read.return_value = "Fake Config"
 
         def fake_open(file, mode):
-            if file == " ~/clearwater-config-manager/staging/ubuntu/shared_config":
+            if file == "/home/ubuntu/clearwater-config-manager/staging/ubuntu/shared_config":
                 return mock_config_file
             else:
                 self.fail("Incorrect File Accessed: {}".format(file))
@@ -324,9 +331,8 @@ class TestConfigLoader(unittest.TestCase):
             etcd_client, "clearwater", "site")
 
         with mock.patch("metaswitch.clearwater.config_manager.move_config.open", mock_open):
-            with mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name", mock_user_name):
-                self.assertRaises(
-                    move_config.ConfigUploadFailed,
-                    config_loader.upload_config,
-                    "shared_config",
-                    1234)
+            self.assertRaises(
+                move_config.ConfigUploadFailed,
+                config_loader.upload_config,
+                "shared_config",
+                1234)
