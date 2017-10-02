@@ -11,6 +11,8 @@ import etcd.client
 import os
 import argparse
 import logging
+import difflib
+import syslog
 import sys
 
 # Constants
@@ -46,6 +48,10 @@ class ConfigValidationFailed(Exception):
     pass
 
 
+class NoConfigChanges(Exception):
+    pass
+
+
 class EtcdConnectionFailed(Exception):
     pass
 
@@ -76,7 +82,7 @@ class ConfigLoader(object):
         try:
             with open(os.path.join(self.download_dir,
                                    config_type), 'w') as config_file:
-                config_file.write(download.value)
+                config_file.write(str(download.value))
         except IOError:
             raise ConfigDownloadFailed(
                 "Couldn't save {} to file".format(config_type))
@@ -86,7 +92,7 @@ class ConfigLoader(object):
         try:
             with open(os.path.join(self.download_dir,
                                    config_type + ".index"), 'w') as index_file:
-                index_file.write(download.modifiedIndex)
+                index_file.write(str(download.modifiedIndex))
         except IOError:
             raise ConfigDownloadFailed(
                 "Couldn't save {} to file".format(config_type))
@@ -122,6 +128,7 @@ class ConfigLoader(object):
         except etcd.EtcdConnectionFailed:
             raise ConfigUploadFailed(
                 "Unable to upload {} to etcd cluster".format(config_type))
+        # TODO: Error handling for CAS
 
     # We need this property for the step in upload_config where we log the
     # change in config to file.
@@ -129,9 +136,10 @@ class ConfigLoader(object):
     def full_uri(self):
         """Returns a URI that represents the folder containing the config
         files."""
-        return "/".join([self._etcd_client.base_uri,
-                         self._etcd_client.key_endpoint,
-                         self.prefix])
+        return (self._etcd_client.base_uri +
+                '/' +
+                self._etcd_client.key_endpoint +
+                self.prefix)
 
 
 def main(args):
@@ -293,23 +301,16 @@ def upload_config(config_loader, config_type, force=False, autoconfirm=False):
     # can be made. But need to confirm that is in fact the case.
 
     # Check that the file exists.
-    if not os.path.exists(os.path.join(get_user_download_dir(), config_type)):
+    config_path = os.path.join(config_loader.download_dir, config_type)
+    if not os.path.exists(config_path):
         raise IOError("No shared config found, unable to upload")
 
-    # Log the changes.
-    # TODO: This probably won't work, the script compares
-    # /etc/clearwater/shared_config to the etcd version, which we're not doing
-    # anymore. What do we actually want to get out of calling this script?
-    # Audit logging?
-    # log_shared_config.log_config(client.full_uri)
-
     # Compare local and etcd revision number
-    with open(os.path.join(config_loader.download_dir,
-                           config_type), "r") as f:
+    # TODO: Error handling for corrupt storage.
+    with open(config_path, "r") as f:
         local_config = f.read()
-    with open(os.path.join(config_loader.download_dir,
-                           config_type + ".index"), "r") as f:
-        local_revision = f.read()
+    with open(os.path.join(config_path, ".index"), "r") as f:
+        local_revision = int(f.read())
     remote_config_and_index = config_loader.get_config_and_index(config_type)
     remote_revision = remote_config_and_index.modifiedIndex
     remote_config = remote_config_and_index.value
@@ -319,8 +320,9 @@ def upload_config(config_loader, config_type, force=False, autoconfirm=False):
                                       "the config locally. Please redownload"
                                       "the config and reapply your changes.")
 
-    # Provide a diff of the changes and ask user to confirm
-    print_diff(local_config, remote_config)
+    # Provide a diff of the changes and log to syslog
+    if not print_diff_and_syslog(local_config, remote_config):
+        raise NoConfigChanges
 
     if not autoconfirm:
         confirmed = confirm_yn("Please check the config changes and confirm that "
@@ -345,6 +347,9 @@ def upload_config(config_loader, config_type, force=False, autoconfirm=False):
     subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
                      "force_true" if force else "force_false",
                      apply_config_key])
+
+    # Delete local config file if upload was successful
+    os.remove(config_path)
 
 
 def confirm_yn(prompt, autoskip=False):
@@ -384,9 +389,52 @@ def get_user_download_dir():
     return os.path.join(DOWNLOADED_CONFIG_PATH, get_user_name())
 
 
-def print_diff(string_1, string_2):
-    """Prints the diff of two texts."""
-    pass
+def print_diff_and_syslog(config_1, config_2):
+    """
+    Print a readable diff of changes between two texts and log to syslog.
+    """
+    config_lines_1 = config_1.splitlines()
+    config_lines_2 = config_2.splitlines()
+
+    # We're looking to log meaningful configuration changes, so sort the lines
+    # to ignore changes in line ordering.
+    config_lines_1.sort()
+    config_lines_2.sort()
+    difflines = list(difflib.ndiff(config_lines_1, config_lines_2))
+
+    # Pull out nonempty diff lines prefixed by "- "
+    deletions = [line[2:] for line in difflines if line.startswith("- ") and len(line) > 2]
+    # "Concatenate", "like", "this"
+    deletions_str = ", ".join(['"' + line + '"' for line in deletions])
+
+    additions = [line[2:] for line in difflines if line.startswith("+ ") and len(line) > 2]
+    additions_str = ", ".join(['"' + line + '"' for line in additions])
+
+    if additions or deletions:
+        logstr = "Configuration file change: shared_config was modified by " \
+                 "user {}. ".format(get_user_name())
+        if deletions:
+            logstr += "Lines removed: "
+            logstr += deletions_str + ". "
+        if additions:
+            logstr += "Lines added: "
+            logstr += additions_str + "."
+
+        # Force encoding so logstr prints and syslogs nicely
+        logstr = logstr.encode("utf-8")
+
+        # Print changes to console so the user can do a sanity check
+        print(logstr)
+
+        # Log the changes
+        syslog.openlog("audit-log", syslog.LOG_PID)
+        syslog.syslog(syslog.LOG_NOTICE, logstr)
+        syslog.closelog()
+
+        return True
+    else:
+        print("No changes detected in shared configuration file.")
+        return False
 
 
 # Call main function if script is executed stand-alone
