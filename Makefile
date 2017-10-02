@@ -12,8 +12,9 @@ X86_64_ONLY=0
 
 .DEFAULT_GOAL = deb
 
-COVERAGE_SETUP_PY = cluster_mgr_setup.py queue_mgr_setup.py config_mgr_setup.py plugins_setup.py
-COVERAGE_PYTHON_PATH = src:common
+TEST_SETUP_PY = cluster_mgr_setup.py queue_mgr_setup.py config_mgr_setup.py plugins_setup.py
+TEST_PYTHON_PATH = src:common
+TEST_REQUIREMENTS = common/requirements-test.txt fv-requirements.txt
 CLEAN_SRC_DIR = src/
 FLAKE8_INCLUDE_DIR = src/
 FLAKE8_EXCLUDE_DIR = src/clearwater_etcd_plugins/
@@ -23,35 +24,27 @@ include build-infra/cw-deb.mk
 include build-infra/python.mk
 
 .PHONY: fvtest
-fvtest: fvtest_setup.py env ${ENV_DIR}/.test_requirements
+fvtest: fvtest_setup.py env ${ENV_DIR}/.test-requirements
 	PYTHONPATH=src:common ${PYTHON} fvtest_setup.py test -v
 
-.PHONY: test
-test: coverage
-
-coverage: ${ENV_DIR}/.test_requirements
-
 .PHONY: test_cluster_mgr
-test_cluster_mgr: cluster_mgr_setup.py env ${ENV_DIR}/.test_requirements
+test_cluster_mgr: cluster_mgr_setup.py env ${ENV_DIR}/.test-requirements
 	PYTHONPATH=src:common ${PYTHON} cluster_mgr_setup.py test -v
 
 .PHONY: test_queue_mgr
-test_queue_mgr: queue_mgr_setup.py env ${ENV_DIR}/.test_requirements
+test_queue_mgr: queue_mgr_setup.py env ${ENV_DIR}/.test-requirements
 	PYTHONPATH=src:common ${PYTHON} queue_mgr_setup.py test -v
 
 .PHONY: test_config_mgr
-test_config_mgr: config_mgr_setup.py env ${ENV_DIR}/.test_requirements
+test_config_mgr: config_mgr_setup.py env ${ENV_DIR}/.test-requirements
 	PYTHONPATH=src:common ${PYTHON} config_mgr_setup.py test -v
 
 .PHONY: test_plugins
-test_plugins: plugins_setup.py env ${ENV_DIR}/.test_requirements
+test_plugins: plugins_setup.py env ${ENV_DIR}/.test-requirements
 	PYTHONPATH=src:common ${PYTHON} plugins_setup.py test -v
 
 .PHONY: run_test
 run_test: test_cluster_mgr test_queue_mgr test_config_mgr test_plugins
-
-${ENV_DIR}/.test_requirements: common/requirements-test.txt fv-requirements.txt ${ENV_DIR}/.wheels-installed
-	${PIP} install -r common/requirements-test.txt -r fv-requirements.txt
 
 # Macro to define the various etcd targets
 #
@@ -97,9 +90,6 @@ src/metaswitch/clearwater/config_manager/alarm_constants.py: clearwater-config-m
 
 src/metaswitch/clearwater/cluster_manager/alarm_constants.py: clearwater-cluster-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_cluster_manager_alarms.json common/metaswitch/common/alarms_writer.py common/metaswitch/common/alarms_parser.py common/metaswitch/common/alarm_severities.py
 	python common/metaswitch/common/alarms_writer.py --json-file="clearwater-cluster-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_cluster_manager_alarms.json" --constants-file=$@
-
-.PHONY: env
-env: cluster_mgr_setup.py queue_mgr_setup.py config_mgr_setup.py shared_setup.py plugins_setup.py ${ENV_DIR}/.wheels-installed
 
 .PHONY: deb
 deb: env deb-only
