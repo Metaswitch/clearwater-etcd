@@ -252,9 +252,8 @@ def delete_outdated_config_files():
     """
 
     date_now = datetime.date.today()
-    delete_date = date_now - datetime.timedelta(days=5)
-    # TODO find the filepath name!
-    shared_config_folder = ''
+    delete_date = date_now - datetime.timedelta(days=30)
+    shared_config_folder = get_base_download_dir()
     for root, dirs, files in os.walk(shared_config_folder, topdown=False):
         for name in files:
             filepath = (os.path.join(root, name))
