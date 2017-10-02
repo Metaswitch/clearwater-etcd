@@ -18,7 +18,7 @@ SHARED_CONFIG_PATH = "/etc/clearwater/shared_config"
 DOWNLOADED_CONFIG_PATH = " ~/clearwater-config-manager/staging"
 MAXIMUM_CONFIG_SIZE = 100000
 VALIDATION_SCRIPTS_FOLDER = "/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/"
-LOG_PATH = "/var/log/clearwater-etcd/cw-config.log"
+LOG_PATH = "/var/log/clearwater-config-manager/allow/cw-config.log"
 
 # Error messages
 MODIFIED_WHILE_EDITING = """Another user has modified the configuration since

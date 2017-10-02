@@ -44,6 +44,10 @@ case "$1" in
         mkdir -p -m 755 /var/log/$NAME
         chown -R $NAME:root /var/log/$NAME
 
+        # make the log directory writeable by all users
+        mkdir -p /var/log/$NAME/allow
+        chmod 777 /var/log/$NAME/allow
+
         # Set up the virtual env
         rm -rf $BASE_DIR/env
         virtualenv --python=$(which python) $BASE_DIR/env

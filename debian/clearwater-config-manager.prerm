@@ -47,6 +47,7 @@ case "$1" in
           fi
 
           rm -rf /var/log/$NAME
+          rm -rf /var/log/$NAME/allow
         fi
     ;;
 
