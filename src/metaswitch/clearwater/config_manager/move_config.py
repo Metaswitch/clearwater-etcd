@@ -11,6 +11,8 @@ import etcd.client
 import os
 import argparse
 import logging
+import difflib
+import syslog
 import sys
 
 # Constants
@@ -43,6 +45,10 @@ class ConfigUploadFailed(Exception):
 
 
 class ConfigValidationFailed(Exception):
+    pass
+
+
+class NoConfigChanges(Exception):
     pass
 
 
@@ -321,7 +327,8 @@ def upload_config(config_loader, config_type, force=False, autoconfirm=False):
                                       "the config and reapply your changes.")
 
     # Provide a diff of the changes and ask user to confirm
-    print_diff(local_config, remote_config)
+    if not print_diff(local_config, remote_config):
+        raise NoConfigChanges
 
     if not autoconfirm:
         confirmed = confirm_yn("Please check the config changes and confirm that "
@@ -385,9 +392,52 @@ def get_user_download_dir():
     return os.path.join(DOWNLOADED_CONFIG_PATH, get_user_name())
 
 
-def print_diff(string_1, string_2):
-    """Prints the diff of two texts."""
-    pass
+def print_diff(config_1, config_2):
+    """
+    Print a readable diff of changes between two texts and log to syslog.
+    """
+    config_lines_1 = config_1.splitlines()
+    config_lines_2 = config_2.splitlines()
+
+    # We're looking to log meaningful configuration changes, so sort the lines
+    # to ignore changes in line ordering.
+    config_lines_1.sort()
+    config_lines_2.sort()
+    difflines = list(difflib.ndiff(config_lines_1, config_lines_2))
+
+    # Pull out nonempty diff lines prefixed by "- "
+    deletions = [line[2:] for line in difflines if line.startswith("- ") and len(line) > 2]
+    # "Concatenate", "like", "this"
+    deletions_str = ", ".join(['"' + line + '"' for line in deletions])
+
+    additions = [line[2:] for line in difflines if line.startswith("+ ") and len(line) > 2]
+    additions_str = ", ".join(['"' + line + '"' for line in additions])
+
+    if additions or deletions:
+        logstr = "Configuration file change: shared_config was modified by " \
+                 "user {}. ".format(get_user_name())
+        if deletions:
+            logstr += "Lines removed: "
+            logstr += deletions_str + ". "
+        if additions:
+            logstr += "Lines added: "
+            logstr += additions_str + "."
+
+        # Force encoding so logstr prints and syslogs nicely
+        logstr = logstr.encode("utf-8")
+
+        # Print changes to console so the user can do a sanity check
+        print(logstr)
+
+        # Log the changes
+        syslog.openlog("audit-log", syslog.LOG_PID)
+        syslog.syslog(syslog.LOG_NOTICE, logstr)
+        syslog.closelog()
+
+        return True
+    else:
+        print("No changes detected in shared configuration file.")
+        return False
 
 
 # Call main function if script is executed stand-alone
