@@ -141,7 +141,6 @@ class ConfigLoader(object):
                 self.prefix)
 
 
-
 def main(args):
     """
     Main entry point for script.
@@ -302,23 +301,15 @@ def upload_config(config_loader, config_type, force=False, autoconfirm=False):
     # can be made. But need to confirm that is in fact the case.
 
     # Check that the file exists.
-    if not os.path.exists(os.path.join(get_user_download_dir(), config_type)):
+    config_path = os.path.join(config_loader.download_dir, config_type)
+    if not os.path.exists(config_path):
         raise IOError("No shared config found, unable to upload")
-
-    # Log the changes.
-    # TODO: This probably won't work, the script compares
-    # /etc/clearwater/shared_config to the etcd version, which we're not doing
-    # anymore. What do we actually want to get out of calling this script?
-    # Audit logging?
-    # log_shared_config.log_config(client.full_uri)
 
     # Compare local and etcd revision number
     # TODO: Error handling for corrupt storage.
-    with open(os.path.join(config_loader.download_dir,
-                           config_type), "r") as f:
+    with open(config_path, "r") as f:
         local_config = f.read()
-    with open(os.path.join(config_loader.download_dir,
-                           config_type + ".index"), "r") as f:
+    with open(os.path.join(config_path, ".index"), "r") as f:
         local_revision = int(f.read())
     remote_config_and_index = config_loader.get_config_and_index(config_type)
     remote_revision = remote_config_and_index.modifiedIndex
@@ -329,8 +320,8 @@ def upload_config(config_loader, config_type, force=False, autoconfirm=False):
                                       "the config locally. Please redownload"
                                       "the config and reapply your changes.")
 
-    # Provide a diff of the changes and ask user to confirm
-    if not print_diff(local_config, remote_config):
+    # Provide a diff of the changes and log to syslog
+    if not print_diff_and_syslog(local_config, remote_config):
         raise NoConfigChanges
 
     if not autoconfirm:
@@ -356,6 +347,9 @@ def upload_config(config_loader, config_type, force=False, autoconfirm=False):
     subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
                      "force_true" if force else "force_false",
                      apply_config_key])
+
+    # Delete local config file if upload was successful
+    os.remove(config_path)
 
 
 def confirm_yn(prompt, autoskip=False):
@@ -395,7 +389,7 @@ def get_user_download_dir():
     return os.path.join(DOWNLOADED_CONFIG_PATH, get_user_name())
 
 
-def print_diff(config_1, config_2):
+def print_diff_and_syslog(config_1, config_2):
     """
     Print a readable diff of changes between two texts and log to syslog.
     """
