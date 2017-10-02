@@ -328,10 +328,13 @@ def upload_config(config_loader, config_type, force=False, autoconfirm=False):
 
     # Check that the file exists.
     config_path = os.path.join(config_loader.download_dir, config_type)
-    config_revision_path = os.path.join(config_path, ".index")
+    revision_path = config_path + ".index"
+    log.debug("Uploading config from '%s'", config_path)
+    log.debug("Using local revision number from '%s'", revision_path)
+
     if not os.path.exists(config_path):
         raise IOError("No shared config found, unable to upload")
-    if not os.path.exists(config_revision_path):
+    if not os.path.exists(revision_path):
         raise IOError("No shared config revision file found, unable to "
                       "upload. Please re-download the shared config again.")
 
@@ -342,7 +345,7 @@ def upload_config(config_loader, config_type, force=False, autoconfirm=False):
     # TODO: Error handling for corrupt storage.
     with open(config_path, "r") as f:
         local_config = f.read()
-    with open(os.path.join(config_path, ".index"), "r") as f:
+    with open(revision_path, "r") as f:
         local_revision = int(f.read())
     remote_config_and_index = config_loader.get_config_and_index(config_type)
     remote_revision = remote_config_and_index.modifiedIndex
