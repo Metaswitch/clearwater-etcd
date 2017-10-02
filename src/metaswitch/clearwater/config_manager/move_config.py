@@ -14,6 +14,8 @@ import logging
 import difflib
 import syslog
 import sys
+import datetime
+import time
 
 # Constants
 MAXIMUM_CONFIG_SIZE = 100000
@@ -123,6 +125,7 @@ class ConfigLoader(object):
                                             config_type)
             log.debug("Reading local config from '%s'", config_file_path)
             with open(config_file_path, 'r') as config_file:
+                # TODO: If the config is longer than we expect we need to handle this
                 upload = config_file.read(MAXIMUM_CONFIG_SIZE)
         except IOError:
             raise ConfigUploadFailed(
@@ -137,7 +140,10 @@ class ConfigLoader(object):
         except etcd.EtcdConnectionFailed:
             raise ConfigUploadFailed(
                 "Unable to upload {} to etcd cluster".format(config_type))
-        # TODO: Error handling for CAS
+        except etcd.EtcdCompareFailed:
+            raise ConfigUploadFailed(
+                "Unable to upload {} to etcd cluster as the version changed "
+                "while editing locally.".format(config_type))
 
     # We need this property for the step in upload_config where we log the
     # change in config to file.
@@ -248,7 +254,20 @@ def delete_outdated_config_files():
     older than 30 days.
     :return:
     """
-    pass
+
+    date_now = datetime.date.today()
+    delete_date = date_now - datetime.timedelta(days=30)
+    shared_config_folder = get_base_download_dir()
+    for root, dirs, files in os.walk(shared_config_folder, topdown=False):
+        for name in files:
+            filepath = (os.path.join(root, name))
+            file_time = time.localtime(os.path.getmtime(filepath))
+            file_date = datetime.date(file_time.tm_year, file_time.tm_mon,
+                                      file_time.tm_mday)
+            if file_date > delete_date:
+                pass
+            else:
+                os.remove(filepath)
 
 
 def download_config(config_loader, config_type, autoskip):
@@ -319,8 +338,12 @@ def upload_config(config_loader, config_type, force=False, autoconfirm=False):
     revision_path = config_path + ".index"
     log.debug("Uploading config from '%s'", config_path)
     log.debug("Using local revision number from '%s'", revision_path)
+
     if not os.path.exists(config_path):
         raise IOError("No shared config found, unable to upload")
+    if not os.path.exists(revision_path):
+        raise IOError("No shared config revision file found, unable to "
+                      "upload. Please re-download the shared config again.")
 
     # Compare local and etcd revision number
     # TODO: Error handling for corrupt storage.
