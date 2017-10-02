@@ -14,7 +14,6 @@ import logging
 import sys
 
 # Constants
-SHARED_CONFIG_PATH = "/etc/clearwater/shared_config"
 DOWNLOADED_CONFIG_PATH = " ~/clearwater-config-manager/staging"
 MAXIMUM_CONFIG_SIZE = 100000
 VALIDATION_SCRIPTS_FOLDER = "/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/"
@@ -28,6 +27,7 @@ shared config, re-apply the changes and try again."""
 # Set up logging
 logging.basicConfig(filename=LOG_PATH, level=logging.DEBUG)
 log = logging.getLogger(__name__)
+
 
 # Exceptions
 class ConfigAlreadyDownloaded(Exception):
@@ -66,8 +66,7 @@ class ConfigLoader(object):
         # etcd API that will get us our config.
         self._etcd_client = etcd_client
         self.prefix = "/".join(["", etcd_key, site, "configuration"])
-        self.download_dir = os.path.join(DOWNLOADED_CONFIG_PATH,
-                                         get_user_name())
+        self.download_dir = get_user_download_dir()
 
     def download_config(self, config_type):
         """Save a copy of a given config type to the download directory.
@@ -104,7 +103,7 @@ class ConfigLoader(object):
 
         return download
 
-    def upload_config(self, config_type, **kwargs):
+    def upload_config(self, config_type, cas_revision):
         """Upload config contained in the specified file to the etcd database.
         Raises a ConfigUploadFailed exception if unsuccessful.
         """
@@ -117,7 +116,9 @@ class ConfigLoader(object):
                 "Failed to retrieve {} from file".format(config_type))
 
         try:
-            self._etcd_client.write("/".join([self.prefix, config_type]), upload, **kwargs)
+            self._etcd_client.write("/".join([self.prefix, config_type]),
+                                    upload,
+                                    prevIndex=cas_revision)
         except etcd.EtcdConnectionFailed:
             raise ConfigUploadFailed(
                 "Unable to upload {} to etcd cluster".format(config_type))
@@ -141,7 +142,7 @@ def main(args):
     # leave unused files on disk.
     delete_outdated_config_files()
 
-    # Define an etcd client for interacting with the database.
+    # Create an etcd client for interacting with the database.
     try:
         log.debug("Getting etcdClient with parameters {}, {}, {}"
                   .format(args.etcd_key, args.site, args.management_ip))
@@ -150,14 +151,17 @@ def main(args):
         config_loader = ConfigLoader(etcd_client=etcd_client,
                                      etcd_key=args.etcd_key,
                                      site=args.site)
-        # TODO we should check the connection to etcd.
+        # TODO we should check the connection to etcd as the bash script did.
+    # TODO Handle exceptions properly here
     except Exception:
         sys.exit("Unable to contact the etcd cluster.")
 
     if args.action == "download":
         log.info("Running in download mode.")
         try:
-            download_config(config_loader, args.config_type, args.autoconfirm)
+            download_config(config_loader,
+                            args.config_type,
+                            args.autoconfirm)
         except ConfigDownloadFailed as e:
             sys.exit(e)
         except UserAbort:
@@ -169,19 +173,27 @@ def main(args):
         log.info("Running in upload mode.")
 
         try:
+            # TODO - upload and download functions are really
+            # massive great big scripts and should hold all the logic
+            # for their mode.
             validate_config(args.force)
         except ConfigValidationFailed as exc:
             sys.exit(exc)
 
         try:
-            upload_config(config_loader, args.config_type, args.force)
+            # TODO - force is different to autoconfirm so we need to pass
+            # them separately, right?
+            upload_config(config_loader,
+                          args.config_type,
+                          args.force,
+                          args.autoconfirm)
         except UserAbort:
             sys.exit("User aborted.")
         except EtcdMasterConfigChanged:
-            # Tell user to redownload and abort
+            # TODO Tell user to redownload and abort
             pass
         except ConfigUploadFailed:
-            # Tell user and abort
+            # TODO Tell user and abort
             pass
 
 
@@ -228,9 +240,8 @@ def download_config(config_loader, config_type, autoskip):
     Downloads the config from etcd and saves a copy to
     DOWNLOADED_CONFIG_PATH/<USER_NAME>.
     """
-    local_config_path = os.path.join(DOWNLOADED_CONFIG_PATH,
-                                     get_user_name(),
-                                     config_type)
+    local_config_path = os.path.join(get_user_download_dir(), config_type)
+
     if os.path.exists(local_config_path):
         # Ask user to confirm if they want to overwrite the file
         # Continue with download if user confirms
@@ -271,7 +282,7 @@ def validate_config(force=False):
     # TODO: add our validation script that should always be run
 
 
-def upload_config(config_loader, config_type, force=False):
+def upload_config(config_loader, config_type, force=False, autoconfirm=False):
     """
     Uploads the config from DOWNLOADED_CONFIG_PATH/<USER_NAME> to etcd.
     """
@@ -283,9 +294,7 @@ def upload_config(config_loader, config_type, force=False):
     # can be made. But need to confirm that is in fact the case.
 
     # Check that the file exists.
-    if not os.path.exists(os.path.join(DOWNLOADED_CONFIG_PATH,
-                                       get_user_name(),
-                                       config_type)):
+    if not os.path.exists(os.path.join(get_user_download_dir(), config_type)):
         raise IOError("No shared config found, unable to upload")
 
     # Log the changes.
@@ -314,16 +323,18 @@ def upload_config(config_loader, config_type, force=False):
     # Provide a diff of the changes and ask user to confirm
     print_diff(local_config, remote_config)
 
-    # TODO: Add skipping
-    confirmed = confirm_yn("Please check the config changes and confirm that "
-                           "you wish to continue with the config upload.")
-    if not confirmed:
-        raise UserAbort
+    if not autoconfirm:
+        confirmed = confirm_yn("Please check the config changes and confirm that "
+                               "you wish to continue with the config upload.")
+        if not confirmed:
+            raise UserAbort
 
     # Upload the configuration to the etcd cluster.
-    config_loader.upload_config(config_type)
+    config_loader.upload_config(config_type,
+                                remote_revision)
 
     # Add the node to the restart queue(s)
+    # TODO - why are we doing this?
     apply_config_key = subprocess.check_output(
         "/usr/share/clearwater/clearwater-queue-manager/scripts/get_apply_config_key")
     subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
@@ -331,6 +342,7 @@ def upload_config(config_loader, config_type, force=False):
                      apply_config_key])
 
     # We need to modify the queue if we're forcing.
+    # TODO - what does this do? Do we need to do it?
     subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
                      "force_true" if force else "force_false",
                      apply_config_key])
@@ -366,6 +378,11 @@ def get_user_name():
     process = subprocess.Popen(["who", "am", "i"], stdout=subprocess.PIPE)
     output, error = process.communicate()
     return output.split()[0]
+
+
+def get_user_download_dir():
+    """Returns the user-specific directory for downloaded config."""
+    return os.path.join(DOWNLOADED_CONFIG_PATH, get_user_name())
 
 
 def print_diff(string_1, string_2):
