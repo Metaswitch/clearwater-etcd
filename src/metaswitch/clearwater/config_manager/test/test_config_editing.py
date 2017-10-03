@@ -372,36 +372,44 @@ class TestConfigLoader(unittest.TestCase):
 
     @mock.patch('metaswitch.clearwater.config_manager.move_config.raw_input')
     def test_yes(self, mock_raw_input):
+        """tests a yes input to the confirm function returns true"""
         mock_raw_input.return_value = 'yes'
         answer = move_config.confirm_yn('Test 1 ', False)
         self.assertIs(answer, True)
 
     @mock.patch('metaswitch.clearwater.config_manager.move_config.raw_input')
     def test_no(self, mock_raw_input):
+        """tests a no input to the confirm function returns false"""
         mock_raw_input.return_value = 'no'
         answer = move_config.confirm_yn('Test 2 ', False)
         self.assertIs(answer, False)
 
     @mock.patch('metaswitch.clearwater.config_manager.move_config.raw_input')
     def test_skip(self, mock_raw_input):
+        """checks that inputting autoskip as
+         true returns true even with a no input"""
         mock_raw_input.return_value = 'no'
         answer = move_config.confirm_yn('Test 3 ', True)
         self.assertIs(answer, True)
 
     @mock.patch('metaswitch.clearwater.config_manager.move_config.raw_input')
     def test_upper_yes(self, mock_raw_input):
+        """Checks the yes input can have upper case"""
         mock_raw_input.return_value = 'YeS'
         answer = move_config.confirm_yn('Test 4 ', False)
         self.assertIs(answer, True)
 
     @mock.patch('metaswitch.clearwater.config_manager.move_config.raw_input')
     def test_upper_no(self, mock_raw_input):
+        """checks the no input can have lower case"""
         mock_raw_input.return_value = 'nO'
         answer = move_config.confirm_yn('Test 5 ', False)
         self.assertIs(answer, False)
 
     @mock.patch('metaswitch.clearwater.config_manager.move_config.raw_input')
     def test_wrong_in1(self, mock_raw_input):
+        """checks the function asks for further inputs until a correct
+        response is supplied, also checks that 'y' is acceptable"""
         mock_raw_input.side_effect = ['noo', 'yese', '1', '2e', 'y', 'notneed']
         answer = move_config.confirm_yn('Test 6 ', False)
         self.assertEqual(mock_raw_input.call_count, 5)
@@ -409,6 +417,8 @@ class TestConfigLoader(unittest.TestCase):
 
     @mock.patch('metaswitch.clearwater.config_manager.move_config.raw_input')
     def test_wrong_in2(self, mock_raw_input):
+        """A second check for checking the function asks for correct responses
+        until one is supplied, also checks that 'n' is accpetable"""
         mock_raw_input.side_effect = ['AS', '1WY1', 'Y3s', 'fo{}', '[]2e', 'n']
         answer = move_config.confirm_yn('Test 7 ', False)
         self.assertEqual(mock_raw_input.call_count, 6)
