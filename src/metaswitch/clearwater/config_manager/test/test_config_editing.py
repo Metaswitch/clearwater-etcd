@@ -423,3 +423,117 @@ class TestConfigLoader(unittest.TestCase):
         answer = move_config.confirm_yn('Test 7 ', False)
         self.assertEqual(mock_raw_input.call_count, 6)
         self.assertIs(answer, False)
+
+
+class TestMain(unittest.TestCase):
+    def test_delete_outdated_config_files(self, mock_open, mock_mkdir, mock_exists, mock_user):
+        """Make sure we always call delete_outdated_config_files"""
+        pass
+
+    def test_download_action_main_line(self):
+        """Make sure that we always call download_config in download mode."""
+        pass
+
+    def test_handle_download_configdownloadfailed(self):
+        """Check that we handle a ConfigDownloadFailed exception raised by
+        download_config."""
+        pass
+
+    def test_handle_download_ioerror(self):
+        """Check that we handle an IOError exception raised by
+        download_config."""
+        pass
+
+    def test_handle_download_userabort(self):
+        """Check that we handle a UserAbort exception raised by
+        download_config."""
+        pass
+
+    def test_upload_action_main_line(self):
+        """Make sure that we always call upload_config in upload mode."""
+        pass
+
+    def test_handle_upload_etcdmasterconfigchanged(self):
+        """Check that we handle a EtcdMasterConfigChanged exception raised by
+        upload_config."""
+        pass
+
+    def test_handle_upload_configuploadfailed(self):
+        """Check that we handle a ConfigUploadFailed exception raised by
+        upload_config."""
+        pass
+
+    def test_handle_upload_configvalidationfailed(self):
+        """Check that we handle a ConfigValidationFailed exception raised by
+        upload_config."""
+        pass
+
+    def test_handle_upload_ioerror(self):
+        """Check that we handle an IOError exception raised by
+        upload_config."""
+        pass
+
+    def test_handle_upload_userabort(self):
+        """Check that we handle a UserAbort exception raised by
+        upload_config."""
+        pass
+
+    def test_handle_etcdexception(self):
+        """Check that we handle an EtcdException raised by
+        etcd.client.Client."""
+        pass
+
+
+class TestDownload(unittest.TestCase):
+    def test_confirm_overwrite(self):
+        """Check that we ask the user for confirmation before overwriting an
+        existing file."""
+        pass
+
+    def test_deny_overwrite(self):
+        """Check that we raise a UserAbort exception if the user denies to
+        overwrite an existing file."""
+        pass
+
+    def test_allow_overwrite(self):
+        """Check that we don't raise a UserAbort exception if the user allows
+        to overwrite an existing file and check that we download_config."""
+        pass
+
+
+class TestUpload(unittest.TestCase):
+    def test_no_file_found(self):
+        """Check that we raise an IOError if either the config file or the
+        index file doesn't exist."""
+        pass
+
+    def test_always_validate(self):
+        """Check that we always call validate_config."""
+        pass
+
+    def test_different_revision_numbers(self):
+        """Check that we raise an EtcdMasterConfigChanged exception if the
+        local revision is not the same as the remote revision."""
+        pass
+
+    def test_print_diff(self):
+        """Check that we always call print_diff_and_syslog."""
+        pass
+
+    def test_ask_confirmation(self):
+        """Check that we always ask for user confirmation if autoconfirm is
+        false."""
+        pass
+
+    def test_user_abort(self):
+        """Check that we raise a UserAbort exception if autoconfirm is false
+        and the user denied to continue."""
+        pass
+
+    def test_upload_config(self):
+        """Check that we call config_loader.upload_config."""
+        pass
+
+    def test_remove_file_on_success(self):
+        """Check that we remove the local config file on successful upload."""
+        pass
