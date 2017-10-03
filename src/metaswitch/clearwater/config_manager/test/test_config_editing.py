@@ -371,6 +371,8 @@ class TestConfigLoader(unittest.TestCase):
                 "shared_config",
                 1234)
 
+
+class TestYesNo(unittest.TestCase):
     @mock.patch('metaswitch.clearwater.config_manager.move_config.raw_input')
     def test_yes(self, mock_raw_input):
         """tests a yes input to the confirm function returns true"""
@@ -425,10 +427,126 @@ class TestConfigLoader(unittest.TestCase):
         self.assertEqual(mock_raw_input.call_count, 6)
         self.assertIs(answer, False)
 
+
+class TestMain(unittest.TestCase):
+    def test_delete_outdated_config_files(self, mock_open, mock_mkdir, mock_exists, mock_user):
+        """Make sure we always call delete_outdated_config_files"""
+        pass
+
+    def test_download_action_main_line(self):
+        """Make sure that we always call download_config in download mode."""
+        pass
+
+    def test_handle_download_configdownloadfailed(self):
+        """Check that we handle a ConfigDownloadFailed exception raised by
+        download_config."""
+        pass
+
+    def test_handle_download_ioerror(self):
+        """Check that we handle an IOError exception raised by
+        download_config."""
+        pass
+
+    def test_handle_download_userabort(self):
+        """Check that we handle a UserAbort exception raised by
+        download_config."""
+        pass
+
+    def test_upload_action_main_line(self):
+        """Make sure that we always call upload_config in upload mode."""
+        pass
+
+    def test_handle_upload_etcdmasterconfigchanged(self):
+        """Check that we handle a EtcdMasterConfigChanged exception raised by
+        upload_config."""
+        pass
+
+    def test_handle_upload_configuploadfailed(self):
+        """Check that we handle a ConfigUploadFailed exception raised by
+        upload_config."""
+        pass
+
+    def test_handle_upload_configvalidationfailed(self):
+        """Check that we handle a ConfigValidationFailed exception raised by
+        upload_config."""
+        pass
+
+    def test_handle_upload_ioerror(self):
+        """Check that we handle an IOError exception raised by
+        upload_config."""
+        pass
+
+    def test_handle_upload_userabort(self):
+        """Check that we handle a UserAbort exception raised by
+        upload_config."""
+        pass
+
+    def test_handle_etcdexception(self):
+        """Check that we handle an EtcdException raised by
+        etcd.client.Client."""
+        pass
+
+
+class TestDownload(unittest.TestCase):
+    def test_confirm_overwrite(self):
+        """Check that we ask the user for confirmation before overwriting an
+        existing file."""
+        pass
+
+    def test_deny_overwrite(self):
+        """Check that we raise a UserAbort exception if the user denies to
+        overwrite an existing file."""
+        pass
+
+    def test_allow_overwrite(self):
+        """Check that we don't raise a UserAbort exception if the user allows
+        to overwrite an existing file and check that we download_config."""
+        pass
+
+
+class TestUpload(unittest.TestCase):
+    def test_no_file_found(self):
+        """Check that we raise an IOError if either the config file or the
+        index file doesn't exist."""
+        pass
+
+    def test_always_validate(self):
+        """Check that we always call validate_config."""
+        pass
+
+    def test_different_revision_numbers(self):
+        """Check that we raise an EtcdMasterConfigChanged exception if the
+        local revision is not the same as the remote revision."""
+        pass
+
+    def test_print_diff(self):
+        """Check that we always call print_diff_and_syslog."""
+        pass
+
+    def test_ask_confirmation(self):
+        """Check that we always ask for user confirmation if autoconfirm is
+        false."""
+        pass
+
+    def test_user_abort(self):
+        """Check that we raise a UserAbort exception if autoconfirm is false
+        and the user denied to continue."""
+        pass
+
+    def test_upload_config(self):
+        """Check that we call config_loader.upload_config."""
+        pass
+
+    def test_remove_file_on_success(self):
+        """Check that we remove the local config file on successful upload."""
+        pass
+
+
+class TestDeleteOutdated(unittest.TestCase):
     @mock.patch("metaswitch.clearwater.config_manager.move_config.os.remove",
                 return_value="")
     @mock.patch("metaswitch.clearwater.config_manager.move_config.os.path.getmtime")
-        def test_no_delete(self):
+    def test_no_delete(self):
         """This tests that a recent file is not deleted"""
         mock_os.path.getmtime.return_value = time
         answer = move_config.delete_outdated_config_files()
@@ -437,4 +555,43 @@ class TestConfigLoader(unittest.TestCase):
     def test_yes_delete(self):
         """This tests that a older file is deleted"""
         answer = move_config.delete_outdated_config_files()
+
+
+class TestUserName(unittest.TestCase):
+    def test_call_subprocess(self):
+        """check that we call subprocess.popen"""
+        pass
+
+
+class TestUserDownloadDir(unittest.TestCase):
+    def test_call_get_base(self):
+        """check that we call get_base_download_dir and get_user_name """
+        pass
+
+
+class TestBaseDownloadDir(unittest.TestCase):
+    def test_call_osgetenv(self):
+        """check that we call os.getenv(HOME)"""
+        pass
+
+    def test_get_runtime_error(self):
+        """check that a runtime error is raised when home is none"""
+        pass
+
+
+class TestDiffAndSyslog(unittest.TestCase):
+    def test_check_iden(self):
+        """check that the diff for two identical files returns false"""
+        pass
+
+    def test_check_diff(self):
+        """check that for two different files with additions and deletions the
+        syslog_str and output_str contain them"""
+        pass
+
+    def test_call_syslog(self):
+        """check that syslog.openlog, syslog.syslog and syslog.closelog are
+        called"""
+        pass
+
 

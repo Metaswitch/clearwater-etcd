@@ -85,12 +85,12 @@ class ConfigLoader(object):
         """Save a copy of a given config type to the download directory.
         Raises a ConfigDownloadFailed exception if unsuccessful."""
         self._ensure_config_dir()
-
+        config_file_path = os.path.join(self.download_dir, config_type)
+        index_file_path = config_file_path + ".index"
         download = self.get_config_and_index(config_type)
+
         # Write the config to file.
         try:
-            config_file_path = os.path.join(self.download_dir,
-                                            config_type)
             log.debug("Writing config to '%s'.", config_file_path)
             with open(config_file_path, 'w') as config_file:
                 config_file.write(str(download.value))
@@ -101,7 +101,6 @@ class ConfigLoader(object):
         # We want to keep track of the index the config had in the etcd cluster
         # so we know if it is up to date.
         try:
-            index_file_path = config_file_path + ".index"
             log.debug("Writing config to '%s'.", index_file_path)
             with open(index_file_path, 'w') as index_file:
                 index_file.write(str(download.modifiedIndex))
@@ -110,11 +109,12 @@ class ConfigLoader(object):
                 "Couldn't save {} to file".format(config_type))
 
     def get_config_and_index(self, config_type):
+        key_path = "/".join([self.prefix, config_type])
+
         try:
             # First we pull the data down from the etcd cluster. This will
             # throw an etcd.EtcdKeyNotFound exception if the config type
             # does not exist in the database.
-            key_path = "/".join([self.prefix, config_type])
             log.debug("Reading etcd config from '%s", key_path)
             download = self._etcd_client.read(key_path)
         except etcd.EtcdKeyNotFound:
@@ -127,11 +127,12 @@ class ConfigLoader(object):
         """Upload config contained in the specified file to the etcd database.
         Raises a ConfigUploadFailed exception if unsuccessful.
         """
+        # TODO: do we really need to check this here?
         self._ensure_config_dir()
+        config_file_path = os.path.join(self.download_dir, config_type)
+        key_path = "/".join([self.prefix, config_type])
 
         try:
-            config_file_path = os.path.join(self.download_dir,
-                                            config_type)
             log.debug("Reading local config from '%s'", config_file_path)
             with open(config_file_path, 'r') as config_file:
                 # TODO: If the config is longer than we expect we need to handle this
@@ -141,7 +142,6 @@ class ConfigLoader(object):
                 "Failed to retrieve {} from file".format(config_type))
 
         try:
-            key_path = "/".join([self.prefix, config_type])
             log.debug("Writing etcd config to '%s'", key_path)
             self._etcd_client.write(key_path,
                                     upload,
@@ -184,8 +184,7 @@ def main(args):
                                      etcd_key=args.etcd_key,
                                      site=args.site)
         # TODO we should check the connection to etcd as the bash script did.
-    # TODO Handle exceptions properly here
-    except Exception:
+    except etcd.EtcdException:
         sys.exit("Unable to contact the etcd cluster.")
 
     if args.action == "download":
@@ -202,8 +201,6 @@ def main(args):
     if args.action == "upload":
         log.info("Running in upload mode.")
         try:
-            # TODO - force is different to autoconfirm so we need to pass
-            # them separately, right?
             upload_config(config_loader,
                           args.config_type,
                           args.force,
@@ -211,11 +208,10 @@ def main(args):
         except UserAbort:
             sys.exit("User aborted.")
         except EtcdMasterConfigChanged:
-            # TODO Tell user to redownload and abort
-            pass
+            sys.exit("The config changed on etcd master while editing locally."
+                     "Please redownload the config and apply your changes.")
         except ConfigUploadFailed:
-            # TODO Tell user and abort
-            pass
+            sys.exit("The config upload failed. Please try again.")
         except (ConfigValidationFailed, IOError) as exc:
             sys.exit(exc)
 
@@ -293,7 +289,6 @@ def validate_config(force=False):
     """
     Validates the config by calling all scripts in the validation folder.
     """
-    #TODO: also call our validation script
     log.info("Start validating config using user scripts.")
     script_dir = os.listdir(VALIDATION_SCRIPTS_FOLDER)
 
@@ -332,6 +327,8 @@ def upload_config(config_loader, config_type, force=False, autoconfirm=False):
     # that we don't actually need to do that in this case, because we'll
     # always be doing some sort of initial verification that the connection
     # can be made. But need to confirm that is in fact the case.
+
+    # TODO: if force is True, check that we are root, otherwise error out
 
     # Check that the file exists.
     config_path = os.path.join(config_loader.download_dir, config_type)
@@ -400,7 +397,7 @@ def confirm_yn(prompt, autoskip=False):
     prompt passed in. This keeps asking the user until a valid response is
     given. True or false is returned for a yes no input respectively"""
 
-    if autoskip is True:
+    if autoskip:
         log.info('skipping confirmation enabled')
         return True
 
