@@ -444,42 +444,54 @@ def print_diff_and_syslog(config_1, config_2):
     """
     Print a readable diff of changes between two texts and log to syslog.
     """
-    config_lines_1 = config_1.splitlines()
-    config_lines_2 = config_2.splitlines()
+    # We don't care about line ordering changes, so first,
+    # clean up the data into sorted lists of lines.
+    config_lines_1 = config_1.splitlines().sort()
+    config_lines_2 = config_2.splitlines().sort()
 
-    # We're looking to log meaningful configuration changes, so sort the lines
-    # to ignore changes in line ordering.
-    config_lines_1.sort()
-    config_lines_2.sort()
-    difflines = list(difflib.ndiff(config_lines_1, config_lines_2))
+    # Get a list of diffs, like the lines of the output you'd see when you
+    # run `diff` on the command line:
+    # * removed lines are prefixed with "- ".
+    # * added lines are prefixed with "+ ".
+    difflines = list(difflib.ndiff(config_lines_1,
+                                   config_lines_2))
 
-    # Pull out nonempty diff lines prefixed by "- "
-    deletions = [line[2:] for line in difflines if line.startswith("- ") and len(line) > 2]
-    # "Concatenate", "like", "this"
-    deletions_str = ", ".join(['"' + line + '"' for line in deletions])
-
-    additions = [line[2:] for line in difflines if line.startswith("+ ") and len(line) > 2]
-    additions_str = ", ".join(['"' + line + '"' for line in additions])
+    # We don't want to print out the '+' or '-': we have our own way of
+    # describing diffs.
+    deletions = [line[2:] for line in difflines
+                 if line.startswith("- ") and len(line) > 2]
+    additions = [line[2:] for line in difflines
+                 if line.startswith("+ ") and len(line) > 2]
 
     if additions or deletions:
-        logstr = "Configuration file change: shared_config was modified by " \
-                 "user {}. ".format(get_user_name())
+        header = ("Configuration file change: shared_config was modified by "
+                  "user {}. ").format(get_user_name())
+
+        # For the syslog, we want the diff output on one line.
+        # For the UI, we want to output on multiple lines, as it's
+        # much clearer.
+        syslog_str = header
+        output_str = header
         if deletions:
-            logstr += "Lines removed: "
-            logstr += deletions_str + ". "
+            syslog_str += "Lines removed: "
+            output_str += "Lines removed:\n"
+            syslog_str += ", ".join(['"' + line + '"' for line in deletions])
+            output_str += "\n".join(['"' + line + '"' for line in deletions])
         if additions:
-            logstr += "Lines added: "
-            logstr += additions_str + "."
+            syslog_str += "Lines added: "
+            output_str += "Lines added:\n"
+            syslog_str += ", ".join(['"' + line + '"' for line in additions])
+            output_str += "\n".join(['"' + line + '"' for line in additions])
 
         # Force encoding so logstr prints and syslogs nicely
-        logstr = logstr.encode("utf-8")
+        syslog_str = syslog_str.encode("utf-8")
 
         # Print changes to console so the user can do a sanity check
-        print(logstr)
+        print(output_str)
 
         # Log the changes
         syslog.openlog("audit-log", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_NOTICE, logstr)
+        syslog.syslog(syslog.LOG_NOTICE, syslog_str)
         syslog.closelog()
 
         return True
