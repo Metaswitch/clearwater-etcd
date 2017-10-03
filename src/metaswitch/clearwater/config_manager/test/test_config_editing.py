@@ -103,6 +103,25 @@ class TestConfigLoader(unittest.TestCase):
             full_uri,
             "http://base_uri/key_endpoint/clearwater/site/configuration")
 
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.path.exists",
+                return_value=True)
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.makedirs")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.open")
+    def test_folder_exists(self, mock_open, mock_mkdir, mock_exists):
+        """Make sure that we tolerate an existing download folder."""
+        etcd_client = mock.MagicMock(spec=etcd.client.Client)
+
+        config_loader = move_config.ConfigLoader(
+            etcd_client, "clearwater", "site")
+
+        config_loader.download_config("shared_config")
+
+        # Make sure we haven't tried to create a dir when one exists.
+        self.assertEqual(mock_mkdir.call_count, 0)
+
+    def test_folder_missing(self):
+        pass
+
     def test_get_config(self):
         """Check we use the right URI to download config."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
@@ -137,7 +156,8 @@ class TestConfigLoader(unittest.TestCase):
                 return_value="ubuntu")
     @mock.patch("metaswitch.clearwater.config_manager.move_config.os.getenv",
                 return_value="/home/ubuntu")
-    def test_download_config(self, mock_getenv, mock_user):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.makedirs")
+    def test_download_config(self, mock_getenv, mock_user, mock_mkdir):
         """Check that we can write config from etcd to file."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
         etcd_result = mock.MagicMock()
@@ -179,7 +199,8 @@ class TestConfigLoader(unittest.TestCase):
                 return_value="ubuntu")
     @mock.patch("metaswitch.clearwater.config_manager.move_config.os.getenv",
                 return_value="/home/ubuntu")
-    def test_download_no_config_file(self, mock_getenv, mock_user):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.makedirs")
+    def test_download_no_config_file(self, mock_getenv, mock_user, mock_mkdir):
         """Check for the correct exception on failure.
 
         Check that failing to open the config file causes the correct
@@ -211,7 +232,8 @@ class TestConfigLoader(unittest.TestCase):
                 return_value="ubuntu")
     @mock.patch("metaswitch.clearwater.config_manager.move_config.os.getenv",
                 return_value="/home/ubuntu")
-    def test_download_no_index_file(self, mock_getenv, mock_user):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.makedirs")
+    def test_download_no_index_file(self, mock_getenv, mock_user, mock_mkdir):
         """Check for the correct exception on failure.
 
         Check that failing to open the index file causes the correct
@@ -245,7 +267,8 @@ class TestConfigLoader(unittest.TestCase):
                 return_value="ubuntu")
     @mock.patch("metaswitch.clearwater.config_manager.move_config.os.getenv",
                 return_value="/home/ubuntu")
-    def test_upload_config(self, mock_getenv, mock_user):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.makedirs")
+    def test_upload_config(self, mock_getenv, mock_user, mock_mkdir):
         """Check that we can write config to etcd from file."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
 
@@ -279,7 +302,8 @@ class TestConfigLoader(unittest.TestCase):
                 return_value="ubuntu")
     @mock.patch("metaswitch.clearwater.config_manager.move_config.os.getenv",
                 return_value="/home/ubuntu")
-    def test_upload_no_config_file(self, mock_getenv, mock_user):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.makedirs")
+    def test_upload_no_config_file(self, mock_getenv, mock_user, mock_mkdir):
         """Check for the correct exception on failure.
 
         Check that failing to open the config file causes the correct
@@ -308,7 +332,8 @@ class TestConfigLoader(unittest.TestCase):
                 return_value="ubuntu")
     @mock.patch("metaswitch.clearwater.config_manager.move_config.os.getenv",
                 return_value="/home/ubuntu")
-    def test_upload_no_connection(self, mock_getenv, mock_user):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.makedirs")
+    def test_upload_no_connection(self, mock_getenv, mock_user, mock_mkdir):
         """Check for the correct exception on failure.
 
         Check that failing to connect to etcd causes the correct

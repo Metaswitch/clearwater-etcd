@@ -76,9 +76,16 @@ class ConfigLoader(object):
         self.prefix = "/".join(["", etcd_key, site, "configuration"])
         self.download_dir = get_user_download_dir()
 
+    def _ensure_config_dir(self):
+        """Make sure that the folder used to store config exists."""
+        if not os.path.exists(self.download_dir):
+            os.makedirs(self.download_dir)
+
     def download_config(self, config_type):
         """Save a copy of a given config type to the download directory.
         Raises a ConfigDownloadFailed exception if unsuccessful."""
+        self._ensure_config_dir()
+
         download = self.get_config_and_index(config_type)
         # Write the config to file.
         try:
@@ -120,6 +127,8 @@ class ConfigLoader(object):
         """Upload config contained in the specified file to the etcd database.
         Raises a ConfigUploadFailed exception if unsuccessful.
         """
+        self._ensure_config_dir()
+
         try:
             config_file_path = os.path.join(self.download_dir,
                                             config_type)
