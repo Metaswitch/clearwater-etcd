@@ -6,6 +6,7 @@
 # Metaswitch Networks in a separate written agreement.
 
 import mock
+import time
 from StringIO import StringIO
 import subprocess
 import unittest
@@ -401,7 +402,7 @@ class TestConfigLoader(unittest.TestCase):
 
     @mock.patch('metaswitch.clearwater.config_manager.move_config.raw_input')
     def test_upper_no(self, mock_raw_input):
-        """checks the no input can have lower case"""
+        """checks the no input can have upper case"""
         mock_raw_input.return_value = 'nO'
         answer = move_config.confirm_yn('Test 5 ', False)
         self.assertIs(answer, False)
@@ -423,3 +424,17 @@ class TestConfigLoader(unittest.TestCase):
         answer = move_config.confirm_yn('Test 7 ', False)
         self.assertEqual(mock_raw_input.call_count, 6)
         self.assertIs(answer, False)
+
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.remove",
+                return_value="")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.path.getmtime")
+        def test_no_delete(self):
+        """This tests that a recent file is not deleted"""
+        mock_os.path.getmtime.return_value = time
+        answer = move_config.delete_outdated_config_files()
+
+    @mock.patch()
+    def test_yes_delete(self):
+        """This tests that a older file is deleted"""
+        answer = move_config.delete_outdated_config_files()
+
