@@ -194,12 +194,10 @@ def main(args):
             download_config(config_loader,
                             args.config_type,
                             args.autoconfirm)
-        except ConfigDownloadFailed as e:
+        except (ConfigDownloadFailed, IOError) as e:
             sys.exit(e)
         except UserAbort:
             sys.exit("User aborted.")
-        except IOError as e:
-            sys.exit(e)
 
     if args.action == "upload":
         log.info("Running in upload mode.")
@@ -218,7 +216,7 @@ def main(args):
         except ConfigUploadFailed:
             # TODO Tell user and abort
             pass
-        except ConfigValidationFailed as exc:
+        except (ConfigValidationFailed, IOError) as exc:
             sys.exit(exc)
 
 
