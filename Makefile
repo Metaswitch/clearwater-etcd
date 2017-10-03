@@ -79,8 +79,10 @@ $(eval $(call etcd_component,queue_mgr))
 $(eval $(call etcd_component,config_mgr))
 $(eval $(call etcd_component,cluster_mgr))
 
-# Add a dependency to the wheels-built target for the alarm constants
-${ENV_DIR}/.wheels-built: src/metaswitch/clearwater/queue_manager/alarm_constants.py src/metaswitch/clearwater/config_manager/alarm_constants.py src/metaswitch/clearwater/cluster_manager/alarm_constants.py
+# Add a dependency to the build-wheels targets for the alarm constants
+${ENV_DIR}/.queue_mgr-build-wheels: src/metaswitch/clearwater/queue_manager/alarm_constants.py
+${ENV_DIR}/.config_mgr-build-wheels: src/metaswitch/clearwater/config_manager/alarm_constants.py
+${ENV_DIR}/.cluster_mgr-build-wheels: src/metaswitch/clearwater/cluster_manager/alarm_constants.py
 
 src/metaswitch/clearwater/queue_manager/alarm_constants.py: clearwater-queue-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_queue_manager_alarms.json common/metaswitch/common/alarms_writer.py common/metaswitch/common/alarms_parser.py common/metaswitch/common/alarm_severities.py
 	python common/metaswitch/common/alarms_writer.py --json-file="clearwater-queue-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_queue_manager_alarms.json" --constants-file=$@
