@@ -117,7 +117,7 @@ class ConfigLoader(object):
 
         return download.value, download.modifiedIndex
 
-    def upload_config(self, config_type, cas_revision):
+    def write_config_to_etcd(self, config_type, cas_revision):
         """Upload config contained in the specified file to the etcd database.
         Raises a ConfigUploadFailed exception if unsuccessful.
         """
@@ -144,7 +144,7 @@ class ConfigLoader(object):
                 "Unable to upload {} to etcd cluster as the version changed "
                 "while editing locally.".format(config_type))
 
-    # We need this property for the step in upload_config where we log the
+    # We need this property for the step in write_config_to_etcd where we log the
     # change in config to file.
     @property
     def full_uri(self):
@@ -194,11 +194,11 @@ def main(args):
     if args.action == "upload":
         log.info("Running in upload mode.")
         try:
-            upload_config(config_loader,
-                          local_store,
-                          args.config_type,
-                          args.force,
-                          args.autoconfirm)
+            upload_verified_config(config_loader,
+                                   local_store,
+                                   args.config_type,
+                                   args.force,
+                                   args.autoconfirm)
         except UserAbort:
             sys.exit("User aborted.")
         except EtcdMasterConfigChanged:
@@ -315,7 +315,7 @@ def validate_config(force=False):
     # TODO: add our validation script that should always be run
 
 
-def upload_config(config_loader, local_store, config_type, force=False, autoconfirm=False):
+def upload_verified_config(config_loader, local_store, config_type, force=False, autoconfirm=False):
     """
     Uploads the config from DOWNLOADED_CONFIG_PATH/<USER_NAME> to etcd.
     """
@@ -330,9 +330,14 @@ def upload_config(config_loader, local_store, config_type, force=False, autoconf
     # Validate the config
     validate_config(force)
 
-    local_config, local_revision = local_store.load_config_and_revision(config_type)
-    remote_config, remote_revision = config_loader.get_config_and_index(config_type)
+    upload_config(autoconfirm, config_loader, config_type, force, local_store)
 
+
+def upload_config(autoconfirm, config_loader, config_type, force, local_store):
+    local_config, local_revision = local_store.load_config_and_revision(
+        config_type)
+    remote_config, remote_revision = config_loader.get_config_and_index(
+        config_type)
     if local_revision != remote_revision:
         raise EtcdMasterConfigChanged("The remote config changed while editing"
                                       "the config locally. Please redownload"
@@ -341,16 +346,15 @@ def upload_config(config_loader, local_store, config_type, force=False, autoconf
     # Provide a diff of the changes and log to syslog
     if not print_diff_and_syslog(remote_config, local_config):
         raise NoConfigChanges
-
     if not autoconfirm:
-        confirmed = confirm_yn("Please check the config changes and confirm that "
-                               "you wish to continue with the config upload.")
+        confirmed = confirm_yn(
+            "Please check the config changes and confirm that "
+            "you wish to continue with the config upload.")
         if not confirmed:
             raise UserAbort
 
     # Upload the configuration to the etcd cluster.
-    config_loader.upload_config(config_type, remote_revision)
-
+    config_loader.write_config_to_etcd(config_type, remote_revision)
     # When changes are made to the config, we tell the queue manager. It
     # coordinates restarting all the nodes in the cluster so that we don't lose
     # service.
@@ -366,17 +370,17 @@ def upload_config(config_loader, local_store, config_type, force=False, autoconf
     #       Ideally we would adjust the modify_nodes_in_queue script so it
     #       could be imported and called directly (it's an uncommented mess
     #       though).
-    subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
-                     "add",
-                     apply_config_key])
-
+    subprocess.call([
+                        "/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
+                        "add",
+                        apply_config_key])
     # If the config changes are being forced through, the queue manager needs
     # to be made aware so it can apply the changes to the other nodes in the
     # cluster properly.
-    subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
-                     "force_true" if force else "force_false",
-                     apply_config_key])
-
+    subprocess.call([
+                        "/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
+                        "force_true" if force else "force_false",
+                        apply_config_key])
     # Delete local config file if upload was successful
     config_path = os.path.join(config_loader.download_dir, config_type)
     os.remove(config_path)
