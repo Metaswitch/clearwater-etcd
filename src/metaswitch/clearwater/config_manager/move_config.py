@@ -69,41 +69,23 @@ class UserAbort(Exception):
 class ConfigLoader(object):
     """Wrapper around etcd.Client to include information about where to find
     config files in the database."""
-    def __init__(self, etcd_client, etcd_key, site):
+    def __init__(self, etcd_client, etcd_key, site, local_store):
         # In addition to standard init, we store off the URL to query on the
         # etcd API that will get us our config.
         self._etcd_client = etcd_client
         self.prefix = "/".join(["", etcd_key, site, "configuration"])
-        self.download_dir = get_user_download_dir()
-
-    def _ensure_config_dir(self):
-        """Make sure that the folder used to store config exists."""
-        if not os.path.exists(self.download_dir):
-            os.makedirs(self.download_dir)
+        self.local_store = local_store
 
     def download_config(self, config_type):
         """Save a copy of a given config type to the download directory.
         Raises a ConfigDownloadFailed exception if unsuccessful."""
-        self._ensure_config_dir()
-        config_file_path = os.path.join(self.download_dir, config_type)
-        index_file_path = config_file_path + ".index"
         download = self.get_config_and_index(config_type)
+        value = str(download.value)
+        index = str(download.modifiedIndex)
 
         # Write the config to file.
         try:
-            log.debug("Writing config to '%s'.", config_file_path)
-            with open(config_file_path, 'w') as config_file:
-                config_file.write(str(download.value))
-        except IOError:
-            raise ConfigDownloadFailed(
-                "Couldn't save {} to file".format(config_type))
-
-        # We want to keep track of the index the config had in the etcd cluster
-        # so we know if it is up to date.
-        try:
-            log.debug("Writing config to '%s'.", index_file_path)
-            with open(index_file_path, 'w') as index_file:
-                index_file.write(str(download.modifiedIndex))
+            self.local_store.save_config_and_revision(config_type, index, value)
         except IOError:
             raise ConfigDownloadFailed(
                 "Couldn't save {} to file".format(config_type))
@@ -128,15 +110,11 @@ class ConfigLoader(object):
         Raises a ConfigUploadFailed exception if unsuccessful.
         """
         # TODO: do we really need to check this here?
-        self._ensure_config_dir()
-        config_file_path = os.path.join(self.download_dir, config_type)
+
         key_path = "/".join([self.prefix, config_type])
 
         try:
-            log.debug("Reading local config from '%s'", config_file_path)
-            with open(config_file_path, 'r') as config_file:
-                # TODO: If the config is longer than we expect we need to handle this
-                upload = config_file.read(MAXIMUM_CONFIG_SIZE)
+            upload, _ = self.local_store.load_config_and_revision(config_type)
         except IOError:
             raise ConfigUploadFailed(
                 "Failed to retrieve {} from file".format(config_type))
@@ -180,9 +158,11 @@ def main(args):
                   .format(args.etcd_key, args.site, args.management_ip))
         etcd_client = etcd.client.Client(host=args.management_ip,
                                          port=4000)
+        local_store = LocalStore()
         config_loader = ConfigLoader(etcd_client=etcd_client,
                                      etcd_key=args.etcd_key,
-                                     site=args.site)
+                                     site=args.site,
+                                     local_store=local_store)
         # TODO we should check the connection to etcd as the bash script did.
     except etcd.EtcdException:
         sys.exit("Unable to contact the etcd cluster.")
@@ -202,6 +182,7 @@ def main(args):
         log.info("Running in upload mode.")
         try:
             upload_config(config_loader,
+                          local_store,
                           args.config_type,
                           args.force,
                           args.autoconfirm)
@@ -321,7 +302,7 @@ def validate_config(force=False):
     # TODO: add our validation script that should always be run
 
 
-def upload_config(config_loader, config_type, force=False, autoconfirm=False):
+def upload_config(config_loader, local_store, config_type, force=False, autoconfirm=False):
     """
     Uploads the config from DOWNLOADED_CONFIG_PATH/<USER_NAME> to etcd.
     """
@@ -333,28 +314,11 @@ def upload_config(config_loader, config_type, force=False, autoconfirm=False):
     # can be made. But need to confirm that is in fact the case.
 
     # TODO: if force is True, check that we are root, otherwise error out
-
-    # Check that the file exists.
-    config_path = os.path.join(config_loader.download_dir, config_type)
-    revision_path = config_path + ".index"
-    log.debug("Uploading config from '%s'", config_path)
-    log.debug("Using local revision number from '%s'", revision_path)
-
-    if not os.path.exists(config_path):
-        raise IOError("No shared config found, unable to upload")
-    if not os.path.exists(revision_path):
-        raise IOError("No shared config revision file found, unable to "
-                      "upload. Please re-download the shared config again.")
-
     # Validate the config
     validate_config(force)
 
-    # Compare local and etcd revision number
-    # TODO: Error handling for corrupt storage.
-    with open(config_path, "r") as f:
-        local_config = f.read()
-    with open(revision_path, "r") as f:
-        local_revision = int(f.read())
+    local_config, local_revision = local_store.load_config_and_revision(config_type)
+
     remote_config_and_index = config_loader.get_config_and_index(config_type)
     remote_revision = remote_config_and_index.modifiedIndex
     remote_config = remote_config_and_index.value
@@ -393,7 +357,60 @@ def upload_config(config_loader, config_type, force=False, autoconfirm=False):
                      apply_config_key])
 
     # Delete local config file if upload was successful
+    config_path = os.path.join(config_loader.download_dir, config_type)
     os.remove(config_path)
+
+
+class LocalStore(object):
+    def __init__(self):
+        self.download_dir = get_user_download_dir()
+        self._ensure_config_dir()
+
+    def _ensure_config_dir(self):
+        """Make sure that the folder used to store config exists."""
+        if not os.path.exists(self.download_dir):
+            os.makedirs(self.download_dir)
+
+    def _get_config_file_path(self, config_type):
+        return os.path.join(self.download_dir, config_type)
+
+    def _get_revision_file_path(self, config_type):
+        return self._get_config_file_path(config_type) + ".index"
+
+    def load_config_and_revision(self, config_type):
+        """"""
+        config_path = self._get_config_file_path(config_type)
+        # Check that the file exists.
+        revision_path = self._get_revision_file_path(config_type)
+        log.debug("Uploading config from '%s'", config_path)
+        log.debug("Using local revision number from '%s'", revision_path)
+        if not os.path.exists(config_path):
+            raise IOError("No shared config found, unable to upload")
+        if not os.path.exists(revision_path):
+            raise IOError("No shared config revision file found, unable to "
+                          "upload. Please re-download the shared config again.")
+
+        # Compare local and etcd revision number
+        # TODO: Error handling for corrupt storage.
+        with open(config_path, "r") as f:
+            local_config = f.read()
+        with open(revision_path, "r") as f:
+            local_revision = int(f.read())
+        return local_config, local_revision
+
+    def save_config_and_revision(self, config_type, index, value):
+        config_file_path = self._get_config_file_path(config_type)
+        index_file_path = self._get_revision_file_path(config_type)
+        log.debug("Writing config to '%s'.", config_file_path)
+        with open(config_file_path, 'w') as config_file:
+            config_file.write(value)
+
+        # We want to keep track of the index the config had in the etcd cluster
+        # so we know if it is up to date.
+        log.debug("Writing config to '%s'.", index_file_path)
+        with open(index_file_path, 'w') as index_file:
+            index_file.write(index)
+
 
 
 def confirm_yn(prompt, autoskip=False):
