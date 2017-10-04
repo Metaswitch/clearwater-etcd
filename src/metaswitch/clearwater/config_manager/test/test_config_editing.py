@@ -543,40 +543,66 @@ class TestUpload(unittest.TestCase):
 
 
 class TestDeleteOutdated(unittest.TestCase):
-    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.remove",
-                return_value="")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.remove")
     @mock.patch("metaswitch.clearwater.config_manager.move_config.os.path.getmtime")
-    def test_no_delete(self):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.walk")
+    def test_no_delete(self, mock_walk, mock_getmtime, mock_remove):
         """This tests that a recent file is not deleted"""
-        mock_os.path.getmtime.return_value = time
+        # gives time of file creation as 28 days ago
+        mock_getmtime.return_value = (time.time() - (28*24*60*60))
+        mock_walk.return_value = (('/imaginary_file_name', [], ['testdel.py']),('/imaginary_file_2',[],[]))
         answer = move_config.delete_outdated_config_files()
+        # then need to check os.remove is NOT called
+        self.assertIs(mock_remove.call_count, 0)
 
-    @mock.patch()
-    def test_yes_delete(self):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.remove")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.path.getmtime")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.walk")
+    def test_yes_delete(self, mock_walk, mock_getmtime, mock_remove):
         """This tests that a older file is deleted"""
+        # gives the creation time of the file at 32 days
+        mock_getmtime.return_value = (time.time() - (32*24*60*60))
+        mock_walk.return_value = (('/imaginary_file_name', ['imaginary_file_2'], ['testdel.py']),('/imaginary_file_name/imaginary_file_2',[],[]))
         answer = move_config.delete_outdated_config_files()
+        # then need to check os.remove IS called
+        self.assertIs(mock_remove.call_count, 1)
 
 
 class TestUserName(unittest.TestCase):
     def test_call_subprocess(self):
         """check that we call subprocess.popen"""
+        # process = subprocess.Popen(["who", "am", "i"], stdout=subprocess.PIPE)
+        # output, error = process.communicate()
+        #  return output.split()[0]
+
+        answer = get_user_name()
+        self.assertIn(answer, )
         pass
 
 
 class TestUserDownloadDir(unittest.TestCase):
+    # """Returns the user-specific directory for downloaded config."""
+    # return os.path.join(get_base_download_dir(), get_user_name())
     def test_call_get_base(self):
         """check that we call get_base_download_dir and get_user_name """
         pass
 
 
 class TestBaseDownloadDir(unittest.TestCase):
+    # """Returns the base directory for downloaded config."""
+    # home = os.getenv("HOME")
+    # if home is None:
+    #    raise RuntimeError("No home directory found.")
+    # return os.path.join(home, 'clearwater-config-manager/staging')
     def test_call_osgetenv(self):
         """check that we call os.getenv(HOME)"""
         pass
 
-    def test_get_runtime_error(self):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.getenv")
+    def test_get_runtime_error(self, mock_getenv):
         """check that a runtime error is raised when home is none"""
-        pass
+        mock_getenv.return_value = None
+        self.assertRaises(RuntimeError)
 
 
 class TestDiffAndSyslog(unittest.TestCase):
