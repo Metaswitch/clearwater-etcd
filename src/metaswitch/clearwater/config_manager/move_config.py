@@ -18,7 +18,7 @@ import datetime
 import time
 
 # Constants
-MAXIMUM_CONFIG_SIZE = 100000
+MAXIMUM_CONFIG_SIZE = 1000000
 VALIDATION_SCRIPTS_FOLDER = "/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/"
 LOG_PATH = "/var/log/clearwater-config-manager/allow/cw-config.log"
 
@@ -76,6 +76,19 @@ class ConfigLoader(object):
         self.prefix = "/".join(["", etcd_key, site, "configuration"])
         self.download_dir = get_user_download_dir()
 
+        # Make sure that the etcd process is actually contactable.
+        self._check_connection()
+
+    def _check_connection(self):
+        """Performs a sanity check to make sure that the etcd process is
+        actually running."""
+        location = ":".join([self._etcd_client.host, self._etcd_client.port])
+        try:
+            subprocess.check_call(["nc", "-z", location])
+        except CalledProcessError:
+            raise EtcdConnectionFailed(
+                "etcd process not running at {}".format(location))
+
     def _ensure_config_dir(self):
         """Make sure that the folder used to store config exists."""
         if not os.path.exists(self.download_dir):
@@ -127,17 +140,27 @@ class ConfigLoader(object):
         """Upload config contained in the specified file to the etcd database.
         Raises a ConfigUploadFailed exception if unsuccessful.
         """
-        # TODO: do we really need to check this here?
-        self._ensure_config_dir()
         config_file_path = os.path.join(self.download_dir, config_type)
         key_path = "/".join([self.prefix, config_type])
 
         try:
             log.debug("Reading local config from '%s'", config_file_path)
             with open(config_file_path, 'r') as config_file:
-                # TODO: If the config is longer than we expect we need to handle this
                 upload = config_file.read(MAXIMUM_CONFIG_SIZE)
+
+                # The MAXIMUM_CONFIG_SIZE should have been big enough to store
+                # all of the config in the file. If there is still config to
+                # read from the file, the config file is too big and is
+                # probably corrupted.
+                if config_file.read(1) != '':
+                    raise ConfigUploadFailed(
+                        "Config exceeds {} bytes. It is too big "
+                        "to upload.".format(MAXIMUM_CONFIG_SIZE))
         except IOError:
+            # This exception will be thrown in the following cases:
+            # - The download directory doesn't exist
+            # - The config file doesn't exist in the download directory
+            # - The config file is not readable
             raise ConfigUploadFailed(
                 "Failed to retrieve {} from file".format(config_type))
 
@@ -176,15 +199,16 @@ def main(args):
 
     # Create an etcd client for interacting with the database.
     try:
-        log.debug("Getting etcdClient with parameters {}, {}, {}"
-                  .format(args.etcd_key, args.site, args.management_ip))
+        log.debug("Getting etcdClient with parameters %s, %s, %s",
+                  args.etcd_key,
+                  args.site,
+                  args.management_ip)
         etcd_client = etcd.client.Client(host=args.management_ip,
                                          port=4000)
         config_loader = ConfigLoader(etcd_client=etcd_client,
                                      etcd_key=args.etcd_key,
                                      site=args.site)
-        # TODO we should check the connection to etcd as the bash script did.
-    except etcd.EtcdException:
+    except (etcd.EtcdException, EtcdConnectionFailed):
         sys.exit("Unable to contact the etcd cluster.")
 
     if args.action == "download":
@@ -193,8 +217,8 @@ def main(args):
             download_config(config_loader,
                             args.config_type,
                             args.autoconfirm)
-        except (ConfigDownloadFailed, IOError) as e:
-            sys.exit(e)
+        except (ConfigDownloadFailed, IOError) as exc:
+            sys.exit(exc)
         except UserAbort:
             sys.exit("User aborted.")
 
@@ -378,16 +402,28 @@ def upload_config(config_loader, config_type, force=False, autoconfirm=False):
     config_loader.upload_config(config_type,
                                 remote_revision)
 
-    # Add the node to the restart queue(s)
-    # TODO - why are we doing this?
+    # When changes are made to the config, we tell the queue manager. It
+    # coordinates restarting all the nodes in the cluster so that we don't lose
+    # service.
+    #
+    # Clearwater can be run with multiple etcd clusters. The apply_config_key
+    # variable stores the information about which etcd cluster the changes
+    # should be applied to.
+    # TODO: What happens if we try to change the etcd cluster configuration as
+    #       part of this script?
     apply_config_key = subprocess.check_output(
         "/usr/share/clearwater/clearwater-queue-manager/scripts/get_apply_config_key")
+    # TODO: This is a bash script that calls a python script under the covers.
+    #       Ideally we would adjust the modify_nodes_in_queue script so it
+    #       could be imported and called directly (it's an uncommented mess
+    #       though).
     subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
                      "add",
                      apply_config_key])
 
-    # We need to modify the queue if we're forcing.
-    # TODO - what does this do? Do we need to do it?
+    # If the config changes are being forced through, the queue manager needs
+    # to be made aware so it can apply the changes to the other nodes in the
+    # cluster properly.
     subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
                      "force_true" if force else "force_false",
                      apply_config_key])
@@ -411,7 +447,7 @@ def confirm_yn(prompt, autoskip=False):
         print('\n{0} '.format(prompt))
         supplied_input = raw_input(question)
         if supplied_input.strip().lower() not in ['y', 'yes', 'n', 'no']:
-                print('\n Answer must be yes or no')
+            print('\n Answer must be yes or no')
         else:
             return supplied_input.strip().lower().startswith('y')
 
