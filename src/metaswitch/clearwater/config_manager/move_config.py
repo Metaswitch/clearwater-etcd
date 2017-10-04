@@ -298,23 +298,31 @@ def validate_config(force=False):
     # TODO: log a warning if we are skipping validation scripts.
     # TODO: Make sure that useful diags are printed by the
     #       validation scripts.
-    # TODO: Run all the scripts to give customers full warning
-    #       of all errors.
+    failed_validation = False
     for script in scripts:
         try:
-            subprocess.check_call(script)
-        except subprocess.CalledProcessError:
-            if force:
-                # In force mode, we override issues with the validation.
-                continue
-            else:
-                raise ConfigValidationFailed(
-                    "Validation failed while executing script {}".format(
-                        os.path.basename(script)))
+            subprocess.check_output(script)
+        except subprocess.CalledProcessError as exc:
+            log.error("Validation script %s failed with output:\n %s",
+                      os.path.basename(script),
+                      exc.output)
+
+            # We want to run through all the validation scripts so we can tell
+            # the user all of the problems with their config changes, so don't
+            # bail out of the loop at this point.
+            if not force:
+                # We should indicate that validation has failed so that once
+                # the scripts have all been run we can throw an exception.
+                failed_validation = True
 
     # When we write the bash injection script, it should either be invoked here
     # or be placed in the VALIDATION_SCRIPTS_FOLDER directory to be executed
     # in the above loop.
+
+    if failed_validation:
+        raise ConfigValidationFailed(
+            "Validation failed while executing script {}".format(
+                os.path.basename(script)))
 
 
 def upload_verified_config(config_loader,
@@ -331,6 +339,7 @@ def upload_verified_config(config_loader,
 
 
 def upload_config(autoconfirm, config_loader, config_type, force, local_store):
+    """Read the relevant config from file and upload it to etcd."""
     local_config, local_revision = local_store.load_config_and_revision(
         config_type)
     remote_config, remote_revision = config_loader.get_config_and_index(
@@ -374,6 +383,7 @@ def upload_config(autoconfirm, config_loader, config_type, force, local_store):
 
 
 class LocalStore(object):
+    """Class for controlling and making changes to the local config."""
     def __init__(self):
         self.download_dir = get_user_download_dir()
         self._ensure_config_dir()
