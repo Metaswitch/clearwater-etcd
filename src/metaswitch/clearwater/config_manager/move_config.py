@@ -396,7 +396,7 @@ def validate_config(force=False):
     # TODO: log a warning if we are skipping validation scripts.
     # TODO: Make sure that useful diags are printed by the
     #       validation scripts.
-    failed_validation = False
+    failed_scripts = []
     for script in scripts:
         try:
             subprocess.check_output(script)
@@ -407,20 +407,21 @@ def validate_config(force=False):
 
             # We want to run through all the validation scripts so we can tell
             # the user all of the problems with their config changes, so don't
-            # bail out of the loop at this point.
-            if not force:
-                # We should indicate that validation has failed so that once
-                # the scripts have all been run we can throw an exception.
-                failed_validation = True
+            # bail out of the loop at this point, just record which scripts
+            # have failed.
+            failed_scripts.append(script)
 
     # When we write the bash injection script, it should either be invoked here
     # or be placed in the VALIDATION_SCRIPTS_FOLDER directory to be executed
     # in the above loop.
 
-    if failed_validation:
+    # In the forcing case, we proceed even if there have been failures, but
+    # otherwise we want to bail out at this point.
+    if not force and failed_scripts:
         raise ConfigValidationFailed(
-            "Validation failed while executing script {}".format(
-                os.path.basename(script)))
+            "Validation failed while executing scripts:\n{}".format(
+                "\n".join(os.path.basename(script)
+                          for script in failed_scripts))
 
 
 def upload_verified_config(config_loader,
