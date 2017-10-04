@@ -18,7 +18,7 @@ import datetime
 import time
 
 # Constants
-MAXIMUM_CONFIG_SIZE = 100000
+MAXIMUM_CONFIG_SIZE = 1000000
 VALIDATION_SCRIPTS_FOLDER = "/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/"
 LOG_PATH = "/var/log/clearwater-config-manager/allow/cw-config.log"
 
@@ -75,17 +75,29 @@ class ConfigLoader(object):
         self._etcd_client = etcd_client
         self.prefix = "/".join(["", etcd_key, site, "configuration"])
         self.local_store = local_store
+        self.download_dir = get_user_download_dir()
+
+        # Make sure that the etcd process is actually contactable.
+        self._check_connection()
+
+    def _check_connection(self):
+        """Performs a sanity check to make sure that the etcd process is
+        actually running."""
+        location = ":".join([self._etcd_client.host, self._etcd_client.port])
+        try:
+            subprocess.check_call(["nc", "-z", location])
+        except CalledProcessError:
+            raise EtcdConnectionFailed(
+                "etcd process not running at {}".format(location))
 
     def download_config(self, config_type):
         """Save a copy of a given config type to the download directory.
         Raises a ConfigDownloadFailed exception if unsuccessful."""
-        download = self.get_config_and_index(config_type)
-        value = str(download.value)
-        index = str(download.modifiedIndex)
+        value, index = self.get_config_and_index(config_type)
 
         # Write the config to file.
         try:
-            self.local_store.save_config_and_revision(config_type, index, value)
+            self.local_store.save_config_and_revision(config_type, str(index), str(value))
         except IOError:
             raise ConfigDownloadFailed(
                 "Couldn't save {} to file".format(config_type))
@@ -103,19 +115,19 @@ class ConfigLoader(object):
             raise ConfigDownloadFailed(
                 "Failed to download {}".format(config_type))
 
-        return download
+        return download.value, download.modifiedIndex
 
-    def upload_config(self, config_type, cas_revision):
+    def write_config_to_etcd(self, config_type, cas_revision):
         """Upload config contained in the specified file to the etcd database.
         Raises a ConfigUploadFailed exception if unsuccessful.
         """
-        # TODO: do we really need to check this here?
-
-        key_path = "/".join([self.prefix, config_type])
-
         try:
             upload, _ = self.local_store.load_config_and_revision(config_type)
         except IOError:
+            # This exception will be thrown in the following cases:
+            # - The download directory doesn't exist
+            # - The config file doesn't exist in the download directory
+            # - The config file is not readable
             raise ConfigUploadFailed(
                 "Failed to retrieve {} from file".format(config_type))
 
@@ -132,7 +144,7 @@ class ConfigLoader(object):
                 "Unable to upload {} to etcd cluster as the version changed "
                 "while editing locally.".format(config_type))
 
-    # We need this property for the step in upload_config where we log the
+    # We need this property for the step in write_config_to_etcd where we log the
     # change in config to file.
     @property
     def full_uri(self):
@@ -154,8 +166,10 @@ def main(args):
 
     # Create an etcd client for interacting with the database.
     try:
-        log.debug("Getting etcdClient with parameters {}, {}, {}"
-                  .format(args.etcd_key, args.site, args.management_ip))
+        log.debug("Getting etcdClient with parameters %s, %s, %s",
+                  args.etcd_key,
+                  args.site,
+                  args.management_ip)
         etcd_client = etcd.client.Client(host=args.management_ip,
                                          port=4000)
         local_store = LocalStore()
@@ -163,8 +177,7 @@ def main(args):
                                      etcd_key=args.etcd_key,
                                      site=args.site,
                                      local_store=local_store)
-        # TODO we should check the connection to etcd as the bash script did.
-    except etcd.EtcdException:
+    except (etcd.EtcdException, EtcdConnectionFailed):
         sys.exit("Unable to contact the etcd cluster.")
 
     if args.action == "download":
@@ -173,19 +186,19 @@ def main(args):
             download_config(config_loader,
                             args.config_type,
                             args.autoconfirm)
-        except (ConfigDownloadFailed, IOError) as e:
-            sys.exit(e)
+        except (ConfigDownloadFailed, IOError) as exc:
+            sys.exit(exc)
         except UserAbort:
             sys.exit("User aborted.")
 
     if args.action == "upload":
         log.info("Running in upload mode.")
         try:
-            upload_config(config_loader,
-                          local_store,
-                          args.config_type,
-                          args.force,
-                          args.autoconfirm)
+            upload_verified_config(config_loader,
+                                   local_store,
+                                   args.config_type,
+                                   args.force,
+                                   args.autoconfirm)
         except UserAbort:
             sys.exit("User aborted.")
         except EtcdMasterConfigChanged:
@@ -302,7 +315,7 @@ def validate_config(force=False):
     # TODO: add our validation script that should always be run
 
 
-def upload_config(config_loader, local_store, config_type, force=False, autoconfirm=False):
+def upload_verified_config(config_loader, local_store, config_type, force=False, autoconfirm=False):
     """
     Uploads the config from DOWNLOADED_CONFIG_PATH/<USER_NAME> to etcd.
     """
@@ -317,12 +330,14 @@ def upload_config(config_loader, local_store, config_type, force=False, autoconf
     # Validate the config
     validate_config(force)
 
-    local_config, local_revision = local_store.load_config_and_revision(config_type)
+    upload_config(autoconfirm, config_loader, config_type, force, local_store)
 
-    remote_config_and_index = config_loader.get_config_and_index(config_type)
-    remote_revision = remote_config_and_index.modifiedIndex
-    remote_config = remote_config_and_index.value
 
+def upload_config(autoconfirm, config_loader, config_type, force, local_store):
+    local_config, local_revision = local_store.load_config_and_revision(
+        config_type)
+    remote_config, remote_revision = config_loader.get_config_and_index(
+        config_type)
     if local_revision != remote_revision:
         raise EtcdMasterConfigChanged("The remote config changed while editing"
                                       "the config locally. Please redownload"
@@ -331,31 +346,41 @@ def upload_config(config_loader, local_store, config_type, force=False, autoconf
     # Provide a diff of the changes and log to syslog
     if not print_diff_and_syslog(remote_config, local_config):
         raise NoConfigChanges
-
     if not autoconfirm:
-        confirmed = confirm_yn("Please check the config changes and confirm that "
-                               "you wish to continue with the config upload.")
+        confirmed = confirm_yn(
+            "Please check the config changes and confirm that "
+            "you wish to continue with the config upload.")
         if not confirmed:
             raise UserAbort
 
     # Upload the configuration to the etcd cluster.
-    config_loader.upload_config(config_type,
-                                remote_revision)
-
-    # Add the node to the restart queue(s)
-    # TODO - why are we doing this?
+    config_loader.write_config_to_etcd(config_type, remote_revision)
+    # When changes are made to the config, we tell the queue manager. It
+    # coordinates restarting all the nodes in the cluster so that we don't lose
+    # service.
+    #
+    # Clearwater can be run with multiple etcd clusters. The apply_config_key
+    # variable stores the information about which etcd cluster the changes
+    # should be applied to.
+    # TODO: What happens if we try to change the etcd cluster configuration as
+    #       part of this script?
     apply_config_key = subprocess.check_output(
         "/usr/share/clearwater/clearwater-queue-manager/scripts/get_apply_config_key")
-    subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
-                     "add",
-                     apply_config_key])
-
-    # We need to modify the queue if we're forcing.
-    # TODO - what does this do? Do we need to do it?
-    subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
-                     "force_true" if force else "force_false",
-                     apply_config_key])
-
+    # TODO: This is a bash script that calls a python script under the covers.
+    #       Ideally we would adjust the modify_nodes_in_queue script so it
+    #       could be imported and called directly (it's an uncommented mess
+    #       though).
+    subprocess.call([
+                        "/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
+                        "add",
+                        apply_config_key])
+    # If the config changes are being forced through, the queue manager needs
+    # to be made aware so it can apply the changes to the other nodes in the
+    # cluster properly.
+    subprocess.call([
+                        "/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
+                        "force_true" if force else "force_false",
+                        apply_config_key])
     # Delete local config file if upload was successful
     config_path = os.path.join(config_loader.download_dir, config_type)
     os.remove(config_path)
@@ -412,7 +437,6 @@ class LocalStore(object):
             index_file.write(index)
 
 
-
 def confirm_yn(prompt, autoskip=False):
     """Asks the user to confirm they want to make the changes described by the
     prompt passed in. This keeps asking the user until a valid response is
@@ -428,7 +452,7 @@ def confirm_yn(prompt, autoskip=False):
         print('\n{0} '.format(prompt))
         supplied_input = raw_input(question)
         if supplied_input.strip().lower() not in ['y', 'yes', 'n', 'no']:
-                print('\n Answer must be yes or no')
+            print('\n Answer must be yes or no')
         else:
             return supplied_input.strip().lower().startswith('y')
 

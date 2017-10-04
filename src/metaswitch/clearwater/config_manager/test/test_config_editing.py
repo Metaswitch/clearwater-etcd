@@ -693,6 +693,8 @@ class TestUserName(unittest.TestCase):
 
 
 class TestUserDownloadDir(unittest.TestCase):
+    # """Returns the user-specific directory for downloaded config."""
+    # return os.path.join(get_base_download_dir(), get_user_name())
     @mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name")
     @mock.patch("metaswitch.clearwater.config_manager.move_config.get_base_download_dir")
     def test_call_get_base(self, mock_getbase, mock_getuser):
