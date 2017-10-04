@@ -18,7 +18,7 @@ import datetime
 import time
 
 # Constants
-MAXIMUM_CONFIG_SIZE = 1000000
+MAXIMUM_CONFIG_SIZE = 100000
 VALIDATION_SCRIPTS_FOLDER = "/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/"
 LOG_PATH = "/var/log/clearwater-config-manager/allow/cw-config.log"
 
@@ -127,27 +127,17 @@ class ConfigLoader(object):
         """Upload config contained in the specified file to the etcd database.
         Raises a ConfigUploadFailed exception if unsuccessful.
         """
+        # TODO: do we really need to check this here?
+        self._ensure_config_dir()
         config_file_path = os.path.join(self.download_dir, config_type)
         key_path = "/".join([self.prefix, config_type])
 
         try:
             log.debug("Reading local config from '%s'", config_file_path)
             with open(config_file_path, 'r') as config_file:
+                # TODO: If the config is longer than we expect we need to handle this
                 upload = config_file.read(MAXIMUM_CONFIG_SIZE)
-
-                # The MAXIMUM_CONFIG_SIZE should have been big enough to store
-                # all of the config in the file. If there is still config to
-                # read from the file, the config file is too big and is
-                # probably corrupted.
-                if config_file.read(1) != '':
-                    raise ConfigUploadFailed(
-                        "Config exceeds {} bytes. It is too big "
-                        "to upload.".format(MAXIMUM_CONFIG_SIZE))
         except IOError:
-            # This exception will be thrown in the following cases:
-            # - The download directory doesn't exist
-            # - The config file doesn't exist in the download directory
-            # - The config file is not readable
             raise ConfigUploadFailed(
                 "Failed to retrieve {} from file".format(config_type))
 
@@ -388,28 +378,16 @@ def upload_config(config_loader, config_type, force=False, autoconfirm=False):
     config_loader.upload_config(config_type,
                                 remote_revision)
 
-    # When changes are made to the config, we tell the queue manager. It
-    # coordinates restarting all the nodes in the cluster so that we don't lose
-    # service.
-    #
-    # Clearwater can be run with multiple etcd clusters. The apply_config_key
-    # variable stores the information about which etcd cluster the changes
-    # should be applied to.
-    # TODO: What happens if we try to change the etcd cluster configuration as
-    #       part of this script?
+    # Add the node to the restart queue(s)
+    # TODO - why are we doing this?
     apply_config_key = subprocess.check_output(
         "/usr/share/clearwater/clearwater-queue-manager/scripts/get_apply_config_key")
-    # TODO: This is a bash script that calls a python script under the covers.
-    #       Ideally we would adjust the modify_nodes_in_queue script so it
-    #       could be imported and called directly (it's an uncommented mess
-    #       though).
     subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
                      "add",
                      apply_config_key])
 
-    # If the config changes are being forced through, the queue manager needs
-    # to be made aware so it can apply the changes to the other nodes in the
-    # cluster properly.
+    # We need to modify the queue if we're forcing.
+    # TODO - what does this do? Do we need to do it?
     subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
                      "force_true" if force else "force_false",
                      apply_config_key])
@@ -433,7 +411,7 @@ def confirm_yn(prompt, autoskip=False):
         print('\n{0} '.format(prompt))
         supplied_input = raw_input(question)
         if supplied_input.strip().lower() not in ['y', 'yes', 'n', 'no']:
-            print('\n Answer must be yes or no')
+                print('\n Answer must be yes or no')
         else:
             return supplied_input.strip().lower().startswith('y')
 
