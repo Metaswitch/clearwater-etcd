@@ -429,62 +429,149 @@ class TestYesNo(unittest.TestCase):
 
 
 class TestMain(unittest.TestCase):
-    def test_delete_outdated_config_files(self, mock_open, mock_mkdir, mock_exists, mock_user):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.ConfigLoader")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.delete_outdated_config_files")
+    def test_delete_outdated_config_files(self, mock_delete_files,
+                                          mock_configloader):
         """Make sure we always call delete_outdated_config_files"""
-        pass
+        args = mock.Mock()
+        move_config.main(args)
 
-    def test_download_action_main_line(self):
+        mock_delete_files.assert_called_with()
+
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.ConfigLoader")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.download_config")
+    def test_download_action_main_line(self, mock_download_config, mock_configloader):
         """Make sure that we always call download_config in download mode."""
-        pass
+        args = mock.Mock(action='download')
+        move_config.main(args)
 
-    def test_handle_download_configdownloadfailed(self):
+        assert mock_download_config.called
+
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.ConfigLoader")
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.download_config")
+    def test_handle_download_configdownloadfailed(self, mock_download_config, mock_configloader):
         """Check that we handle a ConfigDownloadFailed exception raised by
         download_config."""
-        pass
+        mock_download_config.side_effect = move_config.ConfigDownloadFailed
+        args = mock.Mock(action='download')
 
-    def test_handle_download_ioerror(self):
+        with self.assertRaises(SystemExit):
+            move_config.main(args)
+
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.ConfigLoader")
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.download_config")
+    def test_handle_download_ioerror(self, mock_download_config, mock_configloader):
         """Check that we handle an IOError exception raised by
         download_config."""
-        pass
+        mock_download_config.side_effect = IOError
+        args = mock.Mock(action='download')
 
-    def test_handle_download_userabort(self):
+        with self.assertRaises(SystemExit):
+            move_config.main(args)
+
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.ConfigLoader")
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.download_config")
+    def test_handle_download_userabort(self, mock_download_config, mock_configloader):
         """Check that we handle a UserAbort exception raised by
         download_config."""
-        pass
+        mock_download_config.side_effect = move_config.UserAbort
+        args = mock.Mock(action='download')
 
-    def test_upload_action_main_line(self):
+        with self.assertRaises(SystemExit):
+            move_config.main(args)
+
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.ConfigLoader")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.upload_config")
+    def test_upload_action_main_line(self, mock_upload_config, mock_configloader):
         """Make sure that we always call upload_config in upload mode."""
-        pass
+        args = mock.Mock(action='upload')
+        move_config.main(args)
 
-    def test_handle_upload_etcdmasterconfigchanged(self):
+        assert mock_upload_config.called
+
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.ConfigLoader")
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.upload_config")
+    def test_handle_upload_etcdmasterconfigchanged(self, mock_upload_config, mock_configloader):
         """Check that we handle a EtcdMasterConfigChanged exception raised by
         upload_config."""
-        pass
+        mock_upload_config.side_effect = move_config.EtcdMasterConfigChanged
+        args = mock.Mock(action='upload')
 
-    def test_handle_upload_configuploadfailed(self):
+        with self.assertRaises(SystemExit):
+            move_config.main(args)
+
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.ConfigLoader")
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.upload_config")
+    def test_handle_upload_configuploadfailed(self, mock_upload_config, mock_configloader):
         """Check that we handle a ConfigUploadFailed exception raised by
         upload_config."""
-        pass
+        mock_upload_config.side_effect = move_config.ConfigUploadFailed
+        args = mock.Mock(action='upload')
 
-    def test_handle_upload_configvalidationfailed(self):
+        with self.assertRaises(SystemExit):
+            move_config.main(args)
+
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.ConfigLoader")
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.upload_config")
+    def test_handle_upload_configvalidationfailed(self, mock_upload_config, mock_configloader):
         """Check that we handle a ConfigValidationFailed exception raised by
         upload_config."""
-        pass
+        mock_upload_config.side_effect = move_config.ConfigValidationFailed
+        args = mock.Mock(action='upload')
 
-    def test_handle_upload_ioerror(self):
+        with self.assertRaises(SystemExit):
+            move_config.main(args)
+
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.ConfigLoader")
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.upload_config")
+    def test_handle_upload_ioerror(self, mock_upload_config, mock_configloader):
         """Check that we handle an IOError exception raised by
         upload_config."""
-        pass
+        mock_upload_config.side_effect = IOError
+        args = mock.Mock(action='upload')
 
-    def test_handle_upload_userabort(self):
+        with self.assertRaises(SystemExit):
+            move_config.main(args)
+
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.ConfigLoader")
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.upload_config")
+    def test_handle_upload_userabort(self, mock_upload_config, mock_configloader):
         """Check that we handle a UserAbort exception raised by
         upload_config."""
-        pass
+        mock_upload_config.side_effect = move_config.UserAbort
+        args = mock.Mock(action='upload')
 
-    def test_handle_etcdexception(self):
+        with self.assertRaises(SystemExit):
+            move_config.main(args)
+
+    @mock.patch("etcd.client.Client")
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.upload_config")
+    def test_handle_etcdexception(self, mock_upload_config, mock_etcd_client):
         """Check that we handle an EtcdException raised by
         etcd.client.Client."""
-        pass
+        mock_etcd_client.side_effect = etcd.EtcdException
+        args = mock.Mock(action='upload')
+
+        with self.assertRaises(SystemExit):
+            move_config.main(args)
 
 
 class TestDownload(unittest.TestCase):
