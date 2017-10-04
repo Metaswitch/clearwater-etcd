@@ -65,6 +65,15 @@ class EtcdMasterConfigChanged(Exception):
 class UserAbort(Exception):
     pass
 
+# These exceptions are raised by the LocalStore class.
+class FileTooLarge(IOError):
+    """Raised when a config file exceeds MAXIMUM_CONFIG_SIZE."""
+    pass
+
+class InvalidRevision(IOError):
+    """Raised when the revision file does not contain an integer."""
+    pass
+
 
 class ConfigLoader(object):
     """Wrapper around etcd.Client to include information about where to find
@@ -129,6 +138,7 @@ class ConfigLoader(object):
             # - The download directory doesn't exist
             # - The config file doesn't exist in the download directory
             # - The config file is not readable
+            # - The config file is too big
             raise ConfigUploadFailed(
                 "Failed to retrieve {} from file".format(config_type))
 
@@ -303,23 +313,31 @@ def validate_config(force=False):
     # TODO: log a warning if we are skipping validation scripts.
     # TODO: Make sure that useful diags are printed by the
     #       validation scripts.
-    # TODO: Run all the scripts to give customers full warning
-    #       of all errors.
+    failed_validation = False
     for script in scripts:
         try:
-            subprocess.check_call(script)
-        except subprocess.CalledProcessError:
-            if force:
-                # In force mode, we override issues with the validation.
-                continue
-            else:
-                raise ConfigValidationFailed(
-                    "Validation failed while executing script {}".format(
-                        os.path.basename(script)))
+            subprocess.check_output(script)
+        except subprocess.CalledProcessError as exc:
+            log.error("Validation script %s failed with output:\n %s",
+                      os.path.basename(script),
+                      exc.output)
+
+            # We want to run through all the validation scripts so we can tell
+            # the user all of the problems with their config changes, so don't
+            # bail out of the loop at this point.
+            if not force:
+                # We should indicate that validation has failed so that once
+                # the scripts have all been run we can throw an exception.
+                failed_validation = True
 
     # When we write the bash injection script, it should either be invoked here
     # or be placed in the VALIDATION_SCRIPTS_FOLDER directory to be executed
     # in the above loop.
+
+    if failed_validation:
+        raise ConfigValidationFailed(
+            "Validation failed while executing script {}".format(
+                os.path.basename(script)))
 
 
 def upload_verified_config(config_loader,
@@ -336,10 +354,25 @@ def upload_verified_config(config_loader,
 
 
 def upload_config(autoconfirm, config_loader, config_type, force, local_store):
-    local_config, local_revision = local_store.load_config_and_revision(
-        config_type)
-    remote_config, remote_revision = config_loader.get_config_and_index(
-        config_type)
+    """Read the relevant config from file and upload it to etcd."""
+    try:
+        local_config, local_revision = local_store.load_config_and_revision(
+            config_type)
+    except IOError:
+        raise ConfigUploadFailed(
+            "Unable to load config and revision from file")
+
+    # In order to confirm that no changes have been made while the user has
+    # been editing locally, we download a copy of the master config to compare
+    # against.
+    try:
+        remote_config, remote_revision = config_loader.get_config_and_index(
+            config_type)
+    except ConfigDownloadFailed:
+        raise ConfigUploadFailed("Unable to download master config to compare")
+
+    # Users are not allowed to upload changes if someone else has uploaded
+    # config to the etcd cluster in the meantime.
     if local_revision != remote_revision:
         raise EtcdMasterConfigChanged("The remote config changed while editing"
                                       "the config locally. Please redownload"
@@ -379,6 +412,7 @@ def upload_config(autoconfirm, config_loader, config_type, force, local_store):
 
 
 class LocalStore(object):
+    """Class for controlling and making changes to the local config."""
     def __init__(self):
         self.download_dir = get_user_download_dir()
         self._ensure_config_dir()
@@ -395,7 +429,9 @@ class LocalStore(object):
         return self._get_config_file_path(config_type) + ".index"
 
     def load_config_and_revision(self, config_type):
-        """"""
+        """Returns a tuple containing the config extracted from file and
+        the revision number. If there is an issue, it will throw an exception
+        of type IOError (or subclass)."""
         config_path = self._get_config_file_path(config_type)
         # Check that the file exists.
         revision_path = self._get_revision_file_path(config_type)
@@ -407,15 +443,21 @@ class LocalStore(object):
             raise IOError("No shared config revision file found, unable to "
                           "upload. Please re-download the shared config again.")
 
-        # Compare local and etcd revision number
-        # TODO: Error handling for corrupt storage.
-        with open(config_path, "r") as f:
-            local_config = f.read()
-        with open(revision_path, "r") as f:
-            local_revision = int(f.read())
+        # Extract the information from the relevant files.
+        local_config = read_from_file(config_path)
+
+        # The revision must be an integer.
+        try:
+            raw_revision = read_from_file(revision_path)
+            local_revision = int(raw_revision)
+        except ValueError:
+            # The data in the revision file is not an integer!
+            raise InvalidRevision
+
         return local_config, local_revision
 
     def save_config_and_revision(self, config_type, index, value):
+        """Write the config and revision number to file."""
         config_file_path = self._get_config_file_path(config_type)
         index_file_path = self._get_revision_file_path(config_type)
         log.debug("Writing config to '%s'.", config_file_path)
@@ -533,6 +575,25 @@ def print_diff_and_syslog(config_1, config_2):
     else:
         print("No changes detected in shared configuration file.")
         return False
+
+
+    def read_from_file(file_path):
+        """Run some basic checks against a file to check it hasn't been
+        corrupted. If it hasn't, return a string containing its contents.
+        Otherwise, throw a ConfigInvalid exception."""
+        with open(file_path, "r") as open_file:
+            contents = open_file.read(MAXIMUM_CONFIG_SIZE)
+
+            if open_file.read(1) != '':
+                # The file is so big that it cannot be read in one go. It's
+                # probably corrupted.
+                log.error(
+                    "%s file exceeds %s bytes. It is probably corrupted.",
+                    file_path,
+                    MAXIMUM_CONFIG_SIZE)
+                raise FileTooLarge
+
+        return contents
 
 
 # Call main function if script is executed stand-alone
