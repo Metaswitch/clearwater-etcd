@@ -167,6 +167,66 @@ class ConfigLoader(object):
                 self.prefix)
 
 
+class LocalStore(object):
+    """Class for controlling and making changes to the local config."""
+    def __init__(self):
+        self.download_dir = get_user_download_dir()
+        self._ensure_config_dir()
+
+    def _ensure_config_dir(self):
+        """Make sure that the folder used to store config exists."""
+        if not os.path.exists(self.download_dir):
+            os.makedirs(self.download_dir)
+
+    def _get_config_file_path(self, config_type):
+        return os.path.join(self.download_dir, config_type)
+
+    def _get_revision_file_path(self, config_type):
+        return self._get_config_file_path(config_type) + ".index"
+
+    def load_config_and_revision(self, config_type):
+        """Returns a tuple containing the config extracted from file and
+        the revision number. If there is an issue, it will throw an exception
+        of type IOError (or subclass)."""
+        config_path = self._get_config_file_path(config_type)
+        # Check that the file exists.
+        revision_path = self._get_revision_file_path(config_type)
+        log.debug("Uploading config from '%s'", config_path)
+        log.debug("Using local revision number from '%s'", revision_path)
+        if not os.path.exists(config_path):
+            raise IOError("No shared config found, unable to upload")
+        if not os.path.exists(revision_path):
+            raise IOError("No shared config revision file found, unable to "
+                          "upload. Please re-download the shared config again.")
+
+        # Extract the information from the relevant files.
+        local_config = read_from_file(config_path)
+
+        # The revision must be an integer.
+        try:
+            raw_revision = read_from_file(revision_path)
+            local_revision = int(raw_revision)
+        except ValueError:
+            # The data in the revision file is not an integer!
+            raise InvalidRevision
+
+        return local_config, local_revision
+
+    def save_config_and_revision(self, config_type, index, value):
+        """Write the config and revision number to file."""
+        config_file_path = self._get_config_file_path(config_type)
+        index_file_path = self._get_revision_file_path(config_type)
+        log.debug("Writing config to '%s'.", config_file_path)
+        with open(config_file_path, 'w') as config_file:
+            config_file.write(value)
+
+        # We want to keep track of the index the config had in the etcd cluster
+        # so we know if it is up to date.
+        log.debug("Writing config to '%s'.", index_file_path)
+        with open(index_file_path, 'w') as index_file:
+            index_file.write(index)
+
+
 def main(args):
     """
     Main entry point for script.
@@ -405,66 +465,6 @@ def upload_config(autoconfirm, config_loader, config_type, force, local_store):
     # the config file we've uploaded makes sure we don't cause confusion later.
     config_path = os.path.join(config_loader.download_dir, config_type)
     os.remove(config_path)
-
-
-class LocalStore(object):
-    """Class for controlling and making changes to the local config."""
-    def __init__(self):
-        self.download_dir = get_user_download_dir()
-        self._ensure_config_dir()
-
-    def _ensure_config_dir(self):
-        """Make sure that the folder used to store config exists."""
-        if not os.path.exists(self.download_dir):
-            os.makedirs(self.download_dir)
-
-    def _get_config_file_path(self, config_type):
-        return os.path.join(self.download_dir, config_type)
-
-    def _get_revision_file_path(self, config_type):
-        return self._get_config_file_path(config_type) + ".index"
-
-    def load_config_and_revision(self, config_type):
-        """Returns a tuple containing the config extracted from file and
-        the revision number. If there is an issue, it will throw an exception
-        of type IOError (or subclass)."""
-        config_path = self._get_config_file_path(config_type)
-        # Check that the file exists.
-        revision_path = self._get_revision_file_path(config_type)
-        log.debug("Uploading config from '%s'", config_path)
-        log.debug("Using local revision number from '%s'", revision_path)
-        if not os.path.exists(config_path):
-            raise IOError("No shared config found, unable to upload")
-        if not os.path.exists(revision_path):
-            raise IOError("No shared config revision file found, unable to "
-                          "upload. Please re-download the shared config again.")
-
-        # Extract the information from the relevant files.
-        local_config = read_from_file(config_path)
-
-        # The revision must be an integer.
-        try:
-            raw_revision = read_from_file(revision_path)
-            local_revision = int(raw_revision)
-        except ValueError:
-            # The data in the revision file is not an integer!
-            raise InvalidRevision
-
-        return local_config, local_revision
-
-    def save_config_and_revision(self, config_type, index, value):
-        """Write the config and revision number to file."""
-        config_file_path = self._get_config_file_path(config_type)
-        index_file_path = self._get_revision_file_path(config_type)
-        log.debug("Writing config to '%s'.", config_file_path)
-        with open(config_file_path, 'w') as config_file:
-            config_file.write(value)
-
-        # We want to keep track of the index the config had in the etcd cluster
-        # so we know if it is up to date.
-        log.debug("Writing config to '%s'.", index_file_path)
-        with open(index_file_path, 'w') as index_file:
-            index_file.write(index)
 
 
 def confirm_yn(prompt, autoskip=False):
