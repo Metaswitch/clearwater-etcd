@@ -121,6 +121,7 @@ class ConfigLoader(object):
         """Upload config contained in the specified file to the etcd database.
         Raises a ConfigUploadFailed exception if unsuccessful.
         """
+        key_path = "/".join([self.prefix, config_type])
         try:
             upload, _ = self.local_store.load_config_and_revision(config_type)
         except IOError:
@@ -312,24 +313,21 @@ def validate_config(force=False):
                     "Validation failed while executing script {}".format(
                         os.path.basename(script)))
 
-    # TODO: add our validation script that should always be run
+    # When we write the bash injection script, it should either be invoked here
+    # or be placed in the VALIDATION_SCRIPTS_FOLDER directory to be executed
+    # in the above loop.
 
 
-def upload_verified_config(config_loader, local_store, config_type, force=False, autoconfirm=False):
-    """
-    Uploads the config from DOWNLOADED_CONFIG_PATH/<USER_NAME> to etcd.
-    """
-    # THERE MAY BE SOMETHING MISSING HERE! In the bash script
-    # `upload_shared_config`, we check that the port we expect etcd to be
-    # listening on is actually open before doing anything else. It's possible
-    # that we don't actually need to do that in this case, because we'll
-    # always be doing some sort of initial verification that the connection
-    # can be made. But need to confirm that is in fact the case.
-
-    # TODO: if force is True, check that we are root, otherwise error out
-    # Validate the config
+def upload_verified_config(config_loader,
+                           local_store,
+                           config_type,
+                           force=False,
+                           autoconfirm=False):
+    """Verifies the config, then uploads it to etcd."""
     validate_config(force)
 
+    # An exception should have been thrown if validation fails, so we should
+    # only reach this point if the config has been validated successfully.
     upload_config(autoconfirm, config_loader, config_type, force, local_store)
 
 
@@ -353,35 +351,25 @@ def upload_config(autoconfirm, config_loader, config_type, force, local_store):
         if not confirmed:
             raise UserAbort
 
-    # Upload the configuration to the etcd cluster.
+    # Upload the configuration to the etcd cluster. This will trigger the
+    # queue manager to schedule nodes to be restarted.
     config_loader.write_config_to_etcd(config_type, remote_revision)
-    # When changes are made to the config, we tell the queue manager. It
-    # coordinates restarting all the nodes in the cluster so that we don't lose
-    # service.
-    #
+
     # Clearwater can be run with multiple etcd clusters. The apply_config_key
     # variable stores the information about which etcd cluster the changes
     # should be applied to.
-    # TODO: What happens if we try to change the etcd cluster configuration as
-    #       part of this script?
     apply_config_key = subprocess.check_output(
         "/usr/share/clearwater/clearwater-queue-manager/scripts/get_apply_config_key")
-    # TODO: This is a bash script that calls a python script under the covers.
-    #       Ideally we would adjust the modify_nodes_in_queue script so it
-    #       could be imported and called directly (it's an uncommented mess
-    #       though).
-    subprocess.call([
-                        "/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
-                        "add",
-                        apply_config_key])
+
     # If the config changes are being forced through, the queue manager needs
-    # to be made aware so it can apply the changes to the other nodes in the
-    # cluster properly.
-    subprocess.call([
-                        "/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
-                        "force_true" if force else "force_false",
-                        apply_config_key])
-    # Delete local config file if upload was successful
+    # to be made aware so it knows to push on in the case of an error when
+    # applying the config to a node.
+    subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
+                     "force_true" if force else "force_false",
+                     apply_config_key])
+
+    # If we reach this point then config upload was successful. Cleaning up
+    # the config file we've uploaded makes sure we don't cause confusion later.
     config_path = os.path.join(config_loader.download_dir, config_type)
     os.remove(config_path)
 
