@@ -508,7 +508,7 @@ def print_diff_and_syslog(config_1, config_2):
 
     if additions or deletions:
         header = ("Configuration file change: shared_config was modified by "
-                  "user {}. ").format(get_user_name())
+                  "user {}.").format(get_user_name())
 
         # For the syslog, we want the diff output on one line.
         # For the UI, we want to output on multiple lines, as it's
@@ -517,12 +517,12 @@ def print_diff_and_syslog(config_1, config_2):
         output_str = header
         if deletions:
             syslog_str += "Lines removed: "
-            output_str += "Lines removed:\n"
+            output_str += "\n Lines removed:\n"
             syslog_str += ", ".join(['"' + line + '"' for line in deletions])
             output_str += "\n".join(['"' + line + '"' for line in deletions])
         if additions:
             syslog_str += "Lines added: "
-            output_str += "Lines added:\n"
+            output_str += "\n Lines added:\n"
             syslog_str += ", ".join(['"' + line + '"' for line in additions])
             output_str += "\n".join(['"' + line + '"' for line in additions])
 
