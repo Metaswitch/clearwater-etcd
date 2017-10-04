@@ -575,20 +575,46 @@ class TestMain(unittest.TestCase):
 
 
 class TestDownload(unittest.TestCase):
-    def test_confirm_overwrite(self):
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.confirm_yn")
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.os.path.exists")
+    def test_confirm_overwrite(self, mock_path_exists, mock_confirm_yn):
         """Check that we ask the user for confirmation before overwriting an
         existing file."""
-        pass
+        mock_path_exists.return_value = True
+        move_config.download_config(mock.Mock(), mock.Mock(), mock.Mock())
 
-    def test_deny_overwrite(self):
+        assert mock_confirm_yn.called
+
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.confirm_yn")
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.os.path.exists")
+    def test_deny_overwrite(self, mock_path_exists, mock_confirm_yn):
         """Check that we raise a UserAbort exception if the user denies to
         overwrite an existing file."""
-        pass
+        mock_path_exists.return_value = True
+        mock_confirm_yn.return_value = False
 
-    def test_allow_overwrite(self):
+        with self.assertRaises(move_config.UserAbort):
+            move_config.download_config(mock.Mock(), mock.Mock(), mock.Mock())
+
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.ConfigLoader", spec=True)
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.confirm_yn")
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.os.path.exists")
+    def test_allow_overwrite(self, mock_path_exists, mock_confirm_yn, mock_configloader):
         """Check that we don't raise a UserAbort exception if the user allows
         to overwrite an existing file and check that we download_config."""
-        pass
+        mock_path_exists.return_value = True
+        mock_confirm_yn.return_value = True
+
+        move_config.download_config(mock.Mock(), mock.Mock(), mock.Mock())
+
+        assert mock_configloader.download_config.called
 
 
 class TestUpload(unittest.TestCase):
