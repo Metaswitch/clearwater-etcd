@@ -65,6 +65,15 @@ class EtcdMasterConfigChanged(Exception):
 class UserAbort(Exception):
     pass
 
+# These exceptions are raised by the LocalStore class.
+class FileTooLarge(IOError):
+    """Raised when a config file exceeds MAXIMUM_CONFIG_SIZE."""
+    pass
+
+class InvalidRevision(IOError):
+    """Raised when the revision file does not contain an integer."""
+    pass
+
 
 class ConfigLoader(object):
     """Wrapper around etcd.Client to include information about where to find
@@ -129,6 +138,7 @@ class ConfigLoader(object):
             # - The download directory doesn't exist
             # - The config file doesn't exist in the download directory
             # - The config file is not readable
+            # - The config file is too big
             raise ConfigUploadFailed(
                 "Failed to retrieve {} from file".format(config_type))
 
@@ -341,10 +351,24 @@ def upload_verified_config(config_loader,
 
 def upload_config(autoconfirm, config_loader, config_type, force, local_store):
     """Read the relevant config from file and upload it to etcd."""
-    local_config, local_revision = local_store.load_config_and_revision(
-        config_type)
-    remote_config, remote_revision = config_loader.get_config_and_index(
-        config_type)
+    try:
+        local_config, local_revision = local_store.load_config_and_revision(
+            config_type)
+    except IOError:
+        raise ConfigUploadFailed(
+            "Unable to load config and revision from file")
+
+    # In order to confirm that no changes have been made while the user has
+    # been editing locally, we download a copy of the master config to compare
+    # against.
+    try:
+        remote_config, remote_revision = config_loader.get_config_and_index(
+            config_type)
+    except ConfigDownloadFailed:
+        raise ConfigUploadFailed("Unable to download master config to compare")
+
+    # Users are not allowed to upload changes if someone else has uploaded
+    # config to the etcd cluster in the meantime.
     if local_revision != remote_revision:
         raise EtcdMasterConfigChanged("The remote config changed while editing"
                                       "the config locally. Please redownload"
@@ -401,7 +425,9 @@ class LocalStore(object):
         return self._get_config_file_path(config_type) + ".index"
 
     def load_config_and_revision(self, config_type):
-        """"""
+        """Returns a tuple containing the config extracted from file and
+        the revision number. If there is an issue, it will throw an exception
+        of type IOError (or subclass)."""
         config_path = self._get_config_file_path(config_type)
         # Check that the file exists.
         revision_path = self._get_revision_file_path(config_type)
@@ -413,15 +439,21 @@ class LocalStore(object):
             raise IOError("No shared config revision file found, unable to "
                           "upload. Please re-download the shared config again.")
 
-        # Compare local and etcd revision number
-        # TODO: Error handling for corrupt storage.
-        with open(config_path, "r") as f:
-            local_config = f.read()
-        with open(revision_path, "r") as f:
-            local_revision = int(f.read())
+        # Extract the information from the relevant files.
+        local_config = read_from_file(config_path)
+
+        # The revision must be an integer.
+        try:
+            raw_revision = read_from_file(revision_path)
+            local_revision = int(raw_revision)
+        except ValueError:
+            # The data in the revision file is not an integer!
+            raise InvalidRevision
+
         return local_config, local_revision
 
     def save_config_and_revision(self, config_type, index, value):
+        """Write the config and revision number to file."""
         config_file_path = self._get_config_file_path(config_type)
         index_file_path = self._get_revision_file_path(config_type)
         log.debug("Writing config to '%s'.", config_file_path)
@@ -539,6 +571,25 @@ def print_diff_and_syslog(config_1, config_2):
     else:
         print("No changes detected in shared configuration file.")
         return False
+
+
+    def read_from_file(file_path):
+        """Run some basic checks against a file to check it hasn't been
+        corrupted. If it hasn't, return a string containing its contents.
+        Otherwise, throw a ConfigInvalid exception."""
+        with open(file_path, "r") as open_file:
+            contents = open_file.read(MAXIMUM_CONFIG_SIZE)
+
+            if open_file.read(1) != '':
+                # The file is so big that it cannot be read in one go. It's
+                # probably corrupted.
+                log.error(
+                    "%s file exceeds %s bytes. It is probably corrupted.",
+                    file_path,
+                    MAXIMUM_CONFIG_SIZE)
+                raise FileTooLarge
+
+        return contents
 
 
 # Call main function if script is executed stand-alone
