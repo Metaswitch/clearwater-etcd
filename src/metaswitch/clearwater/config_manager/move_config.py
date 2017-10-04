@@ -221,16 +221,20 @@ def parse_arguments():
     Parse the arguments passed to the script.
     :return:
     """
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog='cw-config', description=("You must "
+                                     "pick an action either upload or download"
+                                     " and then also a config_type currently"
+                                     " only shared_config"))
     parser.add_argument("--autoconfirm", action="store_true",
                         help="Turns autoconfirm on [default=off]")
     parser.add_argument("--force", action="store_true",
                         help="Turns forcing on [default=off]")
     parser.add_argument("action", type=str, choices=['upload', 'download'],
-                        help="The action to perform - upload or download")
+                        help="The action to perform - upload or download",
+                        metavar='action')
     parser.add_argument("config_type", type=str, choices=['shared_config'],
-                        help=("The config type to use - shared_config"
-                              " - only one option currently"))
+                        help=("The config type to use - shared_config - only "
+                        "one option currently"), metavar='config_type')
     parser.add_argument("management_ip",
                         help=("The IP address to contact etcd with - this is"
                               "read from the config - do not enter"))
