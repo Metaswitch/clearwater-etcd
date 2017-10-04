@@ -121,6 +121,7 @@ class ConfigLoader(object):
         """Upload config contained in the specified file to the etcd database.
         Raises a ConfigUploadFailed exception if unsuccessful.
         """
+        key_path = "/".join([self.prefix, config_type])
         try:
             upload, _ = self.local_store.load_config_and_revision(config_type)
         except IOError:
