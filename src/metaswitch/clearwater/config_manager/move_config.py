@@ -93,13 +93,11 @@ class ConfigLoader(object):
     def download_config(self, config_type):
         """Save a copy of a given config type to the download directory.
         Raises a ConfigDownloadFailed exception if unsuccessful."""
-        download = self.get_config_and_index(config_type)
-        value = str(download.value)
-        index = str(download.modifiedIndex)
+        value, index = self.get_config_and_index(config_type)
 
         # Write the config to file.
         try:
-            self.local_store.save_config_and_revision(config_type, index, value)
+            self.local_store.save_config_and_revision(config_type, str(index), str(value))
         except IOError:
             raise ConfigDownloadFailed(
                 "Couldn't save {} to file".format(config_type))
@@ -117,7 +115,7 @@ class ConfigLoader(object):
             raise ConfigDownloadFailed(
                 "Failed to download {}".format(config_type))
 
-        return download
+        return download.value, download.modifiedIndex
 
     def upload_config(self, config_type, cas_revision):
         """Upload config contained in the specified file to the etcd database.
@@ -333,10 +331,7 @@ def upload_config(config_loader, local_store, config_type, force=False, autoconf
     validate_config(force)
 
     local_config, local_revision = local_store.load_config_and_revision(config_type)
-
-    remote_config_and_index = config_loader.get_config_and_index(config_type)
-    remote_revision = remote_config_and_index.modifiedIndex
-    remote_config = remote_config_and_index.value
+    remote_config, remote_revision = config_loader.get_config_and_index(config_type)
 
     if local_revision != remote_revision:
         raise EtcdMasterConfigChanged("The remote config changed while editing"
@@ -354,8 +349,7 @@ def upload_config(config_loader, local_store, config_type, force=False, autoconf
             raise UserAbort
 
     # Upload the configuration to the etcd cluster.
-    config_loader.upload_config(config_type,
-                                remote_revision)
+    config_loader.upload_config(config_type, remote_revision)
 
     # When changes are made to the config, we tell the queue manager. It
     # coordinates restarting all the nodes in the cluster so that we don't lose
