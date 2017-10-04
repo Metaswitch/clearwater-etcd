@@ -421,7 +421,7 @@ def validate_config(force=False):
         raise ConfigValidationFailed(
             "Validation failed while executing scripts:\n{}".format(
                 "\n".join(os.path.basename(script)
-                          for script in failed_scripts))
+                          for script in failed_scripts)))
 
 
 def upload_verified_config(config_loader,
@@ -601,23 +601,23 @@ def print_diff_and_syslog(config_1, config_2):
         return False
 
 
-    def read_from_file(file_path):
-        """Run some basic checks against a file to check it hasn't been
-        corrupted. If it hasn't, return a string containing its contents.
-        Otherwise, throw a ConfigInvalid exception."""
-        with open(file_path, "r") as open_file:
-            contents = open_file.read(MAXIMUM_CONFIG_SIZE)
+def read_from_file(file_path):
+    """Run some basic checks against a file to check it hasn't been
+    corrupted. If it hasn't, return a string containing its contents.
+    Otherwise, throw a ConfigInvalid exception."""
+    with open(file_path, "r") as open_file:
+        contents = open_file.read(MAXIMUM_CONFIG_SIZE)
 
-            if open_file.read(1) != '':
-                # The file is so big that it cannot be read in one go. It's
-                # probably corrupted.
-                log.error(
-                    "%s file exceeds %s bytes. It is probably corrupted.",
-                    file_path,
-                    MAXIMUM_CONFIG_SIZE)
-                raise FileTooLarge
+        if open_file.read(1) != '':
+            # The file is so big that it cannot be read in one go. It's
+            # probably corrupted.
+            log.error(
+                "%s file exceeds %s bytes. It is probably corrupted.",
+                file_path,
+                MAXIMUM_CONFIG_SIZE)
+            raise FileTooLarge
 
-        return contents
+    return contents
 
 
 # Call main function if script is executed stand-alone
