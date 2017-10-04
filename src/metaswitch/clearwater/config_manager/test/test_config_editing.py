@@ -630,14 +630,13 @@ class TestDeleteOutdated(unittest.TestCase):
 
 
 class TestUserName(unittest.TestCase):
-    # @mock.patch("metaswitch.clearwater.config_manager.move_config.subprocess.check_output")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.subprocess.check_output")
     def test_call_subprocess(self, mock_subp):
         """check that we call subprocess.popen"""
-        # need TODO
-        mock_subp = ('clearwater fdbngh fghj')
+        mock_subp.return_value = ('clearwater fdbngh fghj')
         answer = move_config.get_user_name()
-        print answer
         self.assertIs(mock_subp.call_count, 1)
+        self.assertMultiLineEqual(answer, 'clearwater')
 
 
 class TestUserDownloadDir(unittest.TestCase):
@@ -675,16 +674,107 @@ class TestDiffAndSyslog(unittest.TestCase):
                                                    'string is a string \n yay')
         self.assertIs(answer, False)
 
+    from StringIO import StringIO
     @mock.patch("metaswitch.clearwater.config_manager.move_config.syslog")
     @mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name")
-    def test_check_diff(self, mock_getname, mock_syslog):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.sys.stdout", new_callable=StringIO)
+    def test_check_diff(self, mock_stdout, mock_getname, mock_syslog):
         """check that for two different files with additions and deletions the
         syslog_str and output_str contain them.
         Also checks that it returns true"""
         mock_getname.return_value = 'name'
-        answer = move_config.print_diff_and_syslog('sing is a string \n yay',
-                                                   'string is a string \n yay')
+        string1 = """# Config for deployment, local site site1
+                sprout_hostname='sprout.site1.md6-clearwater.clearwater.test'
+                sprout_hostname_mgmt='sprout-mgmt.site1.md6-clearwater.clearwater.test:9886'
+                hs_hostname='homestead.site1.md6-clearwater.clearwater.test:8888'
+                hs_hostname_mgmt='homestead-mgmt.site1.md6-clearwater.clearwater.test:8886'
+                chronos_hostname='chronos.site1.md6-clearwater.clearwater.test'
+                cassandra_hostname='cassandra.site1.md6-clearwater.clearwater.test'
+                site_names='site1'
+                sprout_registration_store='site1=astaire.site1.md6-clearwater.clearwater.test'
+                alias_list='sprout.site1.md6-clearwater.clearwater.test,scscf.sprout.site1.md6-clearwater.clearwater.test,icscf.sprout.site1.md6-clearwater.clearwater.test,bgcf.sprout.site1.md6-clearwater.clearwater.test'
+                sprout_chronos_callback_uri='sprout.md6-clearwater.clearwater.test'
+
+                # DNS record found for ralf.site1.md6-clearwater.clearwater.test, so Ralf will be used
+                ralf_hostname='ralf.site1.md6-clearwater.clearwater.test:10888'
+                ralf_session_store='site1=astaire.site1.md6-clearwater.clearwater.test'
+                ralf_chronos_callback_uri='ralf.md6-clearwater.clearwater.test'
+                billing_realm='billing.md6-clearwater.clearwater.test'
+
+                # DNS record found for SRV _diameter._tcp.md6-clearwater.clearwater.test, so assuming an external HSS in use
+                hss_realm='md6-clearwater.clearwater.test'
+
+
+                sas_server='sas.md6-clearwater.clearwater.test'
+
+                # DNS record found for snmp-manager.md6-clearwater.clearwater.test, so using SNMP
+                #snmp_ip='10.225.166.11'
+                # DNS record found for enum.md6-clearwater.clearwater.test
+                enum_server='enum.md6-clearwater.clearwater.test'
+                snmp_notification_types='enterprise'
+
+                icscf='5052'
+                scscf='5054'
+
+                hss_reregistration_time='0'
+                reg_max_expires='3600'
+                enforce_user_phone='Y'
+                enforce_global_only_lookups='Y'
+
+                remote_audit_logging_server="10.225.22.158:514\""""
+
+        string2 = """# Config for deployment, local site site1
+                sprout_hostname='sprout.site1.md6-clearwater.clearwater.test'
+                sprout_hostname_mgmt='sprout-mgmt.site1.md6-clearwater.clearwater.test:9886'
+                hs_hostname='homestead.site1.md6-clearwater.clearwater.test:8888'
+                hs_hostname_mgmt='homestead-mgmt.site1.md6-clearwater.clearwater.test:8886'
+                chronos_hostname='chronos.site1.md6-clearwater.clearwater.test'
+                cassandra_hostname='cassandra.site1.md6-clearwater.clearwater.test'
+                site_names='site2'
+                sprout_registration_store='site1=astaire.site1.md6-clearwater.clearwater.test'
+                alias_list='sprout.site1.md6-clearwater.clearwater.test,scscf.sprout.site1.md6-clearwater.clearwater.test,icscf.sprout.site1.md6-clearwater.clearwater.test,bgcf.sprout.site1.md6-clearwater.clearwater.test'
+                sprout_chronos_callback_uri='sprout.md6-clearwater.clearwater.test'
+
+                # DNS record found for ralf.site1.md6-clearwater.clearwater.test, so Ralf will be used
+                ralf_hostname='ralf.site1.md6-clearwater.clearwater.test:10888'
+                ralf_session_store='site1=astaire.site1.md6-clearwater.clearwater.test'
+                ralf_chronos_callback_uri='ralf.md6-clearwater.clearwater.test'
+                billing_realm='billing.md6-clearwater.clearwater.test'
+
+                # DNS record found for SRV _diameter._tcp.md6-clearwater.clearwater.test, so assuming an external HSS in use
+                hss_realm='md6-clearwater.clearwater.test'
+
+
+                sas_server='sas.md6-clearwater.clearwater.test'
+
+                # DNS record found for snmp-manager.md6-clearwater.clearwater.test, so using SNMP
+                #snmp_ip='10.225.167.11'
+                # DNS record found for enum.md6-clearwater.clearwater.test
+                enum_server='enum.md6-clearwater.clearwater.test'
+                snmp_notification_types='enterprise'
+
+                icscf='5052'
+                scscf='5054'
+
+                hss_reregistration_time='0'
+                reg_max_expires='3600'
+                enforce_user_phone='Y'
+                enforce_global_only_lookups='Y'
+
+                remote_audit_logging_srver="10.225.22.158:514\""""
+
+        answer = move_config.print_diff_and_syslog(string1, string2)
         self.assertIs(answer, True)
+        textchanges = """Configuration file change: shared_config was modified by user name.
+ Lines removed:
+"                #snmp_ip='10.225.166.11'"
+"                remote_audit_logging_server="10.225.22.158:514""
+"                site_names='site1'"
+ Lines added:
+"                #snmp_ip='10.225.167.11'"
+"                remote_audit_logging_srver="10.225.22.158:514""
+"                site_names='site2'\"\n"""
+        self.assertMultiLineEqual(mock_stdout.getvalue(), textchanges)
 
     @mock.patch("metaswitch.clearwater.config_manager.move_config.syslog")
     @mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name")
@@ -692,8 +782,87 @@ class TestDiffAndSyslog(unittest.TestCase):
         """check that syslog.openlog, syslog.syslog and syslog.closelog are
         called"""
         mock_getname.return_value = 'name'
-        answer = move_config.print_diff_and_syslog('sing is a string \n yay',
-                                                   'string is a string \n yay')
+        string1 = """# Config for deployment, local site site1
+                sprout_hostname='sprout.site1.md6-clearwater.clearwater.test'
+                sprout_hostname_mgmt='sprout-mgmt.site1.md6-clearwater.clearwater.test:9886'
+                hs_hostname='homestead.site1.md6-clearwater.clearwater.test:8888'
+                hs_hostname_mgmt='homestead-mgmt.site1.md6-clearwater.clearwater.test:8886'
+                chronos_hostname='chronos.site1.md6-clearwater.clearwater.test'
+                cassandra_hostname='cassandra.site1.md6-clearwater.clearwater.test'
+                site_names='site1'
+                sprout_registration_store='site1=astaire.site1.md6-clearwater.clearwater.test'
+                alias_list='sprout.site1.md6-clearwater.clearwater.test,scscf.sprout.site1.md6-clearwater.clearwater.test,icscf.sprout.site1.md6-clearwater.clearwater.test,bgcf.sprout.site1.md6-clearwater.clearwater.test'
+                sprout_chronos_callback_uri='sprout.md6-clearwater.clearwater.test'
+
+                # DNS record found for ralf.site1.md6-clearwater.clearwater.test, so Ralf will be used
+                ralf_hostname='ralf.site1.md6-clearwater.clearwater.test:10888'
+                ralf_session_store='site1=astaire.site1.md6-clearwater.clearwater.test'
+                ralf_chronos_callback_uri='ralf.md6-clearwater.clearwater.test'
+                billing_realm='billing.md6-clearwater.clearwater.test'
+
+                # DNS record found for SRV _diameter._tcp.md6-clearwater.clearwater.test, so assuming an external HSS in use
+                hss_realm='md6-clearwater.clearwater.test'
+
+
+                sas_server='sas.md6-clearwater.clearwater.test'
+
+                # DNS record found for snmp-manager.md6-clearwater.clearwater.test, so using SNMP
+                #snmp_ip='10.225.166.11'
+                # DNS record found for enum.md6-clearwater.clearwater.test
+                enum_server='enum.md6-clearwater.clearwater.test'
+                snmp_notification_types='enterprise'
+
+                icscf='5052'
+                scscf='5054'
+
+                hss_reregistration_time='0'
+                reg_max_expires='3600'
+                enforce_user_phone='Y'
+                enforce_global_only_lookups='Y'
+
+                remote_audit_logging_server="10.225.22.158:514\""""
+
+        string2 = """# Config for deployment, local site site1
+                sprout_hostname='sprout.site1.md6-clearwater.clearwater.test'
+                sprout_hostname_mgmt='sprout-mgmt.site1.md6-clearwater.clearwater.test:9886'
+                hs_hostname='homestead.site1.md6-clearwater.clearwater.test:8888'
+                hs_hostname_mgmt='homestead-mgmt.site1.md6-clearwater.clearwater.test:8886'
+                chronos_hostname='chronos.site1.md6-clearwater.clearwater.test'
+                cassandra_hostname='cassandra.site1.md6-clearwater.clearwater.test'
+                site_names='site2'
+                sprout_registration_store='site1=astaire.site1.md6-clearwater.clearwater.test'
+                alias_list='sprout.site1.md6-clearwater.clearwater.test,scscf.sprout.site1.md6-clearwater.clearwater.test,icscf.sprout.site1.md6-clearwater.clearwater.test,bgcf.sprout.site1.md6-clearwater.clearwater.test'
+                sprout_chronos_callback_uri='sprout.md6-clearwater.clearwater.test'
+
+                # DNS record found for ralf.site1.md6-clearwater.clearwater.test, so Ralf will be used
+                ralf_hostname='ralf.site1.md6-clearwater.clearwater.test:10888'
+                ralf_session_store='site1=astaire.site1.md6-clearwater.clearwater.test'
+                ralf_chronos_callback_uri='ralf.md6-clearwater.clearwater.test'
+                billing_realm='billing.md6-clearwater.clearwater.test'
+
+                # DNS record found for SRV _diameter._tcp.md6-clearwater.clearwater.test, so assuming an external HSS in use
+                hss_realm='md6-clearwater.clearwater.test'
+
+
+                sas_server='sas.md6-clearwater.clearwater.test'
+
+                # DNS record found for snmp-manager.md6-clearwater.clearwater.test, so using SNMP
+                #snmp_ip='10.225.167.11'
+                # DNS record found for enum.md6-clearwater.clearwater.test
+                enum_server='enum.md6-clearwater.clearwater.test'
+                snmp_notification_types='enterprise'
+
+                icscf='5052'
+                scscf='5054'
+
+                hss_reregistration_time='0'
+                reg_max_expires='3600'
+                enforce_user_phone='Y'
+                enforce_global_only_lookups='Y'
+
+                remote_audit_logging_server="10.225.22.158:514\""""
+
+        answer = move_config.print_diff_and_syslog(string1, string2)
         self.assertIs(mock_syslog.openlog.call_count, 1)
         self.assertIs(mock_syslog.syslog.call_count, 1)
         self.assertIs(mock_syslog.closelog.call_count, 1)
