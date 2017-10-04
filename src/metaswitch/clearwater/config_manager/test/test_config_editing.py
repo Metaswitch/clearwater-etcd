@@ -682,15 +682,14 @@ class TestDeleteOutdated(unittest.TestCase):
 
 
 class TestUserName(unittest.TestCase):
-    def test_call_subprocess(self):
+    # @mock.patch("metaswitch.clearwater.config_manager.move_config.subprocess.check_output")
+    def test_call_subprocess(self, mock_subp):
         """check that we call subprocess.popen"""
-        # process = subprocess.Popen(["who", "am", "i"], stdout=subprocess.PIPE)
-        # output, error = process.communicate()
-        #  return output.split()[0]
-
-        answer = get_user_name()
-        self.assertIn(answer, )
-        pass
+        # need TODO
+        mock_subp = ('clearwater fdbngh fghj')
+        answer = move_config.get_user_name()
+        print answer
+        self.assertIs(mock_subp.call_count, 1)
 
 
 class TestUserDownloadDir(unittest.TestCase):
@@ -705,14 +704,12 @@ class TestUserDownloadDir(unittest.TestCase):
         self.assertIs(mock_getuser.call_count, 1)
 
 
-
 class TestBaseDownloadDir(unittest.TestCase):
     @mock.patch("metaswitch.clearwater.config_manager.move_config.os.getenv")
     def test_call_osgetenv(self, mock_getenv):
         """check that we call os.getenv(HOME)"""
         answer = move_config.get_base_download_dir()
         self.assertIs(mock_getenv.call_count, 1)
-
 
     @mock.patch("metaswitch.clearwater.config_manager.move_config.os.getenv")
     def test_get_runtime_error(self, mock_getenv):
@@ -723,18 +720,32 @@ class TestBaseDownloadDir(unittest.TestCase):
 
 
 class TestDiffAndSyslog(unittest.TestCase):
-    def test_check_iden(self):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.syslog")
+    def test_check_iden(self, mock_syslog):
         """check that the diff for two identical files returns false"""
-        pass
+        answer = move_config.print_diff_and_syslog('string is a string \n yay',
+                                                   'string is a string \n yay')
+        self.assertIs(answer, False)
 
-    def test_check_diff(self):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.syslog")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name")
+    def test_check_diff(self, mock_getname, mock_syslog):
         """check that for two different files with additions and deletions the
-        syslog_str and output_str contain them"""
-        pass
+        syslog_str and output_str contain them.
+        Also checks that it returns true"""
+        mock_getname.return_value = 'name'
+        answer = move_config.print_diff_and_syslog('sing is a string \n yay',
+                                                   'string is a string \n yay')
+        self.assertIs(answer, True)
 
-    def test_call_syslog(self):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.syslog")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name")
+    def test_call_syslog(self, mock_getname, mock_syslog):
         """check that syslog.openlog, syslog.syslog and syslog.closelog are
         called"""
-        pass
-
-
+        mock_getname.return_value = 'name'
+        answer = move_config.print_diff_and_syslog('sing is a string \n yay',
+                                                   'string is a string \n yay')
+        self.assertIs(mock_syslog.openlog.call_count, 1)
+        self.assertIs(mock_syslog.syslog.call_count, 1)
+        self.assertIs(mock_syslog.closelog.call_count, 1)
