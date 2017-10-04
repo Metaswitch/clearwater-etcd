@@ -682,14 +682,14 @@ class TestDeleteOutdated(unittest.TestCase):
 
 
 class TestUserName(unittest.TestCase):
-    @mock.patch("metaswitch.clearwater.config_manager.move_config.subprocess.Popen")
+    # @mock.patch("metaswitch.clearwater.config_manager.move_config.subprocess.check_output")
     def test_call_subprocess(self, mock_subp):
         """check that we call subprocess.popen"""
         # need TODO
-        # mock_subp.return_value = ()
-        # answer = move_config.get_user_name()
-        # print answer
-        # self.assertIs(mock_subp.call_count, 2)
+        mock_subp = ('clearwater fdbngh fghj')
+        answer = move_config.get_user_name()
+        print answer
+        self.assertIs(mock_subp.call_count, 1)
 
 
 class TestUserDownloadDir(unittest.TestCase):

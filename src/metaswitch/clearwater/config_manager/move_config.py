@@ -440,9 +440,8 @@ def get_user_name():
     """
     # Worth noting that `whoami` behaves differently to `who am i`, we need the
     # latter.
-    process = subprocess.Popen(["who", "am", "i"], stdout=subprocess.PIPE)
-    output, error = process.communicate()
-    return output.split()[0]
+    process = subprocess.check_output(["who", "am", "i"])
+    return process.split()[0]
 
 
 def get_user_download_dir():
