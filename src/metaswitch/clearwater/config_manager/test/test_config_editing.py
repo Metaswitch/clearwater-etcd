@@ -696,26 +696,30 @@ class TestUserName(unittest.TestCase):
 class TestUserDownloadDir(unittest.TestCase):
     # """Returns the user-specific directory for downloaded config."""
     # return os.path.join(get_base_download_dir(), get_user_name())
-    def test_call_get_base(self):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.get_base_download_dir")
+    def test_call_get_base(self, mock_getbase, mock_getuser):
         """check that we call get_base_download_dir and get_user_name """
-        pass
+        answer = move_config.get_user_download_dir()
+        self.assertIs(mock_getbase.call_count, 1)
+        self.assertIs(mock_getuser.call_count, 1)
+
 
 
 class TestBaseDownloadDir(unittest.TestCase):
-    # """Returns the base directory for downloaded config."""
-    # home = os.getenv("HOME")
-    # if home is None:
-    #    raise RuntimeError("No home directory found.")
-    # return os.path.join(home, 'clearwater-config-manager/staging')
-    def test_call_osgetenv(self):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.getenv")
+    def test_call_osgetenv(self, mock_getenv):
         """check that we call os.getenv(HOME)"""
-        pass
+        answer = move_config.get_base_download_dir()
+        self.assertIs(mock_getenv.call_count, 1)
+
 
     @mock.patch("metaswitch.clearwater.config_manager.move_config.os.getenv")
     def test_get_runtime_error(self, mock_getenv):
         """check that a runtime error is raised when home is none"""
         mock_getenv.return_value = None
-        self.assertRaises(RuntimeError)
+        with self.assertRaises(RuntimeError):
+            answer = move_config.get_base_download_dir()
 
 
 class TestDiffAndSyslog(unittest.TestCase):
