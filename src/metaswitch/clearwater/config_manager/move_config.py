@@ -443,8 +443,10 @@ def print_diff_and_syslog(config_1, config_2):
     """
     # We don't care about line ordering changes, so first,
     # clean up the data into sorted lists of lines.
-    config_lines_1 = config_1.splitlines().sort()
-    config_lines_2 = config_2.splitlines().sort()
+    config_lines_1 = config_1.splitlines()
+    config_lines_2 = config_2.splitlines()
+    config_lines_1.sort()
+    config_lines_2.sort()
 
     # Get a list of diffs, like the lines of the output you'd see when you
     # run `diff` on the command line:
