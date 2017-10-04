@@ -16,22 +16,24 @@ import syslog
 import sys
 import datetime
 import time
+from metaswitch.common.logging_config import configure_logging
 
 # Constants
 MAXIMUM_CONFIG_SIZE = 1000000
 VALIDATION_SCRIPTS_FOLDER = "/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/"
-LOG_PATH = "/var/log/clearwater-config-manager/allow/cw-config.log"
+LOG_DIR = "/var/log/clearwater-config-manager/allow"
+
+# Logging
+LOG_LEVELS = { "DEBUG": logging.DEBUG,
+               "INFO": logging.INFO,
+               "WARNING": logging.WARNING,
+               "ERROR": logging.ERROR}
+log = logging.getLogger("cw-config.main")
 
 # Error messages
 MODIFIED_WHILE_EDITING = """Another user has modified the configuration since
 cw-download_shared_config was last run. Please download the latest version of
 shared config, re-apply the changes and try again."""
-
-# Set up logging
-# TODO: Make sure that logging wraps properly - use python common's logging infra?
-logging.basicConfig(filename=LOG_PATH, level=logging.DEBUG)
-log = logging.getLogger(__name__)
-
 
 # Exceptions
 class ConfigAlreadyDownloaded(Exception):
@@ -95,7 +97,7 @@ class ConfigLoader(object):
         location = ":".join([self._etcd_client.host, self._etcd_client.port])
         try:
             subprocess.check_call(["nc", "-z", location])
-        except CalledProcessError:
+        except subprocess.CalledProcessError:
             raise EtcdConnectionFailed(
                 "etcd process not running at {}".format(location))
 
@@ -231,6 +233,11 @@ def main(args):
     """
     Main entry point for script.
     """
+    # Set up logging.
+    configure_logging(LOG_LEVELS[args.log_level],
+                      args.log_dir,
+                      "cw-config")
+
     # Regardless of passed arguments we want to delete outdated config to not
     # leave unused files on disk.
     delete_outdated_config_files()
@@ -298,6 +305,22 @@ def parse_arguments():
                         help="Turns autoconfirm on [default=off]")
     parser.add_argument("--force", action="store_true",
                         help="Turns forcing on [default=off]")
+
+    # Logging options
+    parser.add_argument("--log-dir",
+                        type=str,
+                        default=LOG_DIR,
+                        help=("Directory that logs will be written to. "
+                              "Defaults to {}".format(LOG_DIR)))
+
+    parser.add_argument("--log-level",
+                        type=str,
+                        choices=LOG_LEVELS.keys(),
+                        default="INFO",
+                        help=("Minimum log level to be written to file. "
+                              "Defaults to INFO."))
+
+    # Positional arguments
     parser.add_argument("action", type=str, choices=['upload', 'download'],
                         help="The action to perform - upload or download",
                         metavar='action')
