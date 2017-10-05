@@ -333,18 +333,23 @@ def parse_arguments():
                                 All logs of this level or above will be
                                 written to file.
                                 DEFAULT is INFO""".format(logging.DEBUG,
-                                                           logging.INFO,
-                                                           logging.WARNING,
-                                                           logging.ERROR,
-                                                           logging.CRITICAL))
+                                                          logging.INFO,
+                                                          logging.WARNING,
+                                                          logging.ERROR,
+                                                          logging.CRITICAL))
 
     # Positional arguments
-    parser.add_argument("action", type=str, choices=['upload', 'download'],
+    parser.add_argument("action",
+                        type=str,
+                        choices=['upload', 'download'],
                         help="The action to perform - {upload | download}",
                         metavar='action')
-    parser.add_argument("config_type", type=str, choices=['shared_config'],
+    parser.add_argument("config_type",
+                        type=str,
+                        choices=['shared_config'],
                         help=("The config type to use - {shared_config} - only"
-                        " one option currently"), metavar='config_type')
+                              " one option currently"),
+                        metavar='config_type')
     parser.add_argument("--management_ip", required=True,
                         help=argparse.SUPPRESS)
     parser.add_argument("--site", required=True, help=argparse.SUPPRESS)
@@ -479,8 +484,11 @@ def upload_config(autoconfirm, config_loader, config_type, force, local_store):
     os.remove(config_path)
 
 
-def ready_for_upload_checks(autoconfirm, config_loader, config_type,
+def ready_for_upload_checks(autoconfirm,
+                            config_loader,
+                            config_type,
                             local_store):
+    """Make sure that we can and should upload config."""
     try:
         local_config, local_revision = local_store.load_config_and_revision(
             config_type)
