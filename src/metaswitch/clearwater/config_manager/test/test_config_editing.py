@@ -231,6 +231,33 @@ class TestLocalStore(unittest.TestCase):
         self.assertEqual(mock_mkdir.call_count, 0)
 
     @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.os.path.exists",
+        return_value=False)
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.makedirs")
+    def test_folder_doesnt_exist(self, mock_mkdir, mock_exists):
+        """Make sure we do create a folder if there isn't one already."""
+        move_config.LocalStore()
+        self.assertEqual(mock_mkdir.call_count, 1)
+
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.os.path.exists",
+        return_value=True)
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.get_user_download_dir",
+        return_value="/some/directory")
+    def test_config_load(self, mock_ensure_dir, mock_config_path):
+        """Test that we can load from file successfully."""
+
+        local_store = move_config.LocalStore()
+        # First return example config, then return example revision number.
+        with mock.patch(
+            "metaswitch.clearwater.config_manager.move_config.read_from_file",
+            ["fake_key=fake_value", 12345]):
+            # We don't expect there to be any asserts.
+            config, revision = local_store.load_config_and_revision(
+                "shared_config")
+
+    @mock.patch(
         "metaswitch.clearwater.config_manager.move_config.LocalStore._get_config_file_path",
         return_value="config_path")
     @mock.patch(
