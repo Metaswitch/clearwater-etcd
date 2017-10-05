@@ -763,8 +763,8 @@ class TestDiffAndSyslog(unittest.TestCase):
     @mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name")
     @mock.patch("metaswitch.clearwater.config_manager.move_config.sys.stdout", new_callable=StringIO)
     def test_check_diff(self, mock_stdout, mock_getname, mock_syslog):
-        """check that for two different files with additions and deletions the
-        syslog_str and output_str contain them.
+        """check that for two different files with additions, deletions and
+        moves the syslog_str and output_str contain them.
         Also checks that it returns true"""
         mock_getname.return_value = 'name'
         string1 = """# Config for deployment, local site site1
@@ -787,7 +787,7 @@ class TestDiffAndSyslog(unittest.TestCase):
 
                 # DNS record found for SRV _diameter._tcp.md6-clearwater.clearwater.test, so assuming an external HSS in use
                 hss_realm='md6-clearwater.clearwater.test'
-
+                snmp_notification_types='enterprise'
 
                 sas_server='sas.md6-clearwater.clearwater.test'
 
@@ -795,7 +795,7 @@ class TestDiffAndSyslog(unittest.TestCase):
                 #snmp_ip='10.225.166.11'
                 # DNS record found for enum.md6-clearwater.clearwater.test
                 enum_server='enum.md6-clearwater.clearwater.test'
-                snmp_notification_types='enterprise'
+
 
                 icscf='5052'
                 scscf='5054'
@@ -805,7 +805,7 @@ class TestDiffAndSyslog(unittest.TestCase):
                 enforce_user_phone='Y'
                 enforce_global_only_lookups='Y'
 
-                remote_audit_logging_server="10.225.22.158:514\""""
+                remote_audit_logging_server="10.225.22.158:524\""""
 
         string2 = """# Config for deployment, local site site1
                 sprout_hostname='sprout.site1.md6-clearwater.clearwater.test'
@@ -814,7 +814,7 @@ class TestDiffAndSyslog(unittest.TestCase):
                 hs_hostname_mgmt='homestead-mgmt.site1.md6-clearwater.clearwater.test:8886'
                 chronos_hostname='chronos.site1.md6-clearwater.clearwater.test'
                 cassandra_hostname='cassandra.site1.md6-clearwater.clearwater.test'
-                site_names='site2'
+                site_names='site1'
                 sprout_registration_store='site1=astaire.site1.md6-clearwater.clearwater.test'
                 alias_list='sprout.site1.md6-clearwater.clearwater.test,scscf.sprout.site1.md6-clearwater.clearwater.test,icscf.sprout.site1.md6-clearwater.clearwater.test,bgcf.sprout.site1.md6-clearwater.clearwater.test'
                 sprout_chronos_callback_uri='sprout.md6-clearwater.clearwater.test'
@@ -825,39 +825,39 @@ class TestDiffAndSyslog(unittest.TestCase):
                 ralf_chronos_callback_uri='ralf.md6-clearwater.clearwater.test'
                 billing_realm='billing.md6-clearwater.clearwater.test'
 
+                scscf='5054'
+
                 # DNS record found for SRV _diameter._tcp.md6-clearwater.clearwater.test, so assuming an external HSS in use
                 hss_realm='md6-clearwater.clearwater.test'
 
+                icscf='5052'
 
                 sas_server='sas.md6-clearwater.clearwater.test'
 
                 # DNS record found for snmp-manager.md6-clearwater.clearwater.test, so using SNMP
-                #snmp_ip='10.225.167.11'
+                #snmp_ip='10.225.166.11'
                 # DNS record found for enum.md6-clearwater.clearwater.test
                 enum_server='enum.md6-clearwater.clearwater.test'
                 snmp_notification_types='enterprise'
-
-                icscf='5052'
-                scscf='5054'
 
                 hss_reregistration_time='0'
                 reg_max_expires='3600'
                 enforce_user_phone='Y'
                 enforce_global_only_lookups='Y'
 
-                remote_audit_logging_srver="10.225.22.158:514\""""
+                remote_audit_logging_server="10.225.22.158:514\""""
 
         answer = move_config.print_diff_and_syslog(string1, string2)
         self.assertIs(answer, True)
         textchanges = """Configuration file change: shared_config was modified by user name.
  Lines removed:
-"                #snmp_ip='10.225.166.11'"
-"                remote_audit_logging_server="10.225.22.158:514""
-"                site_names='site1'"
+"                remote_audit_logging_server="10.225.22.158:524""
  Lines added:
-"                #snmp_ip='10.225.167.11'"
-"                remote_audit_logging_srver="10.225.22.158:514""
-"                site_names='site2'\"\n"""
+"                remote_audit_logging_server="10.225.22.158:514""
+ Lines moved:
+"                snmp_notification_types='enterprise'"
+"                icscf='5052'"
+"                scscf='5054'\"\n"""
         self.assertMultiLineEqual(mock_stdout.getvalue(), textchanges)
 
     @mock.patch("metaswitch.clearwater.config_manager.move_config.syslog")
