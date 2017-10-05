@@ -240,46 +240,15 @@ class TestLocalStore(unittest.TestCase):
 
     # TODO
     def test_load_non_integer(self):
-        """Test that we raise the right exception if we try to load a non-integer"""
-
-    # @mock.patch(
-    #     "metaswitch.clearwater.config_manager.move_config.LocalStore")
-    # @mock.patch(
-    #     "metaswitch.clearwater.config_manager.move_config.ConfigLoader")
-    def test_no_file_found(self):
+        """Test that we raise the right exception if we try to load a
+        non-integer"""
         pass
-    #     """Check that we raise an IOError if either the config file or the
-    #     index file doesn't exist."""
-    #
-    #     def fake_config_exists(file):
-    #         if file == "/tmp/shared_config":
-    #             return False
-    #         else:
-    #             return True
-    #
-    #     def fake_config_revision_exists(file):
-    #         if file == "/tmp/shared_config.index":
-    #             return False
-    #         else:
-    #             return True
-    #
-    #     mock_config_exists = mock.MagicMock(side_effect=fake_config_exists)
-    #     mock_config_revision_exists = mock.MagicMock(
-    #         side_effect=fake_config_revision_exists)
-    #
-    #     with mock.patch(
-    #             "metaswitch.clearwater.config_manager.move_config.os.path.exists",
-    #             mock_config_exists):
-    #         with self.assertRaises(IOError):
-    #             move_config.upload_verified_config(mock_configloader, "shared_config")
-    #
-    #     with mock.patch(
-    #             "metaswitch.clearwater.config_manager.move_config.os.path.exists",
-    #             mock_config_revision_exists):
-    #         with self.assertRaises(IOError):
-    #             move_config.upload_verified_config(mock_configloader, "shared_config")
 
-
+    # TODO
+    def test_unable_to_save_file(self):
+        """Test that we raise the right exception if we are unable to save the
+        config or index file."""
+        pass
 
 
 class TestYesNo(unittest.TestCase):
