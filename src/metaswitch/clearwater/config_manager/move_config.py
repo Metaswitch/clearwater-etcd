@@ -23,11 +23,7 @@ MAXIMUM_CONFIG_SIZE = 1000000
 VALIDATION_SCRIPTS_FOLDER = "/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/"
 LOG_DIR = "/var/log/clearwater-config-manager/allow"
 
-# Logging
-LOG_LEVELS = { "DEBUG": logging.DEBUG,
-               "INFO": logging.INFO,
-               "WARNING": logging.WARNING,
-               "ERROR": logging.ERROR}
+# Configure logging.
 log = logging.getLogger("cw-config.main")
 
 # Error messages
@@ -234,7 +230,7 @@ def main(args):
     Main entry point for script.
     """
     # Set up logging.
-    configure_logging(LOG_LEVELS[args.log_level],
+    configure_logging(args.log_level,
                       args.log_dir,
                       "cw-config")
 
@@ -312,13 +308,20 @@ def parse_arguments():
                         default=LOG_DIR,
                         help=("Directory that logs will be written to. "
                               "Defaults to {}".format(LOG_DIR)))
-
     parser.add_argument("--log-level",
-                        type=str,
-                        choices=LOG_LEVELS.keys(),
-                        default="INFO",
-                        help=("Minimum log level to be written to file. "
-                              "Defaults to INFO."))
+                        type=int,
+                        default=logging.INFO,
+                        help="""Set to {} for DEBUG,
+                                Set to {} for INFO,
+                                Set to {} for WARNING,
+                                Set to {} for ERROR,
+                                Set to {} for CRITICAL.
+                                All logs of this level or above will be
+                                written to file.""".format(logging.DEBUG,
+                                                           logging.INFO,
+                                                           logging.WARNING,
+                                                           logging.ERROR,
+                                                           logging.CRITICAL))
 
     # Positional arguments
     parser.add_argument("action", type=str, choices=['upload', 'download'],

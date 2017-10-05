@@ -10,12 +10,11 @@ import time
 from StringIO import StringIO
 import subprocess
 import unittest
+import logging
 
 import etcd.client
 
-
 import metaswitch.clearwater.config_manager.move_config as move_config
-
 
 class TestConfigLoader(unittest.TestCase):
     # TODO: FIX
