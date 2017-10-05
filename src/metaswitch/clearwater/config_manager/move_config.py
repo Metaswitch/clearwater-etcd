@@ -310,14 +310,7 @@ def parse_arguments():
     Parse the arguments passed to the script.
     :return:
     """
-    parser = argparse.ArgumentParser(prog='cw-config', usage=("%(prog)s [-h] "
-                                "[--autoconfirm] [--force] {upload|download} "
-                                     "{shared_config} \nCall %(prog)s then"
-                                     " pick an action either {upload or "
-                                     "download} \nFollowed by a config_type "
-                                     "currently only {shared_config} \n"
-                                     "All other inputs are taken from the "
-                                     "config of the node"))
+    parser = argparse.ArgumentParser(prog='cw-config')
     parser.add_argument("--autoconfirm", action="store_true",
                         help="Turns autoconfirm on [default=off]")
     parser.add_argument("--force", action="store_true",
@@ -338,7 +331,8 @@ def parse_arguments():
                                 Set to {} for ERROR,
                                 Set to {} for CRITICAL.
                                 All logs of this level or above will be
-                                written to file.""".format(logging.DEBUG,
+                                written to file.
+                                DEFAULT is INFO""".format(logging.DEBUG,
                                                            logging.INFO,
                                                            logging.WARNING,
                                                            logging.ERROR,
@@ -346,20 +340,15 @@ def parse_arguments():
 
     # Positional arguments
     parser.add_argument("action", type=str, choices=['upload', 'download'],
-                        help="The action to perform - upload or download",
+                        help="The action to perform - {upload | download}",
                         metavar='action')
     parser.add_argument("config_type", type=str, choices=['shared_config'],
-                        help=("The config type to use - shared_config - only "
-                        "one option currently"), metavar='config_type')
-    parser.add_argument("management_ip",
-                        help=("The IP address to contact etcd with - this is "
-                              "read from the config - do not enter"))
-    parser.add_argument("site", help=("always the site you are at, this is"
-                                      " read from config - do not enter"))
-    parser.add_argument("etcd_key",
-                        help=("this is currently always 'clearwater' but may"
-                              "be able to be 'CCF' as well in the future - "
-                              "this is read from config - do not enter"))
+                        help=("The config type to use - {shared_config} - only"
+                        " one option currently"), metavar='config_type')
+    parser.add_argument("--management_ip", required=True,
+                        help=argparse.SUPPRESS)
+    parser.add_argument("--site", required=True, help=argparse.SUPPRESS)
+    parser.add_argument("--etcd_key", required=True, help=argparse.SUPPRESS)
 
     return parser.parse_args()
 
@@ -465,6 +454,33 @@ def validate_config(force=False):
 
 def upload_config(autoconfirm, config_loader, config_type, force, local_store):
     """Read the relevant config from file and upload it to etcd."""
+    remote_revision = ready_for_upload_checks(autoconfirm, config_loader,
+                                              config_type, local_store)
+    # Upload the configuration to the etcd cluster. This will trigger the
+    # queue manager to schedule nodes to be restarted.
+    config_loader.write_config_to_etcd(config_type, remote_revision)
+
+    # Clearwater can be run with multiple etcd clusters. The apply_config_key
+    # variable stores the information about which etcd cluster the changes
+    # should be applied to.
+    apply_config_key = subprocess.check_output(
+        "/usr/share/clearwater/clearwater-queue-manager/scripts/get_apply_config_key")
+
+    # If the config changes are being forced through, the queue manager needs
+    # to be made aware so it knows to push on in the case of an error when
+    # applying the config to a node.
+    subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
+                     "force_true" if force else "force_false",
+                     apply_config_key])
+
+    # If we reach this point then config upload was successful. Cleaning up
+    # the config file we've uploaded makes sure we don't cause confusion later.
+    config_path = os.path.join(config_loader.download_dir, config_type)
+    os.remove(config_path)
+
+
+def ready_for_upload_checks(autoconfirm, config_loader, config_type,
+                            local_store):
     try:
         local_config, local_revision = local_store.load_config_and_revision(
             config_type)
@@ -498,27 +514,7 @@ def upload_config(autoconfirm, config_loader, config_type, force, local_store):
         if not confirmed:
             raise UserAbort
 
-    # Upload the configuration to the etcd cluster. This will trigger the
-    # queue manager to schedule nodes to be restarted.
-    config_loader.write_config_to_etcd(config_type, remote_revision)
-
-    # Clearwater can be run with multiple etcd clusters. The apply_config_key
-    # variable stores the information about which etcd cluster the changes
-    # should be applied to.
-    apply_config_key = subprocess.check_output(
-        "/usr/share/clearwater/clearwater-queue-manager/scripts/get_apply_config_key")
-
-    # If the config changes are being forced through, the queue manager needs
-    # to be made aware so it knows to push on in the case of an error when
-    # applying the config to a node.
-    subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
-                     "force_true" if force else "force_false",
-                     apply_config_key])
-
-    # If we reach this point then config upload was successful. Cleaning up
-    # the config file we've uploaded makes sure we don't cause confusion later.
-    config_path = os.path.join(config_loader.download_dir, config_type)
-    os.remove(config_path)
+    return remote_revision
 
 
 def confirm_yn(prompt, autoskip=False):
