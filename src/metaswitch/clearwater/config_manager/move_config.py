@@ -555,12 +555,10 @@ def print_diff_and_syslog(config_1, config_2):
     """
     Print a readable diff of changes between two texts and log to syslog.
     """
-    # We don't care about line ordering changes, so first,
-    # clean up the data into sorted lists of lines.
+    # We do care about line order changes (so don't sort lines) as we want line
+    # changes to count as config changes for allowing the config to upload.
     config_lines_1 = config_1.splitlines()
     config_lines_2 = config_2.splitlines()
-    config_lines_1.sort()
-    config_lines_2.sort()
 
     # Get a list of diffs, like the lines of the output you'd see when you
     # run `diff` on the command line:
@@ -576,7 +574,14 @@ def print_diff_and_syslog(config_1, config_2):
     additions = [line[2:] for line in difflines
                  if line.startswith("+ ") and len(line) > 2]
 
-    if additions or deletions:
+    # If something is in both deletions and additions it means the line has
+    # moved so will be in third category and removed from the other two.
+    moved = [x for x in deletions for y in additions if x == y]
+    for item in moved:
+        deletions.remove(item)
+        additions.remove(item)
+
+    if additions or deletions or moved:
         header = ("Configuration file change: shared_config was modified by "
                   "user {}.").format(get_user_name())
 
@@ -595,6 +600,11 @@ def print_diff_and_syslog(config_1, config_2):
             output_str += "\n Lines added:\n"
             syslog_str += ", ".join(['"' + line + '"' for line in additions])
             output_str += "\n".join(['"' + line + '"' for line in additions])
+        if moved:
+            syslog_str += "Lines moved: "
+            output_str += "\n Lines moved:\n"
+            syslog_str += ", ".join(['"' + line + '"' for line in moved])
+            output_str += "\n".join(['"' + line + '"' for line in moved])
 
         # Force encoding so logstr prints and syslogs nicely
         syslog_str = syslog_str.encode("utf-8")
