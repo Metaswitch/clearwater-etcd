@@ -1,5 +1,5 @@
 #!/usr/share/clearwater/clearwater-config-manager/env/bin/python
-# Copyright (C) Metaswitch Networks 2016
+# Copyright (C) Metaswitch Networks 2017
 # If license terms are provided to you in a COPYING file in the root directory
 # of the source code repository by which you are accessing this code, then
 # the license outlined in that COPYING file applies to your use.
@@ -28,7 +28,7 @@ log = logging.getLogger("cw-config.main")
 
 # Error messages
 MODIFIED_WHILE_EDITING = """Another user has modified the configuration since
-cw-download_shared_config was last run. Please download the latest version of
+`cw-config download` was last run. Please download the latest version of
 shared config, re-apply the changes and try again."""
 
 # Exceptions
@@ -77,14 +77,15 @@ class FileTooLarge(IOError):
     """Raised when a config file exceeds MAXIMUM_CONFIG_SIZE."""
     pass
 
+
 class InvalidRevision(IOError):
     """Raised when the revision file does not contain an integer."""
     pass
 
 
 class ConfigLoader(object):
-    """Wrapper around etcd.Client to include information about where to find
-    config files in the database."""
+    """Object for interfacing with etcd for uploading and downloading config.
+    """
     def __init__(self, etcd_client, etcd_key, site, local_store):
         # In addition to standard init, we store off the URL to query on the
         # etcd API that will get us our config.
