@@ -120,6 +120,7 @@ class ConfigLoader(object):
                 "Couldn't save {} to file".format(config_type))
 
     def get_config_and_index(self, config_type):
+        """Extract the config file and index from etcd."""
         key_path = "/".join([self.prefix, config_type])
 
         try:
