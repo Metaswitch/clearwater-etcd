@@ -76,6 +76,19 @@ class ConfigLoader(object):
         self.prefix = "/".join(["", etcd_key, site, "configuration"])
         self.download_dir = get_user_download_dir()
 
+        # Make sure that the etcd process is actually contactable.
+        self._check_connection()
+
+    def _check_connection(self):
+        """Performs a sanity check to make sure that the etcd process is
+        actually running."""
+        location = ":".join([self._etcd_client.host, self._etcd_client.port])
+        try:
+            subprocess.check_call(["nc", "-z", location])
+        except CalledProcessError:
+            raise EtcdConnectionFailed(
+                "etcd process not running at {}".format(location))
+
     def _ensure_config_dir(self):
         """Make sure that the folder used to store config exists."""
         if not os.path.exists(self.download_dir):
@@ -176,15 +189,16 @@ def main(args):
 
     # Create an etcd client for interacting with the database.
     try:
-        log.debug("Getting etcdClient with parameters {}, {}, {}"
-                  .format(args.etcd_key, args.site, args.management_ip))
+        log.debug("Getting etcdClient with parameters %s, %s, %s",
+                  args.etcd_key,
+                  args.site,
+                  args.management_ip)
         etcd_client = etcd.client.Client(host=args.management_ip,
                                          port=4000)
         config_loader = ConfigLoader(etcd_client=etcd_client,
                                      etcd_key=args.etcd_key,
                                      site=args.site)
-        # TODO we should check the connection to etcd as the bash script did.
-    except etcd.EtcdException:
+    except (etcd.EtcdException, EtcdConnectionFailed):
         sys.exit("Unable to contact the etcd cluster.")
 
     if args.action == "download":
@@ -193,8 +207,8 @@ def main(args):
             download_config(config_loader,
                             args.config_type,
                             args.autoconfirm)
-        except (ConfigDownloadFailed, IOError) as e:
-            sys.exit(e)
+        except (ConfigDownloadFailed, IOError) as exc:
+            sys.exit(exc)
         except UserAbort:
             sys.exit("User aborted.")
 
