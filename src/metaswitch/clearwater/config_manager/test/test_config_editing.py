@@ -43,6 +43,7 @@ class TestConfigLoader(unittest.TestCase):
         exception to be raised."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
         mock_localstore = mock.MagicMock(spec=move_config.LocalStore)
+        mock_localstore.download_dir = "/some/directory"
         mock_localstore.save_config_and_revision.side_effect = IOError
 
         config_loader = move_config.ConfigLoader(
@@ -442,24 +443,6 @@ class TestMain(unittest.TestCase):
         "metaswitch.clearwater.config_manager.move_config.ConfigLoader")
     @mock.patch(
         "metaswitch.clearwater.config_manager.move_config.download_config")
-    def test_handle_download_ioerror(self,
-                                     mock_download_config,
-                                     mock_configloader,
-                                     mock_logging):
-        """Check that we handle an IOError exception raised by
-        download_config."""
-        mock_download_config.side_effect = IOError
-        args = mock.Mock(action='download')
-
-        with self.assertRaises(SystemExit):
-            move_config.main(args)
-
-    @mock.patch(
-        "metaswitch.clearwater.config_manager.move_config.configure_logging")
-    @mock.patch(
-        "metaswitch.clearwater.config_manager.move_config.ConfigLoader")
-    @mock.patch(
-        "metaswitch.clearwater.config_manager.move_config.download_config")
     def test_handle_download_userabort(self,
                                        mock_download_config,
                                        mock_configloader,
@@ -492,13 +475,13 @@ class TestMain(unittest.TestCase):
         "metaswitch.clearwater.config_manager.move_config.ConfigLoader")
     @mock.patch(
         "metaswitch.clearwater.config_manager.move_config.upload_verified_config")
-    def test_handle_upload_etcdmasterconfigchanged(self,
-                                                   mock_upload_config,
-                                                   mock_configloader,
-                                                   mock_logging):
-        """Check that we handle a EtcdMasterConfigChanged exception raised by
-        upload_verified_config."""
-        mock_upload_config.side_effect = move_config.EtcdMasterConfigChanged
+    def test_handle_upload_failed(self,
+                                  mock_upload_config,
+                                  mock_configloader,
+                                  mock_logging):
+        """Check that we handle an exception raised by upload_verified_config.
+        """
+        mock_upload_config.side_effect = move_config.ConfigUploadFailed
         args = mock.Mock(action='upload')
 
         with self.assertRaises(SystemExit):
@@ -535,24 +518,6 @@ class TestMain(unittest.TestCase):
         """Check that we handle a ConfigValidationFailed exception raised by
         upload_verified_config."""
         mock_upload_config.side_effect = move_config.ConfigValidationFailed
-        args = mock.Mock(action='upload')
-
-        with self.assertRaises(SystemExit):
-            move_config.main(args)
-
-    @mock.patch(
-        "metaswitch.clearwater.config_manager.move_config.configure_logging")
-    @mock.patch(
-        "metaswitch.clearwater.config_manager.move_config.ConfigLoader")
-    @mock.patch(
-        "metaswitch.clearwater.config_manager.move_config.upload_verified_config")
-    def test_handle_upload_ioerror(self,
-                                   mock_upload_config,
-                                   mock_configloader,
-                                   mock_logging):
-        """Check that we handle an IOError exception raised by
-        upload_verified_config."""
-        mock_upload_config.side_effect = IOError
         args = mock.Mock(action='upload')
 
         with self.assertRaises(SystemExit):
@@ -769,17 +734,24 @@ class TestReadyForUpload(unittest.TestCase):
         return_value=("remote_config_text", 42))
     @mock.patch(
         "metaswitch.clearwater.config_manager.move_config.LocalStore._ensure_config_dir")
-    def test_different_revision_numbers(self, mock_ensure_dir, mock_get, mock_load, mock_check_connection):
-        """Check that we raise an EtcdMasterConfigChanged exception if the
-        local revision is not the same as the remote revision."""
+    def test_different_revision_numbers(self,
+                                        mock_ensure_dir,
+                                        mock_get,
+                                        mock_load,
+                                        mock_check_connection):
+        """Check that we raise an exception if the local revision is not the
+        same as the remote revision."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
         local_store = move_config.LocalStore()
 
         config_loader = move_config.ConfigLoader(
             etcd_client, "clearwater", "site", local_store)
 
-        with self.assertRaises(move_config.EtcdMasterConfigChanged):
-            move_config.ready_for_upload_checks(False, config_loader, "shared_config", local_store)
+        with self.assertRaises(move_config.ConfigUploadFailed):
+            move_config.ready_for_upload_checks(False,
+                                                config_loader,
+                                                "shared_config",
+                                                local_store)
 
     @mock.patch(
         "metaswitch.clearwater.config_manager.move_config.print_diff_and_syslog",
@@ -795,14 +767,14 @@ class TestReadyForUpload(unittest.TestCase):
     @mock.patch(
         "metaswitch.clearwater.config_manager.move_config.LocalStore._ensure_config_dir")
     def test_no_config_changes(self, mock_ensure_dir, mock_get, mock_load, mock_check_connection, mock_diff):
-        """Check that we raise NoConfigChanges if no changes were made."""
+        """Check that we raise an exception if no changes were made."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
         local_store = move_config.LocalStore()
 
         config_loader = move_config.ConfigLoader(
             etcd_client, "clearwater", "site", local_store)
 
-        with self.assertRaises(move_config.NoConfigChanges):
+        with self.assertRaises(move_config.ConfigUploadFailed):
             move_config.ready_for_upload_checks(False, config_loader, "shared_config", local_store)
 
     def test_ask_confirmation(self):
