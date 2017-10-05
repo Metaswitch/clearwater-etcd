@@ -1,5 +1,5 @@
 #!/usr/share/clearwater/clearwater-config-manager/env/bin/python
-# Copyright (C) Metaswitch Networks 2016
+# Copyright (C) Metaswitch Networks 2017
 # If license terms are provided to you in a COPYING file in the root directory
 # of the source code repository by which you are accessing this code, then
 # the license outlined in that COPYING file applies to your use.
@@ -28,54 +28,68 @@ log = logging.getLogger("cw-config.main")
 
 # Error messages
 MODIFIED_WHILE_EDITING = """Another user has modified the configuration since
-cw-download_shared_config was last run. Please download the latest version of
+`cw-config download` was last run. Please download the latest version of
 shared config, re-apply the changes and try again."""
 
 # Exceptions
-class ConfigAlreadyDownloaded(Exception):
+class ConfigDownloadFailed(Exception):
+    """Unable to download config."""
     pass
 
 
-class ConfigDownloadFailed(Exception):
+class ConfigAlreadyDownloaded(ConfigDownloadFailed):
+    """The config is already downloaded."""
     pass
 
 
 class ConfigUploadFailed(Exception):
+    """Unable to upload config."""
+    pass
+
+
+class NoConfigChanges(ConfigUploadFailed):
+    """There are no changes to the config to upload."""
     pass
 
 
 class ConfigValidationFailed(Exception):
-    pass
-
-
-class NoConfigChanges(Exception):
+    """Unable to validate config."""
     pass
 
 
 class EtcdConnectionFailed(Exception):
+    """Unable to connect to etcd."""
     pass
 
 
 class EtcdMasterConfigChanged(Exception):
+    """The etcd master config has changed since the config was downloaded."""
     pass
 
 
 class UserAbort(Exception):
+    """The user has triggered an abort."""
     pass
+
 
 # These exceptions are raised by the LocalStore class.
 class FileTooLarge(IOError):
     """Raised when a config file exceeds MAXIMUM_CONFIG_SIZE."""
     pass
 
+
 class InvalidRevision(IOError):
     """Raised when the revision file does not contain an integer."""
     pass
 
 
+class UnableToSaveFile(IOError):
+    pass
+
+
 class ConfigLoader(object):
-    """Wrapper around etcd.Client to include information about where to find
-    config files in the database."""
+    """Object for interfacing with etcd for uploading and downloading config.
+    """
     def __init__(self, etcd_client, etcd_key, site, local_store):
         # In addition to standard init, we store off the URL to query on the
         # etcd API that will get us our config.
@@ -110,6 +124,7 @@ class ConfigLoader(object):
                 "Couldn't save {} to file".format(config_type))
 
     def get_config_and_index(self, config_type):
+        """Extract the config file and index from etcd."""
         key_path = "/".join([self.prefix, config_type])
 
         try:
@@ -187,15 +202,14 @@ class LocalStore(object):
         the revision number. If there is an issue, it will throw an exception
         of type IOError (or subclass)."""
         config_path = self._get_config_file_path(config_type)
-        # Check that the file exists.
         revision_path = self._get_revision_file_path(config_type)
-        log.debug("Uploading config from '%s'", config_path)
-        log.debug("Using local revision number from '%s'", revision_path)
         if not os.path.exists(config_path):
             raise IOError("No shared config found, unable to upload")
         if not os.path.exists(revision_path):
             raise IOError("No shared config revision file found, unable to "
                           "upload. Please re-download the shared config again.")
+        log.debug("Uploading config from '%s'", config_path)
+        log.debug("Using local revision number from '%s'", revision_path)
 
         # Extract the information from the relevant files.
         local_config = read_from_file(config_path)
@@ -215,14 +229,19 @@ class LocalStore(object):
         config_file_path = self._get_config_file_path(config_type)
         index_file_path = self._get_revision_file_path(config_type)
         log.debug("Writing config to '%s'.", config_file_path)
-        with open(config_file_path, 'w') as config_file:
-            config_file.write(value)
-
+        try:
+            with open(config_file_path, 'w') as config_file:
+                config_file.write(value)
+        except IOError:
+            raise UnableToSaveFile("Unable to save config file on disk.")
         # We want to keep track of the index the config had in the etcd cluster
         # so we know if it is up to date.
         log.debug("Writing config to '%s'.", index_file_path)
-        with open(index_file_path, 'w') as index_file:
-            index_file.write(index)
+        try:
+            with open(index_file_path, 'w') as index_file:
+                index_file.write(index)
+        except IOError:
+            raise UnableToSaveFile("Unable to save revision file on disk.")
 
 
 def main(args):
