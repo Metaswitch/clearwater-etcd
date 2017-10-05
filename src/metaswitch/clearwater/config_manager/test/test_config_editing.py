@@ -17,21 +17,21 @@ import etcd.client
 import metaswitch.clearwater.config_manager.move_config as move_config
 
 class TestConfigLoader(unittest.TestCase):
-    # TODO: FIX
     @mock.patch("metaswitch.clearwater.config_manager.move_config.subprocess.check_call",
-               side_effect=subprocess.CalledProcessError)
+               side_effect=subprocess.CalledProcessError(101, "fake"))
     def test_check_connection_exception(self, mock_subprocess_check_call):
-        """Check that we raise an EtcdConnectionFailed exception if the etcd
-        process is not running."""
+        """Check that we raise a subprocess.CalledProcessError exception if the
+        etcd process is not running."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
         etcd_client.host = "host"
         etcd_client.port = "0000"
 
         mock_localstore = mock.MagicMock(spec=move_config.LocalStore)
-        config_loader = move_config.ConfigLoader(
-            etcd_client, "clearwater", "site", mock_localstore)
         with self.assertRaises(move_config.EtcdConnectionFailed):
-            config_loader._check_connection()
+            move_config.ConfigLoader(etcd_client,
+                                     "clearwater",
+                                     "site",
+                                     mock_localstore)
 
     @mock.patch(
         "metaswitch.clearwater.config_manager.move_config.ConfigLoader._check_connection")
