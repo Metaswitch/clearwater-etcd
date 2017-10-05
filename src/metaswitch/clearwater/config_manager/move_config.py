@@ -32,36 +32,45 @@ cw-download_shared_config was last run. Please download the latest version of
 shared config, re-apply the changes and try again."""
 
 # Exceptions
-class ConfigAlreadyDownloaded(Exception):
+class ConfigDownloadFailed(Exception):
+    """Unable to download config."""
     pass
 
 
-class ConfigDownloadFailed(Exception):
+class ConfigAlreadyDownloaded(ConfigDownloadFailed):
+    """The config is already downloaded."""
     pass
 
 
 class ConfigUploadFailed(Exception):
+    """Unable to upload config."""
+    pass
+
+
+class NoConfigChanges(ConfigUploadFailed):
+    """There are no changes to the config to upload."""
     pass
 
 
 class ConfigValidationFailed(Exception):
-    pass
-
-
-class NoConfigChanges(Exception):
+    """Unable to validate config."""
     pass
 
 
 class EtcdConnectionFailed(Exception):
+    """Unable to connect to etcd."""
     pass
 
 
 class EtcdMasterConfigChanged(Exception):
+    """The etcd master config has changed since the config was downloaded."""
     pass
 
 
 class UserAbort(Exception):
+    """The user has triggered an abort."""
     pass
+
 
 # These exceptions are raised by the LocalStore class.
 class FileTooLarge(IOError):
