@@ -16,6 +16,7 @@ import etcd.client
 
 import metaswitch.clearwater.config_manager.move_config as move_config
 
+
 class TestConfigLoader(unittest.TestCase):
     @mock.patch("metaswitch.clearwater.config_manager.move_config.subprocess.check_call",
                side_effect=subprocess.CalledProcessError(101, "fake"))
@@ -201,53 +202,131 @@ class TestConfigLoader(unittest.TestCase):
 
 
 class TestLocalStore(unittest.TestCase):
-    # TODO: adjust to LocalStore, test ensure_directory
-    @mock.patch(
-        "metaswitch.clearwater.config_manager.move_config.ConfigLoader._check_connection")
-    @mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name",
-                return_value="ubuntu")
     @mock.patch("metaswitch.clearwater.config_manager.move_config.os.path.exists",
                 return_value=True)
     @mock.patch("metaswitch.clearwater.config_manager.move_config.os.makedirs")
-    @mock.patch("metaswitch.clearwater.config_manager.move_config.open")
-    def test_folder_exists(self, mock_open, mock_mkdir, mock_exists, mock_user, mock_check_connection):
+    def test_folder_exists(self, mock_mkdir, mock_exists):
         """Make sure that we don't try to create a folder if one already
         exists."""
-        etcd_client = mock.MagicMock(spec=etcd.client.Client)
-
-        mock_localstore = mock.MagicMock(spec=move_config.LocalStore)
-
-        config_loader = move_config.ConfigLoader(
-            etcd_client, "clearwater", "site", mock_localstore)
-
-        config_loader.download_config("shared_config")
-
-        # Make sure we haven't tried to create a dir when one exists.
+        move_config.LocalStore()
         self.assertEqual(mock_mkdir.call_count, 0)
 
-    # TODO
-    def test_no_config_to_load(self):
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.LocalStore._get_config_file_path",
+        return_value="config_path")
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.LocalStore._ensure_config_dir")
+    def test_no_config_to_load(self, mock_ensure_dir, mock_config_path):
         """Test that we raise the right exception if there is no config file to
         load."""
-        pass
+        def no_config_exists(file_name):
+            if file_name == "config_path":
+                return False
+            else:
+                return True
 
-    # TODO
-    def test_no_index_to_load(self):
+        local_store = move_config.LocalStore()
+        with mock.patch("metaswitch.clearwater.config_manager.move_config.os.path.exists",
+                        no_config_exists):
+            with self.assertRaises(IOError):
+                local_store.load_config_and_revision("shared_config")
+
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.LocalStore._get_revision_file_path",
+        return_value="revision_path")
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.LocalStore._ensure_config_dir")
+    def test_no_index_to_load(self, mock_ensure_dir, mock_config_path):
         """Test that we raise the right exception if there is no index file to
         load."""
-        pass
+        def no_config_exists(file_name):
+            if file_name == "revision_path":
+                return False
+            else:
+                return True
 
-    # TODO
-    def test_load_non_integer(self):
+        local_store = move_config.LocalStore()
+        with mock.patch("metaswitch.clearwater.config_manager.move_config.os.path.exists",
+                        no_config_exists):
+            with self.assertRaises(IOError):
+                local_store.load_config_and_revision("shared_config")
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.os.path.exists",
+        return_value=True)
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.read_from_file",
+        return_value="not an integer")
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.LocalStore._ensure_config_dir")
+    def test_load_non_integer(self, mock_ensure_dir, mock_read_from_file, mock_path_exists):
         """Test that we raise the right exception if we try to load a
         non-integer"""
-        pass
+        local_store = move_config.LocalStore()
+        with self.assertRaises(move_config.InvalidRevision):
+            local_store.load_config_and_revision("shared_config")
 
-    # TODO
-    def test_unable_to_save_file(self):
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.LocalStore._get_revision_file_path",
+        return_value="revision_path")
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.LocalStore._get_config_file_path",
+        return_value="config_path")
+    def test_unable_to_save_config_file(self, mock_config_path, mock_revision_path):
         """Test that we raise the right exception if we are unable to save the
         config or index file."""
-        pass
+        local_store = move_config.LocalStore()
+
+        mock_config_file = mock.MagicMock()
+        mock_index_file = mock.MagicMock()
+        mock_config_file.__enter__.return_value = mock_config_file
+        mock_index_file.__enter__.return_value = mock_index_file
+
+        def fake_open(file, mode):
+            if file == "config_path":
+                raise IOError
+            if file == "revision_path":
+                return mock_index_file
+            else:
+                self.fail("Incorrect File Accessed: {}".format(file))
+
+        mock_open = mock.MagicMock(side_effect=fake_open)
+
+        with mock.patch("metaswitch.clearwater.config_manager.move_config.open", mock_open):
+            with self.assertRaises(move_config.UnableToSaveFile):
+                local_store.save_config_and_revision("shared_config", 42,
+                                                     "config_text")
+
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.LocalStore._get_revision_file_path",
+        return_value="revision_path")
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.LocalStore._get_config_file_path",
+        return_value="config_path")
+    def test_unable_to_save_revision_file(self, mock_config_path, mock_revision_path):
+        """Test that we raise the right exception if we are unable to save the
+        config or index file."""
+        local_store = move_config.LocalStore()
+
+        mock_config_file = mock.MagicMock()
+        mock_index_file = mock.MagicMock()
+        mock_config_file.__enter__.return_value = mock_config_file
+        mock_index_file.__enter__.return_value = mock_index_file
+
+        def fake_open(file, mode):
+            if file == "config_path":
+                return mock_config_file
+            if file == "revision_path":
+                raise IOError
+            else:
+                self.fail("Incorrect File Accessed: {}".format(file))
+
+        mock_open = mock.MagicMock(side_effect=fake_open)
+
+        with mock.patch("metaswitch.clearwater.config_manager.move_config.open", mock_open):
+            with self.assertRaises(move_config.UnableToSaveFile):
+                local_store.save_config_and_revision("shared_config", 42,
+                                                     "config_text")
+
 
 
 class TestYesNo(unittest.TestCase):
