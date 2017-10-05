@@ -450,6 +450,33 @@ def upload_verified_config(config_loader,
 
 def upload_config(autoconfirm, config_loader, config_type, force, local_store):
     """Read the relevant config from file and upload it to etcd."""
+    remote_revision = ready_for_upload_checks(autoconfirm, config_loader,
+                                              config_type, local_store)
+    # Upload the configuration to the etcd cluster. This will trigger the
+    # queue manager to schedule nodes to be restarted.
+    config_loader.write_config_to_etcd(config_type, remote_revision)
+
+    # Clearwater can be run with multiple etcd clusters. The apply_config_key
+    # variable stores the information about which etcd cluster the changes
+    # should be applied to.
+    apply_config_key = subprocess.check_output(
+        "/usr/share/clearwater/clearwater-queue-manager/scripts/get_apply_config_key")
+
+    # If the config changes are being forced through, the queue manager needs
+    # to be made aware so it knows to push on in the case of an error when
+    # applying the config to a node.
+    subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
+                     "force_true" if force else "force_false",
+                     apply_config_key])
+
+    # If we reach this point then config upload was successful. Cleaning up
+    # the config file we've uploaded makes sure we don't cause confusion later.
+    config_path = os.path.join(config_loader.download_dir, config_type)
+    os.remove(config_path)
+
+
+def ready_for_upload_checks(autoconfirm, config_loader, config_type,
+                            local_store):
     try:
         local_config, local_revision = local_store.load_config_and_revision(
             config_type)
@@ -483,27 +510,7 @@ def upload_config(autoconfirm, config_loader, config_type, force, local_store):
         if not confirmed:
             raise UserAbort
 
-    # Upload the configuration to the etcd cluster. This will trigger the
-    # queue manager to schedule nodes to be restarted.
-    config_loader.write_config_to_etcd(config_type, remote_revision)
-
-    # Clearwater can be run with multiple etcd clusters. The apply_config_key
-    # variable stores the information about which etcd cluster the changes
-    # should be applied to.
-    apply_config_key = subprocess.check_output(
-        "/usr/share/clearwater/clearwater-queue-manager/scripts/get_apply_config_key")
-
-    # If the config changes are being forced through, the queue manager needs
-    # to be made aware so it knows to push on in the case of an error when
-    # applying the config to a node.
-    subprocess.call(["/usr/share/clearwater/clearwater-queue-manager/scripts/modify_nodes_in_queue",
-                     "force_true" if force else "force_false",
-                     apply_config_key])
-
-    # If we reach this point then config upload was successful. Cleaning up
-    # the config file we've uploaded makes sure we don't cause confusion later.
-    config_path = os.path.join(config_loader.download_dir, config_type)
-    os.remove(config_path)
+    return remote_revision
 
 
 def confirm_yn(prompt, autoskip=False):

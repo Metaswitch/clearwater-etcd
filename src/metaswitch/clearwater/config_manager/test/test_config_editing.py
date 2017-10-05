@@ -644,8 +644,15 @@ class TestVerifiedUpload(unittest.TestCase):
     def test_only_upload_validated_config(self, mock_validate_config):
         """Check that we only call upload_config if validation passed."""
         mock_validate_config.side_effect = move_config.ConfigValidationFailed
-
         mock_upload_config = mock.MagicMock(spec=move_config.upload_config)
+
+        mock_configloader = mock.MagicMock(spec=move_config.ConfigLoader)
+        mock_localstore = mock.MagicMock(spec=move_config.LocalStore)
+
+        with self.assertRaises(move_config.ConfigValidationFailed):
+            move_config.upload_verified_config(mock_configloader,
+                               mock_localstore,
+                               "shared_config")
         assert not mock_upload_config.called
 
 
@@ -737,15 +744,66 @@ class TestValidation(unittest.TestCase):
             self.assertIn(script, args[0])
 
 
-class TestUpload(unittest.TestCase):
-    def test_different_revision_numbers(self):
+class TestReadyForUpload(unittest.TestCase):
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.LocalStore.load_config_and_revision",
+        side_effect=IOError)
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.LocalStore._ensure_config_dir")
+    def test_upload_unable_to_load(self, mock_ensure_dir, mock_load):
+        """Check that we raise a ConfigUploadFailed exception if we can't load
+        the config and index."""
+        config_loader = mock.MagicMock(spec=move_config.ConfigLoader)
+        local_store = move_config.LocalStore()
+
+        with self.assertRaises(move_config.ConfigUploadFailed):
+            move_config.ready_for_upload_checks(False, config_loader, "shared_config", local_store)
+
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.ConfigLoader._check_connection")
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.LocalStore.load_config_and_revision",
+        return_value=("local_config_text", 41))
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.ConfigLoader.get_config_and_index",
+        return_value=("remote_config_text", 42))
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.LocalStore._ensure_config_dir")
+    def test_different_revision_numbers(self, mock_ensure_dir, mock_get, mock_load, mock_check_connection):
         """Check that we raise an EtcdMasterConfigChanged exception if the
         local revision is not the same as the remote revision."""
-        pass
+        etcd_client = mock.MagicMock(spec=etcd.client.Client)
+        local_store = move_config.LocalStore()
 
-    def test_print_diff(self):
-        """Check that we always call print_diff_and_syslog."""
-        pass
+        config_loader = move_config.ConfigLoader(
+            etcd_client, "clearwater", "site", local_store)
+
+        with self.assertRaises(move_config.EtcdMasterConfigChanged):
+            move_config.ready_for_upload_checks(False, config_loader, "shared_config", local_store)
+
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.print_diff_and_syslog",
+        return_value=False)
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.ConfigLoader._check_connection")
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.LocalStore.load_config_and_revision",
+        return_value=("local_config_text", 41))
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.ConfigLoader.get_config_and_index",
+        return_value=("remote_config_text", 41))
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.LocalStore._ensure_config_dir")
+    def test_no_config_changes(self, mock_ensure_dir, mock_get, mock_load, mock_check_connection, mock_diff):
+        """Check that we raise NoConfigChanges if no changes were made."""
+        etcd_client = mock.MagicMock(spec=etcd.client.Client)
+        local_store = move_config.LocalStore()
+
+        config_loader = move_config.ConfigLoader(
+            etcd_client, "clearwater", "site", local_store)
+
+        with self.assertRaises(move_config.NoConfigChanges):
+            move_config.ready_for_upload_checks(False, config_loader, "shared_config", local_store)
 
     def test_ask_confirmation(self):
         """Check that we always ask for user confirmation if autoconfirm is
@@ -757,6 +815,8 @@ class TestUpload(unittest.TestCase):
         and the user denied to continue."""
         pass
 
+
+class TestUpload:
     def test_upload_config(self):
         """Check that we call config_loader.write_config_to_etcd."""
         pass
