@@ -573,7 +573,7 @@ class TestVerifiedUpload(unittest.TestCase):
 class TestValidation(unittest.TestCase):
 
     @mock.patch('os.access')
-    @mock.patch('subprocess.check_call')
+    @mock.patch('subprocess.check_output')
     @mock.patch('os.listdir')
     def test_scripts_run_ok(self, mock_listdir, mock_subprocess, mock_access):
         """Check that we run the validation scripts we find in the relevant
@@ -587,55 +587,73 @@ class TestValidation(unittest.TestCase):
         # Make sure we are looking in the right place.
         mock_listdir.assert_called_with(move_config.VALIDATION_SCRIPTS_FOLDER)
 
-        for call_info, script in zip(mock_subprocess.call_args_list,mock_listdir.return_value):
+        for call_info, script in zip(mock_subprocess.call_args_list,
+                                     mock_listdir.return_value):
             args = call_info[0]
             self.assertIn(script, args[0])
 
     @mock.patch('os.access')
-    @mock.patch('subprocess.check_call')
+    @mock.patch('subprocess.check_output')
     @mock.patch('os.listdir')
-    def test_only_run_accessible(self, mock_listdir, mock_subprocess, mock_access):
+    def test_only_run_accessible(self,
+                                 mock_listdir,
+                                 mock_subprocess,
+                                 mock_access):
         """Check that we only attempt to run accessible script."""
 
         mock_listdir.return_value = ['scriptA', 'scriptB']
         mock_access.return_value = [True, False]
 
         move_config.validate_config(False)
-        mock_listdir.assert_called_once_with(move_config.VALIDATION_SCRIPTS_FOLDER)
+        mock_listdir.assert_called_once_with(
+            move_config.VALIDATION_SCRIPTS_FOLDER)
 
-        for call_info, script in zip(mock_subprocess.call_args_list,mock_listdir.return_value):
+        for call_info, script in zip(mock_subprocess.call_args_list,
+                                     mock_listdir.return_value):
             args = call_info[0]
             self.assertIn(script, args[0])
 
     @mock.patch('os.access')
-    @mock.patch('subprocess.check_call')
+    @mock.patch('subprocess.check_output')
     @mock.patch('os.listdir')
-    def test_handle_validation_error(self, mock_listdir, mock_subprocess, mock_access):
+    def test_handle_validation_error(self,
+                                     mock_listdir,
+                                     mock_subprocess,
+                                     mock_access):
         """Test that we handle validation failure correctly."""
 
         mock_listdir.return_value = ['scriptA', 'scriptB']
         mock_access.return_value = [True, True]
-        mock_subprocess.side_effect = [None, subprocess.CalledProcessError("A", "B")]
+        mock_subprocess.side_effect = [None,
+                                       subprocess.CalledProcessError("A", "B")]
 
-        self.assertRaises(move_config.ConfigValidationFailed, move_config.validate_config, False)
+        self.assertRaises(move_config.ConfigValidationFailed,
+                          move_config.validate_config,
+                          False)
 
-        for call_info, script in zip(mock_subprocess.call_args_list,mock_listdir.return_value):
+        for call_info, script in zip(mock_subprocess.call_args_list,
+                                     mock_listdir.return_value):
             args = call_info[0]
             self.assertIn(script, args[0])
 
     @mock.patch('os.access')
-    @mock.patch('subprocess.check_call')
+    @mock.patch('subprocess.check_output')
     @mock.patch('os.listdir')
-    def test_ignore_validation_error(self, mock_listdir, mock_subprocess, mock_access):
+    def test_ignore_validation_error(self,
+                                     mock_listdir,
+                                     mock_subprocess,
+                                     mock_access):
         """Test that we handle validation failure correctly."""
 
         mock_listdir.return_value = ['scriptA', 'scriptB']
         mock_access.return_value = [True, True]
-        mock_subprocess.side_effect = [None, subprocess.CalledProcessError("A", "B")]
+        mock_subprocess.side_effect = [None,
+                                       subprocess.CalledProcessError("A", "B")]
 
         move_config.validate_config(True)
 
-        for call_info, script in zip(mock_subprocess.call_args_list,mock_listdir.return_value):
+        for call_info, script in zip(mock_subprocess.call_args_list,
+                                     mock_listdir.return_value):
             args = call_info[0]
             self.assertIn(script, args[0])
 
