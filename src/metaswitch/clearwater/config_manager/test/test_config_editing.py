@@ -17,122 +17,41 @@ import etcd.client
 import metaswitch.clearwater.config_manager.move_config as move_config
 
 
-class TestValidation(unittest.TestCase):
-
-    @mock.patch('os.access')
-    @mock.patch('subprocess.check_call')
-    @mock.patch('os.listdir')
-    def test_scripts_run_ok(self, mock_listdir, mock_subprocess, mock_access):
-        """Check that we run the validation scripts we find in the relevant
-        folder."""
-
-        mock_listdir.return_value = ['scriptA', 'scriptB']
-        mock_access.return_value = [True, True]
-
-        move_config.validate_config(False)
-
-        # Make sure we are looking in the right place.
-        mock_listdir.assert_called_with(move_config.VALIDATION_SCRIPTS_FOLDER)
-
-        for call_info, script in zip(mock_subprocess.call_args_list,mock_listdir.return_value):
-            args = call_info[0]
-            self.assertIn(script, args[0])
-
-    @mock.patch('os.access')
-    @mock.patch('subprocess.check_call')
-    @mock.patch('os.listdir')
-    def test_only_run_accessible(self, mock_listdir, mock_subprocess, mock_access):
-        """Check that we only attempt to run accessible script."""
-
-        mock_listdir.return_value = ['scriptA', 'scriptB']
-        mock_access.return_value = [True, False]
-
-        move_config.validate_config(False)
-        mock_listdir.assert_called_once_with(move_config.VALIDATION_SCRIPTS_FOLDER)
-
-        for call_info, script in zip(mock_subprocess.call_args_list,mock_listdir.return_value):
-            args = call_info[0]
-            self.assertIn(script, args[0])
-
-    @mock.patch('os.access')
-    @mock.patch('subprocess.check_call')
-    @mock.patch('os.listdir')
-    def test_handle_validation_error(self, mock_listdir, mock_subprocess, mock_access):
-        """Test that we handle validation failure correctly."""
-
-        mock_listdir.return_value = ['scriptA', 'scriptB']
-        mock_access.return_value = [True, True]
-        mock_subprocess.side_effect = [None, subprocess.CalledProcessError("A", "B")]
-
-        self.assertRaises(move_config.ConfigValidationFailed, move_config.validate_config, False)
-
-        for call_info, script in zip(mock_subprocess.call_args_list,mock_listdir.return_value):
-            args = call_info[0]
-            self.assertIn(script, args[0])
-
-    @mock.patch('os.access')
-    @mock.patch('subprocess.check_call')
-    @mock.patch('os.listdir')
-    def test_ignore_validation_error(self, mock_listdir, mock_subprocess, mock_access):
-        """Test that we handle validation failure correctly."""
-
-        mock_listdir.return_value = ['scriptA', 'scriptB']
-        mock_access.return_value = [True, True]
-        mock_subprocess.side_effect = [None, subprocess.CalledProcessError("A", "B")]
-
-        move_config.validate_config(True)
-
-        for call_info, script in zip(mock_subprocess.call_args_list,mock_listdir.return_value):
-            args = call_info[0]
-            self.assertIn(script, args[0])
-
-
 class TestConfigLoader(unittest.TestCase):
-    @mock.patch(
-        "metaswitch.clearwater.config_manager.move_config.ConfigLoader._check_connection")
-    @mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name",
-                return_value="ubuntu")
-    def test_uri(self, mock_user, mock_check_connection):
-        """Check we can get the correct URI for config in etcd."""
+    # TODO: FIX
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.subprocess.check_call",
+               side_effect=subprocess.CalledProcessError)
+    def test_check_connection_exception(self, mock_subprocess_check_call):
+        """Check that we raise an EtcdConnectionFailed exception if the etcd
+        process is not running."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
-        etcd_client.base_uri = "http://base_uri"
-        etcd_client.key_endpoint = "key_endpoint"
+        etcd_client.host = "host"
+        etcd_client.port = "0000"
 
         mock_localstore = mock.MagicMock(spec=move_config.LocalStore)
+        config_loader = move_config.ConfigLoader(
+            etcd_client, "clearwater", "site", mock_localstore)
+        with self.assertRaises(move_config.EtcdConnectionFailed):
+            config_loader._check_connection()
+
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.ConfigLoader._check_connection")
+    def test_download_unable_to_save(self, mock_check_connection):
+        """Check for the correct exception on failure.
+
+        Check that failing to save the config/index file causes the correct
+        exception to be raised."""
+        etcd_client = mock.MagicMock(spec=etcd.client.Client)
+        mock_localstore = mock.MagicMock(spec=move_config.LocalStore)
+        mock_localstore.save_config_and_revision.side_effect = IOError
 
         config_loader = move_config.ConfigLoader(
             etcd_client, "clearwater", "site", mock_localstore)
 
-        full_uri = config_loader.full_uri
-
-        self.assertEqual(
-            full_uri,
-            "http://base_uri/key_endpoint/clearwater/site/configuration")
-
-    @mock.patch(
-        "metaswitch.clearwater.config_manager.move_config.ConfigLoader._check_connection")
-    @mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name",
-                return_value="ubuntu")
-    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.path.exists",
-                return_value=True)
-    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.makedirs")
-    @mock.patch("metaswitch.clearwater.config_manager.move_config.open")
-    def test_folder_exists(self, mock_open, mock_mkdir, mock_exists, mock_user, mock_check_connection):
-        """Make sure that we tolerate an existing download folder."""
-        etcd_client = mock.MagicMock(spec=etcd.client.Client)
-
-        mock_localstore = mock.MagicMock(spec=move_config.LocalStore)
-
-        config_loader = move_config.ConfigLoader(
-            etcd_client, "clearwater", "site", mock_localstore)
-
-        config_loader.download_config("shared_config")
-
-        # Make sure we haven't tried to create a dir when one exists.
-        self.assertEqual(mock_mkdir.call_count, 0)
-
-    def test_folder_missing(self):
-        pass
+        self.assertRaises(
+            move_config.ConfigDownloadFailed,
+            config_loader.download_config,
+            "shared_config")
 
     @mock.patch(
         "metaswitch.clearwater.config_manager.move_config.ConfigLoader._check_connection")
@@ -178,26 +97,7 @@ class TestConfigLoader(unittest.TestCase):
 
     @mock.patch(
         "metaswitch.clearwater.config_manager.move_config.ConfigLoader._check_connection")
-    def test_download_unable_to_save(self, mock_check_connection):
-        """Check for the correct exception on failure.
-
-        Check that failing to save the config/index file causes the correct
-        exception to be raised."""
-        etcd_client = mock.MagicMock(spec=etcd.client.Client)
-        mock_localstore = mock.MagicMock(spec=move_config.LocalStore)
-        mock_localstore.save_config_and_revision.side_effect = IOError
-
-        config_loader = move_config.ConfigLoader(
-            etcd_client, "clearwater", "site", mock_localstore)
-
-        self.assertRaises(
-            move_config.ConfigDownloadFailed,
-            config_loader.download_config,
-            "shared_config")
-
-    @mock.patch(
-        "metaswitch.clearwater.config_manager.move_config.ConfigLoader._check_connection")
-    def test_upload_config(self, mock_check_connection):
+    def test_write_config_to_etcd(self, mock_check_connection):
         """Check that we can write config to etcd from file."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
         mock_localstore = mock.MagicMock(spec=move_config.LocalStore)
@@ -248,7 +148,7 @@ class TestConfigLoader(unittest.TestCase):
     @mock.patch("metaswitch.clearwater.config_manager.move_config.os.getenv",
                 return_value="/home/ubuntu")
     @mock.patch("metaswitch.clearwater.config_manager.move_config.os.makedirs")
-    def test_upload_no_connection(self, mock_mkdir, mock_getenv, mock_user, mock_check_connection):
+    def test_write_to_etcd_no_connection(self, mock_mkdir, mock_getenv, mock_user, mock_check_connection):
         """Check for the correct exception on failure.
 
         Check that failing to connect to etcd causes the correct
@@ -278,6 +178,108 @@ class TestConfigLoader(unittest.TestCase):
                 config_loader.write_config_to_etcd,
                 "shared_config",
                 1234)
+
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.ConfigLoader._check_connection")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name",
+                return_value="ubuntu")
+    def test_uri(self, mock_user, mock_check_connection):
+        """Check we can get the correct URI for config in etcd."""
+        etcd_client = mock.MagicMock(spec=etcd.client.Client)
+        etcd_client.base_uri = "http://base_uri"
+        etcd_client.key_endpoint = "key_endpoint"
+
+        mock_localstore = mock.MagicMock(spec=move_config.LocalStore)
+
+        config_loader = move_config.ConfigLoader(
+            etcd_client, "clearwater", "site", mock_localstore)
+
+        full_uri = config_loader.full_uri
+
+        self.assertEqual(
+            full_uri,
+            "http://base_uri/key_endpoint/clearwater/site/configuration")
+
+
+class TestLocalStore(unittest.TestCase):
+    # TODO: adjust to LocalStore, test ensure_directory
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.ConfigLoader._check_connection")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_name",
+                return_value="ubuntu")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.path.exists",
+                return_value=True)
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.makedirs")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.open")
+    def test_folder_exists(self, mock_open, mock_mkdir, mock_exists, mock_user, mock_check_connection):
+        """Make sure that we don't try to create a folder if one already
+        exists."""
+        etcd_client = mock.MagicMock(spec=etcd.client.Client)
+
+        mock_localstore = mock.MagicMock(spec=move_config.LocalStore)
+
+        config_loader = move_config.ConfigLoader(
+            etcd_client, "clearwater", "site", mock_localstore)
+
+        config_loader.download_config("shared_config")
+
+        # Make sure we haven't tried to create a dir when one exists.
+        self.assertEqual(mock_mkdir.call_count, 0)
+
+    # TODO
+    def test_no_config_to_load(self):
+        """Test that we raise the right exception if there is no config file to
+        load."""
+        pass
+
+    # TODO
+    def test_no_index_to_load(self):
+        """Test that we raise the right exception if there is no index file to
+        load."""
+        pass
+
+    # TODO
+    def test_load_non_integer(self):
+        """Test that we raise the right exception if we try to load a non-integer"""
+
+    # @mock.patch(
+    #     "metaswitch.clearwater.config_manager.move_config.LocalStore")
+    # @mock.patch(
+    #     "metaswitch.clearwater.config_manager.move_config.ConfigLoader")
+    def test_no_file_found(self):
+        pass
+    #     """Check that we raise an IOError if either the config file or the
+    #     index file doesn't exist."""
+    #
+    #     def fake_config_exists(file):
+    #         if file == "/tmp/shared_config":
+    #             return False
+    #         else:
+    #             return True
+    #
+    #     def fake_config_revision_exists(file):
+    #         if file == "/tmp/shared_config.index":
+    #             return False
+    #         else:
+    #             return True
+    #
+    #     mock_config_exists = mock.MagicMock(side_effect=fake_config_exists)
+    #     mock_config_revision_exists = mock.MagicMock(
+    #         side_effect=fake_config_revision_exists)
+    #
+    #     with mock.patch(
+    #             "metaswitch.clearwater.config_manager.move_config.os.path.exists",
+    #             mock_config_exists):
+    #         with self.assertRaises(IOError):
+    #             move_config.upload_verified_config(mock_configloader, "shared_config")
+    #
+    #     with mock.patch(
+    #             "metaswitch.clearwater.config_manager.move_config.os.path.exists",
+    #             mock_config_revision_exists):
+    #         with self.assertRaises(IOError):
+    #             move_config.upload_verified_config(mock_configloader, "shared_config")
+
+
 
 
 class TestYesNo(unittest.TestCase):
@@ -537,6 +539,76 @@ class TestVerifiedUpload(unittest.TestCase):
         assert not mock_upload_config.called
 
 
+class TestValidation(unittest.TestCase):
+
+    @mock.patch('os.access')
+    @mock.patch('subprocess.check_call')
+    @mock.patch('os.listdir')
+    def test_scripts_run_ok(self, mock_listdir, mock_subprocess, mock_access):
+        """Check that we run the validation scripts we find in the relevant
+        folder."""
+
+        mock_listdir.return_value = ['scriptA', 'scriptB']
+        mock_access.return_value = [True, True]
+
+        move_config.validate_config(False)
+
+        # Make sure we are looking in the right place.
+        mock_listdir.assert_called_with(move_config.VALIDATION_SCRIPTS_FOLDER)
+
+        for call_info, script in zip(mock_subprocess.call_args_list,mock_listdir.return_value):
+            args = call_info[0]
+            self.assertIn(script, args[0])
+
+    @mock.patch('os.access')
+    @mock.patch('subprocess.check_call')
+    @mock.patch('os.listdir')
+    def test_only_run_accessible(self, mock_listdir, mock_subprocess, mock_access):
+        """Check that we only attempt to run accessible script."""
+
+        mock_listdir.return_value = ['scriptA', 'scriptB']
+        mock_access.return_value = [True, False]
+
+        move_config.validate_config(False)
+        mock_listdir.assert_called_once_with(move_config.VALIDATION_SCRIPTS_FOLDER)
+
+        for call_info, script in zip(mock_subprocess.call_args_list,mock_listdir.return_value):
+            args = call_info[0]
+            self.assertIn(script, args[0])
+
+    @mock.patch('os.access')
+    @mock.patch('subprocess.check_call')
+    @mock.patch('os.listdir')
+    def test_handle_validation_error(self, mock_listdir, mock_subprocess, mock_access):
+        """Test that we handle validation failure correctly."""
+
+        mock_listdir.return_value = ['scriptA', 'scriptB']
+        mock_access.return_value = [True, True]
+        mock_subprocess.side_effect = [None, subprocess.CalledProcessError("A", "B")]
+
+        self.assertRaises(move_config.ConfigValidationFailed, move_config.validate_config, False)
+
+        for call_info, script in zip(mock_subprocess.call_args_list,mock_listdir.return_value):
+            args = call_info[0]
+            self.assertIn(script, args[0])
+
+    @mock.patch('os.access')
+    @mock.patch('subprocess.check_call')
+    @mock.patch('os.listdir')
+    def test_ignore_validation_error(self, mock_listdir, mock_subprocess, mock_access):
+        """Test that we handle validation failure correctly."""
+
+        mock_listdir.return_value = ['scriptA', 'scriptB']
+        mock_access.return_value = [True, True]
+        mock_subprocess.side_effect = [None, subprocess.CalledProcessError("A", "B")]
+
+        move_config.validate_config(True)
+
+        for call_info, script in zip(mock_subprocess.call_args_list,mock_listdir.return_value):
+            args = call_info[0]
+            self.assertIn(script, args[0])
+
+
 class TestUpload(unittest.TestCase):
     def test_different_revision_numbers(self):
         """Check that we raise an EtcdMasterConfigChanged exception if the
@@ -565,43 +637,6 @@ class TestUpload(unittest.TestCase):
         """Check that we remove the local config file on successful upload."""
         pass
 
-class TestLocalStore(unittest.TestCase):
-    # @mock.patch(
-    #     "metaswitch.clearwater.config_manager.move_config.LocalStore")
-    # @mock.patch(
-    #     "metaswitch.clearwater.config_manager.move_config.ConfigLoader")
-    def test_no_file_found(self):
-        pass
-    #     """Check that we raise an IOError if either the config file or the
-    #     index file doesn't exist."""
-    #
-    #     def fake_config_exists(file):
-    #         if file == "/tmp/shared_config":
-    #             return False
-    #         else:
-    #             return True
-    #
-    #     def fake_config_revision_exists(file):
-    #         if file == "/tmp/shared_config.index":
-    #             return False
-    #         else:
-    #             return True
-    #
-    #     mock_config_exists = mock.MagicMock(side_effect=fake_config_exists)
-    #     mock_config_revision_exists = mock.MagicMock(
-    #         side_effect=fake_config_revision_exists)
-    #
-    #     with mock.patch(
-    #             "metaswitch.clearwater.config_manager.move_config.os.path.exists",
-    #             mock_config_exists):
-    #         with self.assertRaises(IOError):
-    #             move_config.upload_verified_config(mock_configloader, "shared_config")
-    #
-    #     with mock.patch(
-    #             "metaswitch.clearwater.config_manager.move_config.os.path.exists",
-    #             mock_config_revision_exists):
-    #         with self.assertRaises(IOError):
-    #             move_config.upload_verified_config(mock_configloader, "shared_config")
 
 class TestDeleteOutdated(unittest.TestCase):
     @mock.patch("metaswitch.clearwater.config_manager.move_config.os.remove")
