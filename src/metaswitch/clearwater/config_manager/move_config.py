@@ -289,14 +289,7 @@ def parse_arguments():
     Parse the arguments passed to the script.
     :return:
     """
-    parser = argparse.ArgumentParser(prog='cw-config', usage=("%(prog)s [-h] "
-                                "[--autoconfirm] [--force] {upload|download} "
-                                     "{shared_config} \nCall %(prog)s then"
-                                     " pick an action either {upload or "
-                                     "download} \nFollowed by a config_type "
-                                     "currently only {shared_config} \n"
-                                     "All other inputs are taken from the "
-                                     "config of the node"))
+    parser = argparse.ArgumentParser(prog='cw-config')
     parser.add_argument("--autoconfirm", action="store_true",
                         help="Turns autoconfirm on [default=off]")
     parser.add_argument("--force", action="store_true",
@@ -317,7 +310,8 @@ def parse_arguments():
                                 Set to {} for ERROR,
                                 Set to {} for CRITICAL.
                                 All logs of this level or above will be
-                                written to file.""".format(logging.DEBUG,
+                                written to file.
+                                DEFAULT is INFO""".format(logging.DEBUG,
                                                            logging.INFO,
                                                            logging.WARNING,
                                                            logging.ERROR,
@@ -325,20 +319,15 @@ def parse_arguments():
 
     # Positional arguments
     parser.add_argument("action", type=str, choices=['upload', 'download'],
-                        help="The action to perform - upload or download",
+                        help="The action to perform - {upload | download}",
                         metavar='action')
     parser.add_argument("config_type", type=str, choices=['shared_config'],
-                        help=("The config type to use - shared_config - only "
-                        "one option currently"), metavar='config_type')
-    parser.add_argument("management_ip",
-                        help=("The IP address to contact etcd with - this is "
-                              "read from the config - do not enter"))
-    parser.add_argument("site", help=("always the site you are at, this is"
-                                      " read from config - do not enter"))
-    parser.add_argument("etcd_key",
-                        help=("this is currently always 'clearwater' but may"
-                              "be able to be 'CCF' as well in the future - "
-                              "this is read from config - do not enter"))
+                        help=("The config type to use - {shared_config} - only"
+                        " one option currently"), metavar='config_type')
+    parser.add_argument("--management_ip", required=True,
+                        help=argparse.SUPPRESS)
+    parser.add_argument("--site", required=True, help=argparse.SUPPRESS)
+    parser.add_argument("--etcd_key", required=True, help=argparse.SUPPRESS)
 
     return parser.parse_args()
 
