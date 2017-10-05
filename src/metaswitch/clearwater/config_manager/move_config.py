@@ -16,22 +16,24 @@ import syslog
 import sys
 import datetime
 import time
+from metaswitch.common.logging_config import configure_logging
 
 # Constants
 MAXIMUM_CONFIG_SIZE = 1000000
 VALIDATION_SCRIPTS_FOLDER = "/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/"
-LOG_PATH = "/var/log/clearwater-config-manager/allow/cw-config.log"
+LOG_DIR = "/var/log/clearwater-config-manager/allow"
+
+# Logging
+LOG_LEVELS = { "DEBUG": logging.DEBUG,
+               "INFO": logging.INFO,
+               "WARNING": logging.WARNING,
+               "ERROR": logging.ERROR}
+log = logging.getLogger("cw-config.main")
 
 # Error messages
 MODIFIED_WHILE_EDITING = """Another user has modified the configuration since
 cw-download_shared_config was last run. Please download the latest version of
 shared config, re-apply the changes and try again."""
-
-# Set up logging
-# TODO: Make sure that logging wraps properly - use python common's logging infra?
-logging.basicConfig(filename=LOG_PATH, level=logging.DEBUG)
-log = logging.getLogger(__name__)
-
 
 # Exceptions
 class ConfigAlreadyDownloaded(Exception):
@@ -95,7 +97,7 @@ class ConfigLoader(object):
         location = ":".join([self._etcd_client.host, self._etcd_client.port])
         try:
             subprocess.check_call(["nc", "-z", location])
-        except CalledProcessError:
+        except subprocess.CalledProcessError:
             raise EtcdConnectionFailed(
                 "etcd process not running at {}".format(location))
 
@@ -231,6 +233,11 @@ def main(args):
     """
     Main entry point for script.
     """
+    # Set up logging.
+    configure_logging(LOG_LEVELS[args.log_level],
+                      args.log_dir,
+                      "cw-config")
+
     # Regardless of passed arguments we want to delete outdated config to not
     # leave unused files on disk.
     delete_outdated_config_files()
@@ -298,6 +305,22 @@ def parse_arguments():
                         help="Turns autoconfirm on [default=off]")
     parser.add_argument("--force", action="store_true",
                         help="Turns forcing on [default=off]")
+
+    # Logging options
+    parser.add_argument("--log-dir",
+                        type=str,
+                        default=LOG_DIR,
+                        help=("Directory that logs will be written to. "
+                              "Defaults to {}".format(LOG_DIR)))
+
+    parser.add_argument("--log-level",
+                        type=str,
+                        choices=LOG_LEVELS.keys(),
+                        default="INFO",
+                        help=("Minimum log level to be written to file. "
+                              "Defaults to INFO."))
+
+    # Positional arguments
     parser.add_argument("action", type=str, choices=['upload', 'download'],
                         help="The action to perform - upload or download",
                         metavar='action')
@@ -373,7 +396,7 @@ def validate_config(force=False):
     # TODO: log a warning if we are skipping validation scripts.
     # TODO: Make sure that useful diags are printed by the
     #       validation scripts.
-    failed_validation = False
+    failed_scripts = []
     for script in scripts:
         try:
             subprocess.check_output(script)
@@ -384,20 +407,21 @@ def validate_config(force=False):
 
             # We want to run through all the validation scripts so we can tell
             # the user all of the problems with their config changes, so don't
-            # bail out of the loop at this point.
-            if not force:
-                # We should indicate that validation has failed so that once
-                # the scripts have all been run we can throw an exception.
-                failed_validation = True
+            # bail out of the loop at this point, just record which scripts
+            # have failed.
+            failed_scripts.append(script)
 
     # When we write the bash injection script, it should either be invoked here
     # or be placed in the VALIDATION_SCRIPTS_FOLDER directory to be executed
     # in the above loop.
 
-    if failed_validation:
+    # In the forcing case, we proceed even if there have been failures, but
+    # otherwise we want to bail out at this point.
+    if not force and failed_scripts:
         raise ConfigValidationFailed(
-            "Validation failed while executing script {}".format(
-                os.path.basename(script)))
+            "Validation failed while executing scripts:\n{}".format(
+                "\n".join(os.path.basename(script)
+                          for script in failed_scripts)))
 
 
 def upload_verified_config(config_loader,
@@ -577,23 +601,23 @@ def print_diff_and_syslog(config_1, config_2):
         return False
 
 
-    def read_from_file(file_path):
-        """Run some basic checks against a file to check it hasn't been
-        corrupted. If it hasn't, return a string containing its contents.
-        Otherwise, throw a ConfigInvalid exception."""
-        with open(file_path, "r") as open_file:
-            contents = open_file.read(MAXIMUM_CONFIG_SIZE)
+def read_from_file(file_path):
+    """Run some basic checks against a file to check it hasn't been
+    corrupted. If it hasn't, return a string containing its contents.
+    Otherwise, throw a ConfigInvalid exception."""
+    with open(file_path, "r") as open_file:
+        contents = open_file.read(MAXIMUM_CONFIG_SIZE)
 
-            if open_file.read(1) != '':
-                # The file is so big that it cannot be read in one go. It's
-                # probably corrupted.
-                log.error(
-                    "%s file exceeds %s bytes. It is probably corrupted.",
-                    file_path,
-                    MAXIMUM_CONFIG_SIZE)
-                raise FileTooLarge
+        if open_file.read(1) != '':
+            # The file is so big that it cannot be read in one go. It's
+            # probably corrupted.
+            log.error(
+                "%s file exceeds %s bytes. It is probably corrupted.",
+                file_path,
+                MAXIMUM_CONFIG_SIZE)
+            raise FileTooLarge
 
-        return contents
+    return contents
 
 
 # Call main function if script is executed stand-alone
