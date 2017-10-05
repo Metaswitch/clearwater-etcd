@@ -149,16 +149,21 @@ class TestConfigLoader(unittest.TestCase):
     @mock.patch("metaswitch.clearwater.config_manager.move_config.os.getenv",
                 return_value="/home/ubuntu")
     @mock.patch("metaswitch.clearwater.config_manager.move_config.os.makedirs")
-    def test_write_to_etcd_no_connection(self, mock_mkdir, mock_getenv, mock_user, mock_check_connection):
+    def test_write_to_etcd_failure(self,
+                                   mock_mkdir,
+                                   mock_getenv,
+                                   mock_user,
+                                   mock_check_connection):
         """Check for the correct exception on failure.
 
         Check that failing to connect to etcd causes the correct
         exception to be raised."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
-        etcd_client.write.side_effect = etcd.EtcdConnectionFailed
+        etcd_client.write.side_effect = [etcd.EtcdConnectionFailed,
+                                         etcd.EtcdCompareFailed]
 
         mock_config_file = mock.MagicMock()
-        mock_config_file.read.return_value = "Fake Config"
+        mock_config_file.read.return_value = "FakeConfig"
 
         def fake_open(file, mode):
             if file == "/home/ubuntu/clearwater-config-manager/staging/ubuntu/shared_config":
@@ -168,12 +173,25 @@ class TestConfigLoader(unittest.TestCase):
 
         mock_open = mock.MagicMock(side_effect=fake_open)
         mock_localstore = mock.MagicMock(spec=move_config.LocalStore)
-        mock_localstore.load_config_and_revision.return_value = ("Local Config", 100)
+        mock_localstore.load_config_and_revision.return_value = ("LocalConfig",
+                                                                 100)
 
-        config_loader = move_config.ConfigLoader(
-            etcd_client, "clearwater", "site", mock_localstore)
+        config_loader = move_config.ConfigLoader(etcd_client,
+                                                 "clearwater",
+                                                 "site",
+                                                 mock_localstore)
 
-        with mock.patch("metaswitch.clearwater.config_manager.move_config.open", mock_open):
+        with mock.patch(
+            "metaswitch.clearwater.config_manager.move_config.open",
+            mock_open):
+            # First time, we trigger etcd.EtcdConnectionFailed
+            self.assertRaises(
+                move_config.ConfigUploadFailed,
+                config_loader.write_config_to_etcd,
+                "shared_config",
+                1234)
+
+            # Second time, we trigger etcd.EtcdCompareFailed
             self.assertRaises(
                 move_config.ConfigUploadFailed,
                 config_loader.write_config_to_etcd,
