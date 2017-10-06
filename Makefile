@@ -27,24 +27,12 @@ include build-infra/python.mk
 fvtest: fvtest_setup.py env ${ENV_DIR}/.test-requirements
 	PYTHONPATH=src:common ${PYTHON} fvtest_setup.py test -v
 
-.PHONY: test_cluster_mgr
-test_cluster_mgr: cluster_mgr_setup.py env ${ENV_DIR}/.test-requirements
-	PYTHONPATH=src:common ${PYTHON} cluster_mgr_setup.py test -v
-
-.PHONY: test_queue_mgr
-test_queue_mgr: queue_mgr_setup.py env ${ENV_DIR}/.test-requirements
-	PYTHONPATH=src:common ${PYTHON} queue_mgr_setup.py test -v
-
-.PHONY: test_config_mgr
-test_config_mgr: config_mgr_setup.py env ${ENV_DIR}/.test-requirements
-	PYTHONPATH=src:common ${PYTHON} config_mgr_setup.py test -v
-
 .PHONY: test_plugins
 test_plugins: plugins_setup.py env ${ENV_DIR}/.test-requirements
 	PYTHONPATH=src:common ${PYTHON} plugins_setup.py test -v
 
 .PHONY: run_test
-run_test: test_cluster_mgr test_queue_mgr test_config_mgr test_plugins
+run_test: test_plugins
 
 # Macro to define the various etcd targets
 #
@@ -72,26 +60,27 @@ ${ENV_DIR}/.$1_build_common_wheel: common/requirements.txt $(shell find common/m
 # Add dependency to the install-wheels to ensure we also install the python-common wheel
 ${ENV_DIR}/.$1-install-wheels: ${ENV_DIR}/.$1_build_common_wheel
 
+# Test definition
+.PHONY: test_$1
+test_$1: $1_setup.py env ${ENV_DIR}/.test-requirements
+	PYTHONPATH=src:common ${PYTHON} $1_setup.py test -v
+
+# Add the test target to run_test
+run_test: test_$1
+
+# Add the alarm constants target
+src/metaswitch/clearwater/$$(subst mgr,manager,$1)/alarm_constants.py: clearwater-$$(subst _,-,$$(subst mgr,manager,$1)).root/usr/share/clearwater/infrastructure/alarms/clearwater_$$(subst mgr,manager,$1)_alarms.json common/metaswitch/common/alarms_writer.py common/metaswitch/common/alarms_parser.py common/metaswitch/common/alarm_severities.py
+	python common/metaswitch/common/alarms_writer.py --json-file="clearwater-$$(subst _,-,$$(subst mgr,manager,$1)).root/usr/share/clearwater/infrastructure/alarms/clearwater_$$(subst mgr,manager,$1)_alarms.json" --constants-file=$$@
+
+# Add a dependency to the build-wheels targets for the alarm constants
+${ENV_DIR}/.$1-build-wheels: src/metaswitch/clearwater/$$(subst mgr,manager,$1)/alarm_constants.py
+
 endef
 
 # Use the macro to define the queue-, config- and cluster-manager components
 $(eval $(call etcd_component,queue_mgr))
 $(eval $(call etcd_component,config_mgr))
 $(eval $(call etcd_component,cluster_mgr))
-
-# Add a dependency to the build-wheels targets for the alarm constants
-${ENV_DIR}/.queue_mgr-build-wheels: src/metaswitch/clearwater/queue_manager/alarm_constants.py
-${ENV_DIR}/.config_mgr-build-wheels: src/metaswitch/clearwater/config_manager/alarm_constants.py
-${ENV_DIR}/.cluster_mgr-build-wheels: src/metaswitch/clearwater/cluster_manager/alarm_constants.py
-
-src/metaswitch/clearwater/queue_manager/alarm_constants.py: clearwater-queue-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_queue_manager_alarms.json common/metaswitch/common/alarms_writer.py common/metaswitch/common/alarms_parser.py common/metaswitch/common/alarm_severities.py
-	python common/metaswitch/common/alarms_writer.py --json-file="clearwater-queue-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_queue_manager_alarms.json" --constants-file=$@
-
-src/metaswitch/clearwater/config_manager/alarm_constants.py: clearwater-config-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_config_manager_alarms.json common/metaswitch/common/alarms_writer.py common/metaswitch/common/alarms_parser.py common/metaswitch/common/alarm_severities.py
-	python common/metaswitch/common/alarms_writer.py --json-file="clearwater-config-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_config_manager_alarms.json" --constants-file=$@
-
-src/metaswitch/clearwater/cluster_manager/alarm_constants.py: clearwater-cluster-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_cluster_manager_alarms.json common/metaswitch/common/alarms_writer.py common/metaswitch/common/alarms_parser.py common/metaswitch/common/alarm_severities.py
-	python common/metaswitch/common/alarms_writer.py --json-file="clearwater-cluster-manager.root/usr/share/clearwater/infrastructure/alarms/clearwater_cluster_manager_alarms.json" --constants-file=$@
 
 .PHONY: deb
 deb: env deb-only
