@@ -245,17 +245,21 @@ class TestLocalStore(unittest.TestCase):
     @mock.patch(
         "metaswitch.clearwater.config_manager.move_config.get_user_download_dir",
         return_value="/some/directory")
-    def test_config_load(self, mock_ensure_dir, mock_config_path):
+    @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.read_from_file")
+    def test_config_load(self,
+                         mock_ensure_dir,
+                         mock_config_path,
+                         mock_file_read):
         """Test that we can load from file successfully."""
-
         local_store = move_config.LocalStore()
+
         # First return example config, then return example revision number.
-        with mock.patch(
-            "metaswitch.clearwater.config_manager.move_config.read_from_file",
-            ["fake_key=fake_value", 12345]):
-            # We don't expect there to be any asserts.
-            config, revision = local_store.load_config_and_revision(
-                "shared_config")
+        mock_file_read.side_effect = ["fake_key=fake_value", 12345]
+
+        # We don't expect there to be any asserts.
+        config, revision = local_store.load_config_and_revision(
+            "shared_config")
 
     @mock.patch(
         "metaswitch.clearwater.config_manager.move_config.LocalStore._get_config_file_path",
