@@ -215,7 +215,7 @@ class LocalStore(object):
         return os.path.join(self.download_dir, config_type)
 
     def _get_revision_file_path(self, config_type):
-        return self._get_config_file_path(config_type) + ".index"
+        return "." + self._get_config_file_path(config_type) + ".index"
 
     def config_location(self, config_type):
         """Returns the location of the local copy of the config type."""
@@ -273,6 +273,14 @@ class LocalStore(object):
         except IOError:
             log.error("Failed to write revision number to file")
             raise UnableToSaveFile("Unable to save revision file on disk.")
+
+    def config_cleanup(self, config_type):
+        """This function cleans up the config from the local store after a
+        successful upload to avoid confusion"""
+        config_path = self._get_config_file_path(config_type)
+        revision_path = self._get_revision_file_path(config_type)
+        os.remove(config_path)
+        os.remove(revision_path)
 
 
 def main(args):
@@ -512,8 +520,7 @@ def upload_config(autoconfirm, config_loader, config_type, force, local_store):
 
     # If we reach this point then config upload was successful. Cleaning up
     # the config file we've uploaded makes sure we don't cause confusion later.
-    config_path = os.path.join(config_loader.download_dir, config_type)
-    os.remove(config_path)
+    local_store.config_cleanup()
 
     print "{} successfully uploaded".format(shared_config)
 
