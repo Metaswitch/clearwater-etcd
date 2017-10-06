@@ -477,7 +477,7 @@ def validate_config(force=False):
                 "\n".join(os.path.basename(script)
                           for script in failed_scripts)))
 
-    print "{} successfully verified".format(shared_config)
+    print "Config successfully verified"
 
 
 def upload_config(autoconfirm, config_loader, config_type, force, local_store):
