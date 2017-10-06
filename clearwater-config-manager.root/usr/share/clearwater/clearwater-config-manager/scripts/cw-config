@@ -21,4 +21,7 @@ then
   . /usr/share/clearwater/utils/check-root-permissions 2
 fi
 
+# Make sure that all files we write are group writeable
+umask 0002
+
 /usr/share/clearwater/clearwater-config-manager/env/bin/python -m metaswitch.clearwater.config_manager.move_config "$@" --management_ip=${management_local_ip:-$local_ip} --site=${local_site_name:-"site1"} --etcd_key=${etcd_key:-"clearwater"}

@@ -40,14 +40,18 @@ case "$1" in
             useradd --system -M -d /nonexistent -s /bin/false $NAME
         fi
 
+        # Add the logusers group which is used to ensure that all users have
+        # permission to access log files.
+        groupadd -f logusers
+
         # Ensure the log directory exists and is owned by the user.
         mkdir -p -m 755 /var/log/$NAME
         chown -R $NAME:root /var/log/$NAME
 
-        # make the log directory writeable by all users
-        # and anything in that directory
-        mkdir -p /var/log/$NAME/allow
-        chmod 777 /var/log/$NAME/allow
+        # make the log directory writeable by everyone in the group
+        mkdir -p  /var/log/$NAME/allow
+        chmod g+s /var/log/$NAME/allow
+        chgrp loggroup /var/log/$NAME/allow
 
         # Set up the virtual env
         rm -rf $BASE_DIR/env
