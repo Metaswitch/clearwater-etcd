@@ -110,7 +110,13 @@ class ConfigLoader(object):
         location = ":".join([self._etcd_client.host,
                              str(self._etcd_client.port)])
         try:
-            subprocess.check_call(["nc", "-z", location])
+            # `nc` is a program that checks whether the specified IP address/
+            # port combination is open. When run with the `-z` argument, it
+            # does this passively (eg. without actually sending any data).
+            subprocess.check_call(["nc",
+                                   "-z",
+                                   self._etcd_client.host,
+                                   str(self._etcd_client.port)])
         except subprocess.CalledProcessError:
             log.error("Unable to connect to etcd database at %s", location)
             raise EtcdConnectionFailed(
