@@ -107,7 +107,8 @@ class ConfigLoader(object):
     def _check_connection(self):
         """Performs a sanity check to make sure that the etcd process is
         actually running."""
-        location = ":".join([self._etcd_client.host, self._etcd_client.port])
+        location = ":".join([self._etcd_client.host,
+                             str(self._etcd_client.port)])
         try:
             subprocess.check_call(["nc", "-z", location])
         except subprocess.CalledProcessError:
