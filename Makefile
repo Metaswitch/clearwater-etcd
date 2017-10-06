@@ -14,7 +14,7 @@ X86_64_ONLY=0
 
 TEST_SETUP_PY = cluster_mgr_setup.py queue_mgr_setup.py config_mgr_setup.py plugins_setup.py
 TEST_PYTHON_PATH = src:common
-TEST_REQUIREMENTS = common/requirements-test.txt fv-requirements.txt
+TEST_REQUIREMENTS = common/requirements-test.txt fv-requirements.txt requirements-test.txt
 CLEAN_SRC_DIR = src/
 FLAKE8_INCLUDE_DIR = src/
 FLAKE8_EXCLUDE_DIR = src/clearwater_etcd_plugins/
