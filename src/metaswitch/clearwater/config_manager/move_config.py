@@ -669,6 +669,7 @@ def print_diff_and_syslog(config_1, config_2):
         syslog_str = syslog_str.encode("utf-8")
 
         # Print changes to console so the user can do a sanity check
+        log.info(output_str)
         print(output_str)
 
         # Log the changes
