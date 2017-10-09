@@ -29,7 +29,7 @@ log = logging.getLogger("cw-config.main")
 # Error messages
 MODIFIED_WHILE_EDITING = """Another user has modified the configuration since
 `cw-config download` was last run. Please download the latest version of
-shared config, re-apply the changes and try again."""
+{}, re-apply the changes and try again."""
 
 NO_CHANGES_TO_CONFIG = """There are no differences between the local and remote
 configuration. No upload will be performed."""
@@ -184,7 +184,8 @@ class ConfigLoader(object):
             raise ConfigUploadFailed(UNABLE_TO_UPLOAD.format(config_type))
         except etcd.EtcdCompareFailed:
             log.error("Master revision doesn't match local revision")
-            raise ConfigUploadFailed(MODIFIED_WHILE_EDITING)
+            raise ConfigUploadFailed(
+                MODIFIED_WHILE_EDITING.format(config_type))
 
 
     # We need this property for the step in write_config_to_etcd where we log
@@ -215,11 +216,16 @@ class LocalStore(object):
         return os.path.join(self.download_dir, config_type)
 
     def _get_revision_file_path(self, config_type):
-        return "." + self._get_config_file_path(config_type) + ".index"
+        revision_file_name = "." + config_type + ".index"
+        return self._get_config_file_path(revision_file_name)
 
+    # This function is only really used during exception handling. It would be
+    # better if we instead passed through the file location as part of the
+    # exception (then we could get rid of the duplication here).
     def config_location(self, config_type):
-        """Returns the location of the local copy of the config type."""
-        return os.path.join(self.download_dir, config_type)
+        """Public method for reporting the location of the config file of a
+        given type."""
+        return self._get_config_file_path(config_type)
 
     def load_config_and_revision(self, config_type):
         """Returns a tuple containing the config extracted from file and
@@ -262,7 +268,9 @@ class LocalStore(object):
             with open(config_file_path, 'w') as config_file:
                 config_file.write(value)
         except IOError:
-            log.error("Failed to write %s to file", config_type)
+            log.error("Failed to write %s to %s",
+                      config_type,
+                      config_file_path)
             raise UnableToSaveFile("Unable to save config file on disk.")
         # We want to keep track of the index the config had in the etcd cluster
         # so we know if it is up to date.
@@ -271,7 +279,7 @@ class LocalStore(object):
             with open(index_file_path, 'w') as index_file:
                 index_file.write(index)
         except IOError:
-            log.error("Failed to write revision number to file")
+            log.error("Failed to write revision number to %s", index_file_path)
             raise UnableToSaveFile("Unable to save revision file on disk.")
 
     def config_cleanup(self, config_type):
@@ -557,7 +565,7 @@ def ready_for_upload_checks(autoconfirm,
     # config to the etcd cluster in the meantime.
     if local_revision != remote_revision:
         log.error("Master has different revision to local %s", config_type)
-        raise ConfigUploadFailed(MODIFIED_WHILE_EDITING)
+        raise ConfigUploadFailed(MODIFIED_WHILE_EDITING.format(config_type))
 
     # Provide a diff of the changes and log to syslog
     if not print_diff_and_syslog(remote_config, local_config):
