@@ -529,7 +529,7 @@ def upload_config(autoconfirm, config_loader, config_type, force, local_store):
 
     # If we reach this point then config upload was successful. Cleaning up
     # the config file we've uploaded makes sure we don't cause confusion later.
-    local_store.config_cleanup()
+    local_store.config_cleanup(config_type)
 
     print "{} successfully uploaded".format(shared_config)
 
