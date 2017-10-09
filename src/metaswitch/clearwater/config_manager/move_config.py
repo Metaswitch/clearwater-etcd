@@ -277,6 +277,7 @@ class LocalStore(object):
     def config_cleanup(self, config_type):
         """This function cleans up the config from the local store after a
         successful upload to avoid confusion"""
+        log.debug("Cleaning up old config")
         config_path = self._get_config_file_path(config_type)
         revision_path = self._get_revision_file_path(config_type)
         os.remove(config_path)
