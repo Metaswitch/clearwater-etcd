@@ -46,9 +46,8 @@ case "$1" in
 
         # make the log directory writeable by all users
         # and anything in that directory
-        mkdir -p  /var/log/$NAME/allow
-        chmod -R 777 /var/log/$NAME/allow
-
+        mkdir -p /var/log/$NAME/allow
+        chmod 777 /var/log/$NAME/allow
 
         # Set up the virtual env
         rm -rf $BASE_DIR/env
