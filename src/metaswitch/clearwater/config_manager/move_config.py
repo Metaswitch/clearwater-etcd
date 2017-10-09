@@ -531,7 +531,7 @@ def upload_config(autoconfirm, config_loader, config_type, force, local_store):
     # the config file we've uploaded makes sure we don't cause confusion later.
     local_store.config_cleanup(config_type)
 
-    print "{} successfully uploaded".format(shared_config)
+    print "{} successfully uploaded".format(config_type)
 
 
 def ready_for_upload_checks(autoconfirm,
