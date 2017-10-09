@@ -11,6 +11,8 @@ from StringIO import StringIO
 import subprocess
 import unittest
 import logging
+import os.path
+import sys
 
 import etcd.client
 
@@ -654,20 +656,33 @@ class TestDownload(unittest.TestCase):
 
 class TestVerifiedUpload(unittest.TestCase):
     @mock.patch(
+        "metaswitch.clearwater.config_manager.move_config.upload_config")
+    @mock.patch(
         "metaswitch.clearwater.config_manager.move_config.validate_config")
-    def test_only_upload_validated_config(self, mock_validate_config):
+    def test_only_upload_validated_config(self,
+                                          mock_validate_config,
+                                          mock_upload_config):
         """Check that we only call upload_config if validation passed."""
-        mock_validate_config.side_effect = move_config.ConfigValidationFailed
-        mock_upload_config = mock.MagicMock(spec=move_config.upload_config)
-
         mock_configloader = mock.MagicMock(spec=move_config.ConfigLoader)
         mock_localstore = mock.MagicMock(spec=move_config.LocalStore)
 
+        # Test that if we fail to validate the config, it does not get
+        # uploaded.
+        mock_validate_config.side_effect = move_config.ConfigValidationFailed
         with self.assertRaises(move_config.ConfigValidationFailed):
             move_config.upload_verified_config(mock_configloader,
-                               mock_localstore,
-                               "shared_config")
+                                               mock_localstore,
+                                               "shared_config")
         assert not mock_upload_config.called
+
+        # Test that if we successfully validate the config, it does get
+        # uploaded.
+        mock_validate_config.side_effect = None
+        move_config.upload_verified_config(mock_configloader,
+                                           mock_localstore,
+                                           "shared_config")
+
+        assert mock_upload_config.called
 
 
 class TestValidation(unittest.TestCase):
@@ -837,14 +852,44 @@ class TestReadyForUpload(unittest.TestCase):
         pass
 
 
-class TestUpload:
-    def test_upload_config(self):
+@mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_download_dir")
+@mock.patch("metaswitch.clearwater.config_manager.move_config.ready_for_upload_checks")
+@mock.patch("metaswitch.clearwater.config_manager.move_config.subprocess")
+@mock.patch("metaswitch.clearwater.config_manager.move_config.LocalStore._ensure_config_dir")
+@mock.patch("metaswitch.clearwater.config_manager.move_config.ConfigLoader", autospec=True)
+class TestUpload(unittest.TestCase):
+    def test_upload_config(self,
+                           mock_config_loader,
+                           mock_ensure,
+                           mock_subprocess,
+                           mock_checks,
+                           mock_download_dir):
         """Check that we call config_loader.write_config_to_etcd."""
         pass
 
-    def test_remove_file_on_success(self):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.os.remove")
+    def test_remove_file_on_success(self,
+                                    mock_remove,
+                                    mock_config_loader,
+                                    mock_ensure,
+                                    mock_subprocess,
+                                    mock_checks,
+                                    mock_download_dir):
         """Check that we remove the local config file on successful upload."""
-        pass
+        download_dir = "download/dir"
+        mock_download_dir.return_value = download_dir
+        local_store = move_config.LocalStore()
+        move_config.upload_config(False,
+                                  mock_config_loader,
+                                  "shared_config",
+                                  False,
+                                  local_store)
+
+        remove_calls = [mock.call(os.path.join(download_dir,
+                                               "shared_config")),
+                        mock.call(os.path.join(download_dir,
+                                               ".shared_config.index"))]
+        mock_remove.assert_has_calls(remove_calls)
 
 
 class TestDeleteOutdated(unittest.TestCase):
@@ -908,6 +953,92 @@ class TestBaseDownloadDir(unittest.TestCase):
         mock_getenv.return_value = None
         with self.assertRaises(RuntimeError):
             answer = move_config.get_base_download_dir()
+
+class TestArguments(unittest.TestCase):
+    def test_all_arguments(self):
+        """Test that every argument is set correctly."""
+        sys.argv = ["move_config.py",
+                    "--autoconfirm",
+                    "--force",
+                    "--log-dir", "some/dir",
+                    "--log-level", "50",
+                    "upload",
+                    "shared_config",
+                    "--management_ip", "1.2.3.4",
+                    "--site", "siteX",
+                    "--etcd_key", "lockpick"]
+
+        args = move_config.parse_arguments()
+
+        assert args.force
+        assert args.autoconfirm
+        assert args.log_dir == "some/dir"
+        assert args.log_level == 50
+        assert args.action == "upload"
+        assert args.config_type == "shared_config"
+        assert args.management_ip == "1.2.3.4"
+        assert args.site == "siteX"
+        assert args.etcd_key == "lockpick"
+
+    def test_mandatory_args_only(self):
+        """Check that we correctly parse only the mandatory arguments."""
+        sys.argv = ["move_config.py",
+                    "download",
+                    "shared_config",
+                    "--management_ip", "1.2.3.4",
+                    "--site", "siteX",
+                    "--etcd_key", "lockpick"]
+
+        args = move_config.parse_arguments()
+
+        assert not args.force
+        assert not args.autoconfirm
+        assert args.log_level == logging.INFO
+        assert args.action == "download"
+        assert args.config_type == "shared_config"
+        assert args.management_ip == "1.2.3.4"
+        assert args.site == "siteX"
+        assert args.etcd_key == "lockpick"
+
+    def test_missing_args(self):
+        """Check that when the arguments are invalid we error out."""
+        sys.argv = ["move_config.py",
+                    "reload",
+                    "shard_config"]
+
+        # There's a config error, so we should fail.
+        with self.assertRaises(SystemExit):
+            args = move_config.parse_arguments()
+
+
+class TestReadFromFile(unittest.TestCase):
+    def test_valid_read(self):
+        """Tests that a normal file is read properly."""
+        mock_file = mock.mock_open(read_data="some_data")
+
+        with mock.patch('metaswitch.clearwater.config_manager.move_config.open', mock_file, create=True):
+            config = move_config.read_from_file('example_file')
+
+        assert config == "some_data"
+
+#    def test_file_too_big(self):
+#        """Test that if the file exceeds the maximum size an error is thrown.
+#        """
+#        mock_file = mock.mock_open(
+#            read_data="X" * (move_config.MAXIMUM_CONFIG_SIZE + 1))
+#
+#        with mock.patch('metaswitch.clearwater.config_manager.move_config.open', mock_file, create=True):
+#            with self.assertRaises(move_config.FileTooLarge):
+#                config = move_config.read_from_file('example_file')
+
+    def test_file_does_not_exist(self):
+        """Test we throw an IOError if the file doesn't exist."""
+        mock_file = mock.mock_open()
+        mock_file.side_effect = IOError
+
+        with mock.patch('metaswitch.clearwater.config_manager.move_config.open', mock_file, create=True):
+            with self.assertRaises(IOError):
+                config = move_config.read_from_file('example_file')
 
 
 class TestDiffAndSyslog(unittest.TestCase):
