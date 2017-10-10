@@ -729,6 +729,6 @@ def read_from_file(file_path):
 
 
 # Call main function if script is executed stand-alone
-if __name__ == "__main__":
-    arguments = parse_arguments()
-    main(arguments)
+if __name__ == "__main__": # pragma: no cover
+    arguments = parse_arguments() # pragma: no cover
+    main(arguments) # pragma: no cover
