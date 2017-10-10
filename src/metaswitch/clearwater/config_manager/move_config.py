@@ -21,12 +21,13 @@ from metaswitch.common.logging_config import configure_logging
 # Constants
 MAXIMUM_CONFIG_SIZE = 1000000
 VALIDATION_SCRIPTS_FOLDER = "/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/"
-LOG_DIR = "/var/log/clearwater-config-manager/allow"
+LOG_DIR = "/var/log/clearwater-config-manager"
 
 # Configure logging.
 log = logging.getLogger("cw-config.main")
 
-# Error messages
+# Error messages that are displayed to the user (error messages on internal
+# exceptions are not shown here).
 MODIFIED_WHILE_EDITING = """Another user has modified the configuration since
 `cw-config download` was last run. Please download the latest version of
 {}, re-apply the changes and try again."""
@@ -43,10 +44,11 @@ permissions to write to {}."""
 CANT_COMPARE_WITH_MASTER = """Unable to compare with master configuration file.
 No upload will be performed."""
 
-CONFIG_TYPE_DOESNT_EXIST = """{} does not exist on the etcd cluster."""
+CONFIG_TYPE_DOESNT_EXIST = """{} does not exist in the configuration
+database."""
 
-UNABLE_TO_UPLOAD = """Unable to upload {} to the etcd cluster. The upload has
-failed."""
+UNABLE_TO_UPLOAD = """Unable to upload {} to the configuration database. The
+upload has failed."""
 
 # Exceptions
 class ConfigDownloadFailed(Exception):
@@ -155,7 +157,7 @@ class ConfigLoader(object):
 
         return download.value, download.modifiedIndex
 
-    def write_config_to_etcd(self, config_type, cas_revision):
+    def write_config_to_etcd(self, config_type, prev_revision):
         """Upload config contained in the specified file to the etcd database.
         Raises a ConfigUploadFailed exception if unsuccessful.
         """
@@ -178,7 +180,7 @@ class ConfigLoader(object):
             log.debug("Writing etcd config to '%s'", key_path)
             self._etcd_client.write(key_path,
                                     upload,
-                                    prevIndex=cas_revision)
+                                    prevIndex=prev_revision)
         except etcd.EtcdConnectionFailed:
             log.error("Unable to write to etcd database")
             raise ConfigUploadFailed(UNABLE_TO_UPLOAD.format(config_type))
@@ -240,8 +242,8 @@ class LocalStore(object):
         if not os.path.exists(revision_path):
             log.error("%s does not exist", revision_path)
             raise IOError(
-                "No shared config revision file found, unable to upload. "
-                "Please re-download {} again.".format(config_type))
+                "No {} revision file found, unable to upload. "
+                "Please download {} again.".format(config_type, config_type))
         log.debug("Uploading config from '%s'", config_path)
         log.debug("Using local revision number from '%s'", revision_path)
 
@@ -254,7 +256,8 @@ class LocalStore(object):
             local_revision = int(raw_revision)
         except ValueError:
             # The data in the revision file is not an integer!
-            log.error("Revision file doesn't contain an integer")
+            log.error("Revision file doesn't contain an integer. Value:\n"
+                      "%s", raw_revision)
             raise InvalidRevision
 
         return local_config, local_revision
@@ -263,7 +266,9 @@ class LocalStore(object):
         """Write the config and revision number to file."""
         config_file_path = self._get_config_file_path(config_type)
         index_file_path = self._get_revision_file_path(config_type)
+
         log.debug("Writing %s to '%s'.", config_type, config_file_path)
+
         try:
             with open(config_file_path, 'w') as config_file:
                 config_file.write(value)
@@ -307,9 +312,7 @@ def main(args):
 
     # Create an etcd client for interacting with the database.
     try:
-        log.debug("Getting etcdClient with parameters %s, %s, %s",
-                  args.etcd_key,
-                  args.site,
+        log.debug("Getting etcdClient with parameters %s, 4000",
                   args.management_ip)
         etcd_client = etcd.client.Client(host=args.management_ip,
                                          port=4000)
@@ -404,11 +407,11 @@ def delete_outdated_config_files():
     older than 30 days.
     :return:
     """
-    log.debug("Deleting oudated config files")
+    log.debug("Deleting outdated config files")
     date_now = datetime.date.today()
     delete_date = date_now - datetime.timedelta(days=30)
-    shared_config_folder = get_base_download_dir()
-    for root, _, files in os.walk(shared_config_folder, topdown=False):
+    config_folder = get_base_download_dir()
+    for root, _, files in os.walk(config_folder, topdown=False):
         for name in files:
             filepath = (os.path.join(root, name))
             file_time = time.localtime(os.path.getmtime(filepath))
@@ -433,8 +436,8 @@ def download_config(config_loader, config_type, autoskip=False):
         # Continue with download if user confirms
         log.debug("Check user wants to overwrite existing file")
         confirmed = confirm_yn(
-            "A local copy of shared_config is already present. "
-            "Continuing will overwrite the file.",
+            "A local copy of {} is already present. "
+            "Continuing will overwrite the file.".format(config_type),
             autoskip)
         if not confirmed:
             log.info("User aborted download")
@@ -468,9 +471,16 @@ def validate_config(force=False):
                for s in script_dir
                if os.access(os.path.join(VALIDATION_SCRIPTS_FOLDER, s),
                             os.X_OK)]
-    # TODO: log a warning if we are skipping validation scripts.
-    # TODO: Make sure that useful diags are printed by the
-    #       validation scripts.
+
+    # Print a warning for each script that isn't being run because of execute
+    # permissions not being set.
+    for script in script_dir:
+        if not os.access(os.path.join(VALIDATION_SCRIPTS_FOLDER, script),
+                         os.X_OK):
+            log.warning("Skipping script %s", script)
+            print ("Validation script {} will be skipped because it does not "
+                   "have execute permissions")
+
     failed_scripts = []
     for script in scripts:
         try:
@@ -500,7 +510,11 @@ def validate_config(force=False):
                 "\n".join(os.path.basename(script)
                           for script in failed_scripts)))
 
-    print "Config successfully verified"
+    if failed_scripts:
+        # We can only get here in the forcing case.
+        print "Continuing despite failed validation"
+    else:
+        print "Config successfully validated"
 
 
 def upload_config(autoconfirm, config_loader, config_type, force, local_store):
@@ -539,13 +553,15 @@ def ready_for_upload_checks(autoconfirm,
                             config_type,
                             local_store):
     """Make sure that we can and should upload config. Returns the current
-    revision of the master config upload should proceed, otherwise throws
+    revision of the master config upload if we should proceed, otherwise throws
     a ConfigUploadFailed exception."""
     try:
         local_config, local_revision = local_store.load_config_and_revision(
             config_type)
     except IOError:
-        log.error("%s cannot be uploaded", config_type)
+        log.error("Can't read %s from %s",
+                  config_type,
+                  local_store.config_location(config_type))
         raise ConfigUploadFailed(
             CANT_LOAD_LOCAL_CONFIG.format(
                 config_type,
@@ -558,7 +574,8 @@ def ready_for_upload_checks(autoconfirm,
         remote_config, remote_revision = config_loader.get_config_and_index(
             config_type)
     except ConfigDownloadFailed:
-        log.error("%s cannot be compared with master", config_type)
+        log.error("Unable to download %s from config database to compare it "
+                  "with local config", config_type)
         raise ConfigUploadFailed(CANT_COMPARE_WITH_MASTER)
 
     # Users are not allowed to upload changes if someone else has uploaded
