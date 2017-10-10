@@ -467,22 +467,19 @@ def validate_config(force=False):
     script_dir = os.listdir(VALIDATION_SCRIPTS_FOLDER)
 
     # We can only execute scripts that have execute permissions.
-    scripts = [os.path.join(VALIDATION_SCRIPTS_FOLDER, s)
-               for s in script_dir
-               if os.access(os.path.join(VALIDATION_SCRIPTS_FOLDER, s),
-                            os.X_OK)]
-
-    # Print a warning for each script that isn't being run because of execute
-    # permissions not being set.
+    scripts_to_run = []
     for script in script_dir:
-        if not os.access(os.path.join(VALIDATION_SCRIPTS_FOLDER, script),
-                         os.X_OK):
+        if os.access(os.path.join(VALIDATION_SCRIPTS_FOLDER, script), os.X_OK):
+            scripts_to_run.append(script)
+        else:
+            # Print a warning for each script that isn't being run because of
+            # execute permissions not being set.
             log.warning("Skipping script %s", script)
             print ("Validation script {} will be skipped because it does not "
                    "have execute permissions")
 
     failed_scripts = []
-    for script in scripts:
+    for script in scripts_to_run:
         try:
             log.debug("Running validation script %s", script)
             subprocess.check_output(script)

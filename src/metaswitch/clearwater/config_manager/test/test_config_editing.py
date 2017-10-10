@@ -732,7 +732,7 @@ class TestValidation(unittest.TestCase):
         folder."""
 
         mock_listdir.return_value = ['scriptA', 'scriptB']
-        mock_access.return_value = [True, True]
+        mock_access.side_effect = [True, True]
 
         move_config.validate_config(False)
 
@@ -751,10 +751,12 @@ class TestValidation(unittest.TestCase):
                                  mock_listdir,
                                  mock_subprocess,
                                  mock_access):
-        """Check that we only attempt to run accessible script."""
+        """Check that we only attempt to run accessible scripts."""
 
         mock_listdir.return_value = ['scriptA', 'scriptB']
-        mock_access.return_value = [True, False]
+
+        # We call `os.access()` once for each script.
+        mock_access.side_effect = [True, False]
 
         move_config.validate_config(False)
         mock_listdir.assert_called_once_with(
