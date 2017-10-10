@@ -406,9 +406,9 @@ class TestLocalStore(unittest.TestCase):
                 local_store.save_config_and_revision("shared_config", 42,
                                                      "config_text")
 
-    @mock.patch(
-        "metaswitch.clearwater.config_manager.move_config.get_user_download_dir")
-    def test_config_location(self, mock_download_dir):
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.get_user_download_dir")
+    @mock.patch("metaswitch.clearwater.config_manager.move_config.LocalStore._ensure_config_dir")
+    def test_config_location(self, mock_ensure, mock_download_dir):
         """Test that we can return the correct config location."""
         mock_download_dir.return_value = "/download/dir"
         local_store = move_config.LocalStore()
