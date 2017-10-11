@@ -16,7 +16,7 @@ import syslog
 import sys
 import datetime
 import time
-from metaswitch.common.logging_config import configure_logging
+from metaswitch.common.logging_config import configure_syslog
 
 # Constants
 MAXIMUM_CONFIG_SIZE = 1000000
@@ -304,10 +304,8 @@ def main(args):
     """
     Main entry point for script.
     """
-    # Set up logging.
-    configure_logging(args.log_level,
-                      args.log_dir,
-                      "cw-config")
+    # Set up logging to syslog.
+    configure_syslog(args.log_level)
 
     # Regardless of passed arguments we want to delete outdated config to not
     # leave unused files on disk.
