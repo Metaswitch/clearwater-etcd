@@ -240,8 +240,8 @@ class LocalStore(object):
         if not os.path.exists(revision_path):
             log.error("%s does not exist", revision_path)
             raise IOError(
-                "No shared config revision file found, unable to upload. "
-                "Please re-download {} again.".format(config_type))
+                "No {} revision file found, unable to upload. "
+                "Please re-download {} again.".format(config_type, config_type))
         log.debug("Uploading config from '%s'", config_path)
         log.debug("Using local revision number from '%s'", revision_path)
 
@@ -407,8 +407,8 @@ def delete_outdated_config_files():
     log.debug("Deleting oudated config files")
     date_now = datetime.date.today()
     delete_date = date_now - datetime.timedelta(days=30)
-    shared_config_folder = get_base_download_dir()
-    for root, _, files in os.walk(shared_config_folder, topdown=False):
+    config_folder = get_base_download_dir()
+    for root, _, files in os.walk(config_folder, topdown=False):
         for name in files:
             filepath = (os.path.join(root, name))
             file_time = time.localtime(os.path.getmtime(filepath))
@@ -432,10 +432,9 @@ def download_config(config_loader, config_type, autoskip=False):
         # Ask user to confirm if they want to overwrite the file
         # Continue with download if user confirms
         log.debug("Check user wants to overwrite existing file")
-        confirmed = confirm_yn(
-            "A local copy of shared_config is already present. "
-            "Continuing will overwrite the file.",
-            autoskip)
+        yn_prompt = ("A local copy of {} is already present. Continuing will "
+                     "overwrite the file.").format(config_type)
+        confirmed = confirm_yn(yn_prompt, autoskip)
         if not confirmed:
             log.info("User aborted download")
             raise UserAbort
@@ -568,7 +567,7 @@ def ready_for_upload_checks(autoconfirm,
         raise ConfigUploadFailed(MODIFIED_WHILE_EDITING.format(config_type))
 
     # Provide a diff of the changes and log to syslog
-    if not print_diff_and_syslog(remote_config, local_config):
+    if not print_diff_and_syslog(remote_config, local_config, config_type):
         # We don't bother uploading if there are no changes to upload.
         log.error("No differences between local and master %s", config_type)
         raise ConfigUploadFailed(NO_CHANGES_TO_CONFIG)
@@ -630,7 +629,7 @@ def get_base_download_dir():
     return os.path.join(home, 'clearwater-config-manager/staging')
 
 
-def print_diff_and_syslog(config_1, config_2):
+def print_diff_and_syslog(config_1, config_2, config_type):
     """
     Print a readable diff of changes between two texts and log to syslog.
     Returns True if there are changes, that need to be uploaded, or False if
@@ -663,8 +662,8 @@ def print_diff_and_syslog(config_1, config_2):
         additions.remove(item)
 
     if additions or deletions or moved:
-        header = ("Configuration file change: shared_config was modified by "
-                  "user {}.").format(get_user_name())
+        header = ("Configuration file change: {} was modified by "
+                  "user {}.").format(config_type, get_user_name())
 
         # For the syslog, we want the diff output on one line.
         # For the UI, we want to output on multiple lines, as it's
@@ -701,7 +700,7 @@ def print_diff_and_syslog(config_1, config_2):
 
         return True
     else:
-        print("No changes detected in shared configuration file.")
+        print("No changes detected in {} file.").format(config_type)
         return False
 
 
