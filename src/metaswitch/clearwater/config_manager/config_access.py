@@ -23,6 +23,9 @@ MAXIMUM_CONFIG_SIZE = 1000000
 VALIDATION_SCRIPTS_FOLDER = "/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/"
 LOG_DIR = "/var/log/clearwater-config-manager"
 
+# The directory under $HOME where config will be downloaded to.
+DOWNLOAD_DIR = "clearwater-config-manager"
+
 # Configure logging.
 log = logging.getLogger("cw-config.main")
 
@@ -641,7 +644,7 @@ def get_base_download_dir():
     if home is None:
         log.error("There must be a home directory to download config to")
         raise RuntimeError("No home directory found.")
-    return os.path.join(home, 'clearwater-config-manager/staging')
+    return os.path.join(home, DOWNLOAD_DIR)
 
 
 def print_diff_and_syslog(config_1, config_2):

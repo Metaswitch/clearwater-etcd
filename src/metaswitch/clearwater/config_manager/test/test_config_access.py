@@ -152,7 +152,7 @@ class TestConfigLoader(unittest.TestCase):
         mock_config_file.read.return_value = "FakeConfig"
 
         def fake_open(file, mode):
-            if file == "/home/ubuntu/clearwater-config-manager/staging/ubuntu/shared_config":
+            if file == "/home/ubuntu/clearwater-config-manager/ubuntu/shared_config":
                 return mock_config_file
             else:
                 self.fail("Incorrect File Accessed: {}".format(file))
