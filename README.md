@@ -40,5 +40,5 @@ To decommission a node run `sudo service clearwater-etcd decommission` which wil
 
 ## etcd sources
 
-* `etcd` and `etcdctl` are the versions downloaded from <https://github.com/coreos/etcd/releases/download/v2.2.5/etcd-v2.2.5-linux-amd64.tar.gz>
-* `etcd-dump-logs` is built from <https://github.com/coreos/etcd/blob/v2.2.5/tools/etcd-dump-logs/main.go>
+* `etcd` and `etcdctl` are the versions downloaded from <https://github.com/coreos/etcd/releases/download/v3.1.7/etcd-v3.1.7-linux-amd64.tar.gz>
+* `etcd-dump-logs` is built from <https://github.com/coreos/etcd/blob/v3.1.7/tools/etcd-dump-logs/main.go>
