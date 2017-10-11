@@ -41,13 +41,8 @@ case "$1" in
         fi
 
         # Ensure the log directory exists and is owned by the user.
-        mkdir -p -m 755 /var/log/$NAME
+        mkdir -p -m 777 /var/log/$NAME
         chown -R $NAME:root /var/log/$NAME
-
-        # make the log directory writeable by all users
-        # and anything in that directory
-        mkdir -p /var/log/$NAME/allow
-        chmod 777 /var/log/$NAME/allow
 
         # Set up the virtual env
         rm -rf $BASE_DIR/env
