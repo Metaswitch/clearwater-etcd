@@ -620,86 +620,45 @@ class TestVerifiedUpload(unittest.TestCase):
 
         assert mock_upload_config.called
 
-@mock.patch('metaswitch.clearwater.config_manager.config_access.os.access')
 @mock.patch(
     'metaswitch.clearwater.config_manager.config_access.subprocess.check_output')
-@mock.patch('metaswitch.clearwater.config_manager.config_access.os.listdir')
 @mock.patch('metaswitch.clearwater.config_manager.config_access.LocalStore')
 class TestValidation(unittest.TestCase):
     config_location = "/some/dir/shared_config"
 
-    def test_scripts_run_ok(self, mock_localstore, mock_listdir, mock_subprocess, mock_access):
+    def test_scripts_run_ok(self, mock_localstore, mock_subprocess):
         """Check that we run the validation scripts we find in the relevant
         folder."""
-
         mock_localstore.config_location.return_value = self.config_location
-
-        mock_listdir.return_value = ['scriptA', 'scriptB']
-        mock_access.side_effect = [True, True]
 
         config_access.validate_config(mock_localstore, "shared_config", False)
 
-        self.assertTrue([config_access.VALIDATION_SCRIPT, self.config_location]
-                        in mock_subprocess.call_args_list)
+        self.assertEqual(
+            mock.call([config_access.VALIDATION_SCRIPT, self.config_location]),
+            mock_subprocess.call_args_list[0])
 
-
-    def test_only_run_accessible(self,
-                                 mock_listdir,
-                                 mock_subprocess,
-                                 mock_access):
-        """Check that we only attempt to run accessible scripts."""
-
-        mock_listdir.return_value = ['scriptA', 'scriptB']
-
-        # We call `os.access()` once for each script.
-        mock_access.side_effect = [True, False]
-
-        config_access.validate_config(False)
-        mock_listdir.assert_called_once_with(
-            config_access.VALIDATION_SCRIPTS_FOLDER)
-
-        for call_info, script in zip(mock_subprocess.call_args_list,
-                                     mock_listdir.return_value):
-            args = call_info[0]
-            self.assertIn(script, args[0])
-
-    def test_handle_validation_error(self,
-                                     mock_listdir,
-                                     mock_subprocess,
-                                     mock_access):
+    def test_handle_validation_error(self, mock_localstore, mock_subprocess):
         """Test that we handle validation failure correctly."""
+        mock_localstore.config_location.return_value = self.config_location
 
-        mock_listdir.return_value = ['scriptA', 'scriptB']
-        mock_access.return_value = [True, True]
-        mock_subprocess.side_effect = [None,
-                                       subprocess.CalledProcessError("A", "B")]
+        mock_subprocess.side_effect = subprocess.CalledProcessError("A", "B")
 
         self.assertRaises(config_access.ConfigValidationFailed,
                           config_access.validate_config,
+                          mock_localstore,
+                          "shared_config",
                           False)
 
-        for call_info, script in zip(mock_subprocess.call_args_list,
-                                     mock_listdir.return_value):
-            args = call_info[0]
-            self.assertIn(script, args[0])
+    def test_ignore_validation_error(self, mock_localstore, mock_subprocess):
+        """Test that we ignore validation failure correctly in the force
+        case."""
+        mock_localstore.config_location.return_value = self.config_location
 
-    def test_ignore_validation_error(self,
-                                     mock_listdir,
-                                     mock_subprocess,
-                                     mock_access):
-        """Test that we handle validation failure correctly."""
+        mock_subprocess.side_effect = subprocess.CalledProcessError("A", "B")
 
-        mock_listdir.return_value = ['scriptA', 'scriptB']
-        mock_access.return_value = [True, True]
-        mock_subprocess.side_effect = [None,
-                                       subprocess.CalledProcessError("A", "B")]
-
-        config_access.validate_config(True)
-
-        for call_info, script in zip(mock_subprocess.call_args_list,
-                                     mock_listdir.return_value):
-            args = call_info[0]
-            self.assertIn(script, args[0])
+        # Even though subprocess raises an exception, we continue because
+        # we're in force mode.
+        config_access.validate_config(mock_localstore, "shared_config", True)
 
 @mock.patch("metaswitch.clearwater.config_manager.config_access.ConfigLoader",
             autospec=True)
