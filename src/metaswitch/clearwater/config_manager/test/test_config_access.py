@@ -427,6 +427,8 @@ class TestYesNo(unittest.TestCase):
     "metaswitch.clearwater.config_manager.config_access.configure_syslog")
 @mock.patch("metaswitch.clearwater.config_manager.config_access.ConfigLoader",
             autospec=True)
+@mock.patch("metaswitch.clearwater.config_manager.config_access.LocalStore",
+            autospec=True)
 @mock.patch(
     "metaswitch.clearwater.config_manager.config_access.download_config")
 class TestMainDownload(unittest.TestCase):
@@ -435,6 +437,7 @@ class TestMainDownload(unittest.TestCase):
     def test_delete_outdated_config_files(self,
                                           mock_delete_files,
                                           mock_download_config,
+                                          mock_localstore,
                                           mock_configloader,
                                           mock_logging):
         """Make sure we always delete outdated config files"""
@@ -445,6 +448,7 @@ class TestMainDownload(unittest.TestCase):
 
     def test_download_action_main_line(self,
                                        mock_download_config,
+                                       mock_localstore,
                                        mock_configloader,
                                        mock_logging):
         """Make sure that we always call download_config in download mode."""
@@ -455,6 +459,7 @@ class TestMainDownload(unittest.TestCase):
 
     def test_handle_download_configdownloadfailed(self,
                                                   mock_download_config,
+                                                  mock_localstore,
                                                   mock_configloader,
                                                   mock_logging):
         """Check that we handle a ConfigDownloadFailed exception raised by
@@ -467,6 +472,7 @@ class TestMainDownload(unittest.TestCase):
 
     def test_handle_download_userabort(self,
                                        mock_download_config,
+                                       mock_localstore,
                                        mock_configloader,
                                        mock_logging):
         """Check that we handle a UserAbort exception raised by
@@ -481,10 +487,13 @@ class TestMainDownload(unittest.TestCase):
     "metaswitch.clearwater.config_manager.config_access.configure_syslog")
 @mock.patch("metaswitch.clearwater.config_manager.config_access.ConfigLoader",
             autospec=True)
+@mock.patch("metaswitch.clearwater.config_manager.config_access.LocalStore",
+            autospec=True)
 @mock.patch("metaswitch.clearwater.config_manager.config_access.upload_verified_config")
 class TestMainUpload(unittest.TestCase):
     def test_upload_action_main_line(self,
                                      mock_upload_config,
+                                     mock_localstore,
                                      mock_configloader,
                                      mock_logging):
         """Make sure that we always call upload_verified_config in upload mode."""
@@ -495,6 +504,7 @@ class TestMainUpload(unittest.TestCase):
 
     def test_handle_upload_failed(self,
                                   mock_upload_config,
+                                  mock_localstore,
                                   mock_configloader,
                                   mock_logging):
         """Check that we handle an exception raised by upload_verified_config.
@@ -507,6 +517,7 @@ class TestMainUpload(unittest.TestCase):
 
     def test_handle_upload_configuploadfailed(self,
                                               mock_upload_config,
+                                              mock_localstore,
                                               mock_configloader,
                                               mock_logging):
         """Check that we handle a ConfigUploadFailed exception raised by
@@ -519,6 +530,7 @@ class TestMainUpload(unittest.TestCase):
 
     def test_handle_upload_configvalidationfailed(self,
                                                   mock_upload_config,
+                                                  mock_localstore,
                                                   mock_configloader,
                                                   mock_logging):
         """Check that we handle a ConfigValidationFailed exception raised by
@@ -531,6 +543,7 @@ class TestMainUpload(unittest.TestCase):
 
     def test_handle_upload_userabort(self,
                                      mock_upload_config,
+                                     mock_localstore,
                                      mock_configloader,
                                      mock_logging):
         """Check that we handle a UserAbort exception raised by
@@ -543,6 +556,7 @@ class TestMainUpload(unittest.TestCase):
 
     def test_handle_etcdexception(self,
                                   mock_upload_config,
+                                  mock_localstore,
                                   mock_configloader,
                                   mock_logging):
         """Check that we handle an EtcdException raised by
