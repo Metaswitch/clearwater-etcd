@@ -942,7 +942,6 @@ class TestArguments(unittest.TestCase):
         sys.argv = ["config_access.py",
                     "--autoconfirm",
                     "--force",
-                    "--log-dir", "some/dir",
                     "--log-level", "50",
                     "upload",
                     "shared_config",
@@ -954,7 +953,6 @@ class TestArguments(unittest.TestCase):
 
         assert args.force
         assert args.autoconfirm
-        assert args.log_dir == "some/dir"
         assert args.log_level == 50
         assert args.action == "upload"
         assert args.config_type == "shared_config"

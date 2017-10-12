@@ -361,11 +361,6 @@ def parse_arguments():
                         help="Turns forcing on [default=off]")
 
     # Logging options
-    parser.add_argument("--log-dir",
-                        type=str,
-                        default=LOG_DIR,
-                        help=("Directory that logs will be written to. "
-                              "Defaults to {}".format(LOG_DIR)))
     parser.add_argument("--log-level",
                         type=int,
                         default=logging.INFO,
