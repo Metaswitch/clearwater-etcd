@@ -17,6 +17,7 @@ import sys
 import datetime
 import time
 from metaswitch.common.logging_config import configure_logging
+# from where_is_the_config_type_plugin_loader import load_plugins_in_dir
 
 # Constants
 MAXIMUM_CONFIG_SIZE = 1000000
@@ -348,11 +349,28 @@ def main(args):
             sys.exit(exc)
 
 
+def class_return(key):
+    config_classes = load_plugins_in_dir('/home/ubuntu/code/etcd_classes/')
+    dict1 = {}
+    for choice in config_classes:
+        dict1[choice.name] = choice
+    return dict1[key]
+
+
 def parse_arguments():
     """
     Parse the arguments passed to the script.
+    The options for config type are designated by the plugins available
     :return:
     """
+    # pick the options to appear in argument parsing
+    config_classes = load_plugins_in_dir('/home/ubuntu/code/etcd_classes/')
+
+    config_choice_help = '\n'.join(choice.help_info for choice in config_classes)
+    config_choices = []
+    for choice in config_classes:
+        config_choices.append(choice.name)
+
     parser = argparse.ArgumentParser(prog='cw-config')
     parser.add_argument("--autoconfirm", action="store_true",
                         help="Turns autoconfirm on [default=off]")
@@ -388,10 +406,9 @@ def parse_arguments():
                         help="The action to perform - {upload | download}",
                         metavar='action')
     parser.add_argument("config_type",
-                        type=str,
-                        choices=['shared_config'],
-                        help=("The config type to use - {shared_config} - only"
-                              " one option currently"),
+                        type=class_return,
+                        choices=config_choices,
+                        help=(config_choice_help),
                         metavar='config_type')
     parser.add_argument("--management_ip", required=True,
                         help=argparse.SUPPRESS)
@@ -464,35 +481,15 @@ def validate_config(force=False):
     """
     Validates the config by calling all scripts in the validation folder.
     """
-    script_dir = os.listdir(VALIDATION_SCRIPTS_FOLDER)
 
-    # We can only execute scripts that have execute permissions.
-    scripts_to_run = []
-    for script in script_dir:
-        if os.access(os.path.join(VALIDATION_SCRIPTS_FOLDER, script), os.X_OK):
-            scripts_to_run.append(script)
-        else:
-            # Print a warning for each script that isn't being run because of
-            # execute permissions not being set.
-            log.warning("Skipping script %s", script)
-            print ("Validation script {} will be skipped because it does not "
-                   "have execute permissions")
+    # only need to run scripts as defined by the class structure ConfigType.
 
-    failed_scripts = []
-    for script in scripts_to_run:
-        try:
-            log.debug("Running validation script %s", script)
-            subprocess.check_output(script)
-        except subprocess.CalledProcessError as exc:
-            log.error("Validation script %s failed with output:\n %s",
-                      os.path.basename(script),
-                      exc.output)
+    # This next bit should call to the rightconfig.validate, this then returns
+    # the log info to be stored and the failed script info
 
-            # We want to run through all the validation scripts so we can tell
-            # the user all of the problems with their config changes, so don't
-            # bail out of the loop at this point, just record which scripts
-            # have failed.
-            failed_scripts.append(script)
+    failed_scripts, log_de, log_err = selected_config.validate()
+    log.debug(log_de)
+    log.error(log_err)
 
     # When we write the bash injection script, it should either be invoked here
     # or be placed in the VALIDATION_SCRIPTS_FOLDER directory to be executed
