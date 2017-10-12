@@ -449,20 +449,21 @@ def upload_verified_config(config_loader,
                            force=False,
                            autoconfirm=False):
     """Verifies the config, then uploads it to etcd."""
-    validate_config(force)
+    validate_config(local_store, config_type, force)
 
     # An exception should have been thrown if validation fails, so we should
     # only reach this point if the config has been validated successfully.
     upload_config(autoconfirm, config_loader, config_type, force, local_store)
 
 
-def validate_config(force=False):
+def validate_config(local_store, config_type, force=False):
     """
     Validates the config by calling all scripts in the validation folder.
     """
     try:
         log.debug("Running validation script %s", script)
-        subprocess.check_output(VALIDATION_SCRIPT)
+        subprocess.check_output([VALIDATION_SCRIPT,
+                                 local_store.config_location(config_type)])
         print "Config successfully validated"
 
     except subprocess.CalledProcessError as exc:
@@ -473,7 +474,7 @@ def validate_config(force=False):
         if not force:
             raise ConfigValidationFailed(
                 "Validation failed while executing {}".format(
-                    VALIDATION_SCRIPT)
+                    VALIDATION_SCRIPT))
 
         else:
             print "Continuing despite failed validation"
