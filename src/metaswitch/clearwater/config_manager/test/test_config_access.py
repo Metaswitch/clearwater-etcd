@@ -32,9 +32,9 @@ class TestCheckConnection(unittest.TestCase):
         mock_localstore = mock.MagicMock(spec=config_access.LocalStore)
         with self.assertRaises(config_access.EtcdConnectionFailed):
             config_access.ConfigLoader(etcd_client,
-                                        "clearwater",
-                                        "site",
-                                        mock_localstore)
+                                       "clearwater",
+                                       "site",
+                                       mock_localstore)
 
 
 @mock.patch("metaswitch.clearwater.config_manager.config_access.ConfigLoader._check_connection")
@@ -372,6 +372,7 @@ class TestLocalStore(unittest.TestCase):
         config_location = local_store.config_location("shared_config")
         assert config_location == "/some/directory/shared_config"
 
+
 @mock.patch('metaswitch.clearwater.config_manager.config_access.raw_input')
 class TestYesNo(unittest.TestCase):
     """Test user input validation."""
@@ -421,6 +422,7 @@ class TestYesNo(unittest.TestCase):
         answer = config_access.confirm_yn('Test 7 ', False)
         self.assertEqual(mock_raw_input.call_count, 6)
         self.assertIs(answer, False)
+
 
 @mock.patch(
     "metaswitch.clearwater.config_manager.config_access.configure_syslog")
@@ -481,6 +483,7 @@ class TestMainDownload(unittest.TestCase):
 
         with self.assertRaises(SystemExit):
             config_access.main(args)
+
 
 @mock.patch(
     "metaswitch.clearwater.config_manager.config_access.configure_syslog")
@@ -566,6 +569,7 @@ class TestMainUpload(unittest.TestCase):
         with self.assertRaises(SystemExit):
             config_access.main(args)
 
+
 @mock.patch("metaswitch.clearwater.config_manager.config_access.get_user_download_dir")
 @mock.patch("metaswitch.clearwater.config_manager.config_access.confirm_yn")
 @mock.patch("metaswitch.clearwater.config_manager.config_access.os.path.exists")
@@ -635,6 +639,7 @@ class TestVerifiedUpload(unittest.TestCase):
 
         assert mock_upload_config.called
 
+
 @mock.patch(
     'metaswitch.clearwater.config_manager.config_access.subprocess.check_output')
 @mock.patch('metaswitch.clearwater.config_manager.config_access.LocalStore')
@@ -675,6 +680,7 @@ class TestValidation(unittest.TestCase):
         # we're in force mode.
         config_access.validate_config(mock_localstore, "shared_config", True)
 
+
 @mock.patch("metaswitch.clearwater.config_manager.config_access.ConfigLoader",
             autospec=True)
 @mock.patch("metaswitch.clearwater.config_manager.config_access.LocalStore",
@@ -690,9 +696,9 @@ class TestReadyForUpload(unittest.TestCase):
 
         with self.assertRaises(config_access.ConfigUploadFailed):
             config_access.ready_for_upload_checks(False,
-                                                mock_configloader,
-                                                "shared_config",
-                                                mock_localstore)
+                                                  mock_configloader,
+                                                  "shared_config",
+                                                  mock_localstore)
 
     def test_cant_download_config(self,
                                   mock_localstore,
@@ -722,9 +728,9 @@ class TestReadyForUpload(unittest.TestCase):
 
         with self.assertRaises(config_access.ConfigUploadFailed):
             config_access.ready_for_upload_checks(False,
-                                                mock_configloader,
-                                                "shared_config",
-                                                mock_localstore)
+                                                  mock_configloader,
+                                                  "shared_config",
+                                                  mock_localstore)
 
     @mock.patch(
         "metaswitch.clearwater.config_manager.config_access.print_diff_and_syslog",
@@ -775,9 +781,9 @@ class TestReadyForUpload(unittest.TestCase):
         # Now test that user confirmation is required if we aren't
         # autoconfirming.
         config_access.ready_for_upload_checks(False,
-                                            mock_configloader,
-                                            "shared_config",
-                                            mock_localstore)
+                                              mock_configloader,
+                                              "shared_config",
+                                              mock_localstore)
 
         mock_confirm.assert_called_once()
 
@@ -801,10 +807,9 @@ class TestReadyForUpload(unittest.TestCase):
 
         with self.assertRaises(config_access.UserAbort):
             config_access.ready_for_upload_checks(False,
-                                                mock_configloader,
-                                                "shared_config",
-                                                mock_localstore)
-
+                                                  mock_configloader,
+                                                  "shared_config",
+                                                  mock_localstore)
 
 
 @mock.patch("metaswitch.clearwater.config_manager.config_access.get_user_download_dir")
@@ -824,10 +829,10 @@ class TestUpload(unittest.TestCase):
         """Check that we write the config to etcd when uploading."""
         local_store = config_access.LocalStore()
         config_access.upload_config(True,
-                                  mock_configloader,
-                                  "shared_config",
-                                  True,
-                                  local_store)
+                                    mock_configloader,
+                                    "shared_config",
+                                    True,
+                                    local_store)
         mock_configloader.write_config_to_etcd.assert_called_once()
 
     def test_remove_file_on_success(self,
@@ -842,16 +847,17 @@ class TestUpload(unittest.TestCase):
         mock_download_dir.return_value = download_dir
         local_store = config_access.LocalStore()
         config_access.upload_config(False,
-                                  mock_config_loader,
-                                  "shared_config",
-                                  False,
-                                  local_store)
+                                    mock_config_loader,
+                                    "shared_config",
+                                    False,
+                                    local_store)
 
         remove_calls = [mock.call(os.path.join(download_dir,
                                                "shared_config")),
                         mock.call(os.path.join(download_dir,
                                                ".shared_config.index"))]
         mock_remove.assert_has_calls(remove_calls)
+
 
 @mock.patch("metaswitch.clearwater.config_manager.config_access.os.remove")
 @mock.patch("metaswitch.clearwater.config_manager.config_access.os.path.getmtime")
@@ -861,7 +867,8 @@ class TestDeleteOutdated(unittest.TestCase):
         """This tests that a recent file is not deleted"""
         # Gives time of file creation as 28 days ago
         mock_getmtime.return_value = (time.time() - (28*24*60*60))
-        mock_walk.return_value = (('/imaginary_file_name', [], ['testdel.py']),('/imaginary_file_2',[],[]))
+        mock_walk.return_value = (('/imaginary_file_name', [], ['testdel.py']),
+                                  ('/imaginary_file_2', [], []))
         config_access.delete_outdated_config_files()
         # Need to check os.remove is NOT called
         self.assertIs(mock_remove.call_count, 0)
@@ -872,7 +879,7 @@ class TestDeleteOutdated(unittest.TestCase):
         mock_getmtime.return_value = (time.time() - (32*24*60*60))
         mock_walk.return_value = (
             ('/imaginary_file_name', ['imaginary_file_2'], ['testdel.py']),
-            ('/imaginary_file_name/imaginary_file_2',[],[]))
+            ('/imaginary_file_name/imaginary_file_2', [], []))
         config_access.delete_outdated_config_files()
         # Need to check os.remove IS called
         self.assertIs(mock_remove.call_count, 1)
@@ -971,7 +978,9 @@ class TestReadFromFile(unittest.TestCase):
         """Tests that a normal file is read properly."""
         mock_file = mock.mock_open(read_data="some_data")
 
-        with mock.patch('metaswitch.clearwater.config_manager.config_access.open', mock_file, create=True):
+        with mock.patch('metaswitch.clearwater.config_manager.config_access.open',
+                        mock_file,
+                        create=True):
             config = config_access.read_from_file('example_file')
 
         self.assertEqual(config, "some_data")
@@ -991,7 +1000,9 @@ class TestReadFromFile(unittest.TestCase):
             "X" * config_access.MAXIMUM_CONFIG_SIZE,
             "X"]
 
-        with mock.patch('metaswitch.clearwater.config_manager.config_access.open', mock_file, create=True):
+        with mock.patch('metaswitch.clearwater.config_manager.config_access.open',
+                        mock_file,
+                        create=True):
             with self.assertRaises(config_access.FileTooLarge):
                 config_access.read_from_file('example_file')
 
@@ -1000,7 +1011,9 @@ class TestReadFromFile(unittest.TestCase):
         mock_file = mock.mock_open()
         mock_file.side_effect = IOError
 
-        with mock.patch('metaswitch.clearwater.config_manager.config_access.open', mock_file, create=True):
+        with mock.patch('metaswitch.clearwater.config_manager.config_access.open',
+                        mock_file,
+                        create=True):
             with self.assertRaises(IOError):
                 config_access.read_from_file('example_file')
 
@@ -1016,7 +1029,8 @@ class TestDiffAndSyslog(unittest.TestCase):
             'string is a string \n yay')
         self.assertIs(answer, False)
 
-    @mock.patch("metaswitch.clearwater.config_manager.config_access.sys.stdout", new_callable=StringIO)
+    @mock.patch("metaswitch.clearwater.config_manager.config_access.sys.stdout",
+                new_callable=StringIO)
     def test_check_diff(self, mock_stdout, mock_getname, mock_syslog):
         """Check that for two different files with additions, deletions and
         moves the syslog_str and output_str represent the differences."""

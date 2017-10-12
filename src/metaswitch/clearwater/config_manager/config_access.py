@@ -53,6 +53,7 @@ database."""
 UNABLE_TO_UPLOAD = """Unable to upload {} to the configuration database. The
 upload has failed."""
 
+
 # Exceptions
 class ConfigDownloadFailed(Exception):
     """Unable to download config."""
@@ -190,7 +191,6 @@ class ConfigLoader(object):
             log.error("Master revision doesn't match local revision")
             raise ConfigUploadFailed(
                 MODIFIED_WHILE_EDITING.format(config_type))
-
 
     # We need this property for the step in write_config_to_etcd where we log
     # the change in config to file.
