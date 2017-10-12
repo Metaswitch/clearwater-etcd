@@ -38,14 +38,11 @@ class TestCheckConnection(unittest.TestCase):
 
 
 @mock.patch("metaswitch.clearwater.config_manager.config_access.ConfigLoader._check_connection")
-@mock.patch("metaswitch.clearwater.config_manager.config_access.get_user_download_dir",
-            return_value="/some/directory")
 @mock.patch("metaswitch.clearwater.config_manager.config_access.LocalStore",
             autospec=True)
 class TestConfigLoader(unittest.TestCase):
     def test_download_unable_to_save(self,
                                      mock_localstore,
-                                     mock_download_dir,
                                      mock_check_connection):
         """Check for the correct exception on failure.
 
@@ -63,7 +60,7 @@ class TestConfigLoader(unittest.TestCase):
             config_loader.download_config,
             "shared_config")
 
-    def test_get_config(self, mock_localstore, mock_download_dir, mock_check_connection):
+    def test_get_config(self, mock_localstore, mock_check_connection):
         """Check we use the right URI to download config."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
         etcd_result = mock.MagicMock()
@@ -81,7 +78,7 @@ class TestConfigLoader(unittest.TestCase):
         etcd_client.read.assert_called_with(
             "/clearwater/site/configuration/shared_config")
 
-    def test_get_config_failed(self, mock_localstore, mock_download_dir, mock_check_connection):
+    def test_get_config_failed(self, mock_localstore, mock_check_connection):
         """Check we get the right exception on failure."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
         etcd_client.read.side_effect = etcd.EtcdKeyNotFound
@@ -93,7 +90,7 @@ class TestConfigLoader(unittest.TestCase):
                           config_loader.get_config_and_index,
                           "shared_config")
 
-    def test_write_config_to_etcd(self, mock_localstore, mock_download_dir, mock_check_connection):
+    def test_write_config_to_etcd(self, mock_localstore, mock_check_connection):
         """Check that we can write config to etcd from file."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
 
@@ -114,7 +111,6 @@ class TestConfigLoader(unittest.TestCase):
 
     def test_write_to_etcd_unable_to_load(self,
                                           mock_localstore,
-                                          mock_download_dir,
                                           mock_check_connection):
         """Check for the correct exception on failure.
 
@@ -135,7 +131,6 @@ class TestConfigLoader(unittest.TestCase):
 
     def test_write_to_etcd_failure(self,
                                    mock_localstore,
-                                   mock_download_dir,
                                    mock_check_connection):
         """Check for the correct exception on failure.
 
@@ -181,7 +176,7 @@ class TestConfigLoader(unittest.TestCase):
                 "shared_config",
                 1234)
 
-    def test_uri(self, mock_localstore, mock_download_dir, mock_check_connection):
+    def test_uri(self, mock_localstore, mock_check_connection):
         """Check we can get the correct URI for config in etcd."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
         etcd_client.base_uri = "http://base_uri"

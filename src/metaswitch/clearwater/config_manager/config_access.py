@@ -104,7 +104,6 @@ class ConfigLoader(object):
         self._etcd_client = etcd_client
         self.prefix = "/".join(["", etcd_key, site, "configuration"])
         self.local_store = local_store
-        self.download_dir = get_user_download_dir()
 
         # Make sure that the etcd process is actually contactable.
         self._check_connection()
