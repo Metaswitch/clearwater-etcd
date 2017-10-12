@@ -159,9 +159,8 @@ class TestConfigLoader(unittest.TestCase):
                                                    "site",
                                                    mock_localstore)
 
-        with mock.patch(
-            "metaswitch.clearwater.config_manager.config_access.open",
-            mock_open):
+        with mock.patch("metaswitch.clearwater.config_manager.config_access.open",
+                        mock_open):
             # First time, we trigger etcd.EtcdConnectionFailed
             self.assertRaises(
                 config_access.ConfigUploadFailed,
@@ -866,7 +865,7 @@ class TestDeleteOutdated(unittest.TestCase):
     def test_no_delete(self, mock_walk, mock_getmtime, mock_remove):
         """This tests that a recent file is not deleted"""
         # Gives time of file creation as 28 days ago
-        mock_getmtime.return_value = (time.time() - (28*24*60*60))
+        mock_getmtime.return_value = (time.time() - (28 * 24 * 60 * 60))
         mock_walk.return_value = (('/imaginary_file_name', [], ['testdel.py']),
                                   ('/imaginary_file_2', [], []))
         config_access.delete_outdated_config_files()
@@ -876,7 +875,7 @@ class TestDeleteOutdated(unittest.TestCase):
     def test_yes_delete(self, mock_walk, mock_getmtime, mock_remove):
         """This tests that a older file is deleted"""
         # Gives the creation time of the file at 32 days
-        mock_getmtime.return_value = (time.time() - (32*24*60*60))
+        mock_getmtime.return_value = (time.time() - (32 * 24 * 60 * 60))
         mock_walk.return_value = (
             ('/imaginary_file_name', ['imaginary_file_2'], ['testdel.py']),
             ('/imaginary_file_name/imaginary_file_2', [], []))
@@ -905,6 +904,7 @@ class TestUserDownloadDir(unittest.TestCase):
         self.assertIs(mock_getbase.call_count, 1)
         self.assertIs(mock_getuser.call_count, 1)
 
+
 @mock.patch("metaswitch.clearwater.config_manager.config_access.os.getenv")
 class TestBaseDownloadDir(unittest.TestCase):
     def test_call_osgetenv(self, mock_getenv):
@@ -917,6 +917,7 @@ class TestBaseDownloadDir(unittest.TestCase):
         mock_getenv.return_value = None
         with self.assertRaises(RuntimeError):
             config_access.get_base_download_dir()
+
 
 class TestArguments(unittest.TestCase):
     def test_all_arguments(self):
@@ -971,6 +972,7 @@ class TestArguments(unittest.TestCase):
         # There's a config error, so we should fail.
         with self.assertRaises(SystemExit):
             config_access.parse_arguments()
+
 
 # In these tests, we use the mock.mock_open() helper to simulate file access.
 class TestReadFromFile(unittest.TestCase):
