@@ -200,13 +200,13 @@ class TestConfigLoader(unittest.TestCase):
 @mock.patch("metaswitch.clearwater.config_manager.config_access.subprocess.check_output",
             return_value="someuser")
 class TestCreateLocalStore(unittest.TestCase):
-    def test_folder_doesnt_exist(self, mock_mkdir, mock_exists):
+    def test_folder_doesnt_exist(self, mock_subprocess, mock_getenv, mock_mkdir, mock_exists):
         """Make sure we do create a folder if there isn't one already."""
         mock_exists.return_value = False
         config_access.LocalStore()
         self.assertEqual(mock_mkdir.call_count, 1)
 
-    def test_folder_exists(self, mock_mkdir, mock_exists):
+    def test_folder_exists(self, mock_subprocess, mock_getenv, mock_mkdir, mock_exists):
         """Make sure that we don't try to create a folder if one already
         exists."""
         config_access.LocalStore()
