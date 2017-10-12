@@ -461,7 +461,7 @@ def validate_config(local_store, config_type, force=False):
     Validates the config by calling all scripts in the validation folder.
     """
     try:
-        log.debug("Running validation script %s", script)
+        log.debug("Running validation script %s", VALIDATION_SCRIPT)
         subprocess.check_output([VALIDATION_SCRIPT,
                                  local_store.config_location(config_type)])
         print "Config successfully validated"

@@ -424,7 +424,7 @@ class TestYesNo(unittest.TestCase):
         self.assertIs(answer, False)
 
 @mock.patch(
-    "metaswitch.clearwater.config_manager.config_access.configure_logging")
+    "metaswitch.clearwater.config_manager.config_access.configure_syslog")
 @mock.patch("metaswitch.clearwater.config_manager.config_access.ConfigLoader",
             autospec=True)
 @mock.patch(
@@ -478,7 +478,7 @@ class TestMainDownload(unittest.TestCase):
             config_access.main(args)
 
 @mock.patch(
-    "metaswitch.clearwater.config_manager.config_access.configure_logging")
+    "metaswitch.clearwater.config_manager.config_access.configure_syslog")
 @mock.patch("metaswitch.clearwater.config_manager.config_access.ConfigLoader",
             autospec=True)
 @mock.patch("metaswitch.clearwater.config_manager.config_access.upload_verified_config")
@@ -624,23 +624,24 @@ class TestVerifiedUpload(unittest.TestCase):
 @mock.patch(
     'metaswitch.clearwater.config_manager.config_access.subprocess.check_output')
 @mock.patch('metaswitch.clearwater.config_manager.config_access.os.listdir')
+@mock.patch('metaswitch.clearwater.config_manager.config_access.LocalStore')
 class TestValidation(unittest.TestCase):
-    def test_scripts_run_ok(self, mock_listdir, mock_subprocess, mock_access):
+    config_location = "/some/dir/shared_config"
+
+    def test_scripts_run_ok(self, mock_localstore, mock_listdir, mock_subprocess, mock_access):
         """Check that we run the validation scripts we find in the relevant
         folder."""
+
+        mock_localstore.config_location.return_value = self.config_location
 
         mock_listdir.return_value = ['scriptA', 'scriptB']
         mock_access.side_effect = [True, True]
 
-        config_access.validate_config(False)
+        config_access.validate_config(mock_localstore, "shared_config", False)
 
-        # Make sure we are looking in the right place.
-        mock_listdir.assert_called_with(config_access.VALIDATION_SCRIPTS_FOLDER)
+        self.assertTrue([config_access.VALIDATION_SCRIPT, self.config_location]
+                        in mock_subprocess.call_args_list)
 
-        for call_info, script in zip(mock_subprocess.call_args_list,
-                                     mock_listdir.return_value):
-            args = call_info[0]
-            self.assertIn(script, args[0])
 
     def test_only_run_accessible(self,
                                  mock_listdir,
