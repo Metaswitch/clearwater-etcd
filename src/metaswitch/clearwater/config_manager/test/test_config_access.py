@@ -195,6 +195,10 @@ class TestConfigLoader(unittest.TestCase):
 @mock.patch("metaswitch.clearwater.config_manager.config_access.os.path.exists",
             return_value=True)
 @mock.patch("metaswitch.clearwater.config_manager.config_access.os.makedirs")
+@mock.patch("metaswitch.clearwater.config_manager.config_access.os.getenv",
+            return_value="/home/dir")
+@mock.patch("metaswitch.clearwater.config_manager.config_access.subprocess.check_output",
+            return_value="someuser")
 class TestCreateLocalStore(unittest.TestCase):
     def test_folder_doesnt_exist(self, mock_mkdir, mock_exists):
         """Make sure we do create a folder if there isn't one already."""
@@ -562,10 +566,11 @@ class TestMainUpload(unittest.TestCase):
         with self.assertRaises(SystemExit):
             config_access.main(args)
 
+@mock.patch("metaswitch.clearwater.config_manager.config_access.get_user_download_dir")
 @mock.patch("metaswitch.clearwater.config_manager.config_access.confirm_yn")
 @mock.patch("metaswitch.clearwater.config_manager.config_access.os.path.exists")
 class TestConfigDownload(unittest.TestCase):
-    def test_confirm_overwrite(self, mock_path_exists, mock_confirm_yn):
+    def test_confirm_overwrite(self, mock_path_exists, mock_confirm_yn, mock_download_dir):
         """Check that we ask the user for confirmation before overwriting an
         existing file."""
         mock_path_exists.return_value = True
@@ -573,7 +578,7 @@ class TestConfigDownload(unittest.TestCase):
 
         assert mock_confirm_yn.called
 
-    def test_deny_overwrite(self, mock_path_exists, mock_confirm_yn):
+    def test_deny_overwrite(self, mock_path_exists, mock_confirm_yn, mock_download_dir):
         """Check that we raise a UserAbort exception if the user denies to
         overwrite an existing file."""
         mock_path_exists.return_value = True
@@ -588,6 +593,7 @@ class TestConfigDownload(unittest.TestCase):
     def test_allow_overwrite(self,
                              mock_path_exists,
                              mock_confirm_yn,
+                             mock_download_dir,
                              mock_configloader):
         """Check that we don't raise a UserAbort exception if the user allows
         to overwrite an existing file and check that we download_config."""
