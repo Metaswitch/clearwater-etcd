@@ -17,7 +17,7 @@ import sys
 import datetime
 import time
 from metaswitch.common.logging_config import configure_logging
-# from where_is_the_config_type_plugin_loader import load_plugins_in_dir
+from metaswitch.clearwater.config_manager.config_type_plugin_loader import load_plugins_in_dir
 
 # Constants
 MAXIMUM_CONFIG_SIZE = 1000000
@@ -317,6 +317,7 @@ def main(args):
                   args.management_ip)
         etcd_client = etcd.client.Client(host=args.management_ip,
                                          port=4000)
+        selected_config = args.config_type()
         local_store = LocalStore()
         config_loader = ConfigLoader(etcd_client=etcd_client,
                                      etcd_key=args.etcd_key,
@@ -350,7 +351,7 @@ def main(args):
 
 
 def class_return(key):
-    config_classes = load_plugins_in_dir('/home/ubuntu/code/etcd_classes/')
+    config_classes = load_plugins_in_dir('/usr/share/clearwater/clearwater-config-access/plugins/')
     dict1 = {}
     for choice in config_classes:
         dict1[choice.name] = choice
@@ -364,7 +365,7 @@ def parse_arguments():
     :return:
     """
     # pick the options to appear in argument parsing
-    config_classes = load_plugins_in_dir('/home/ubuntu/code/etcd_classes/')
+    config_classes = load_plugins_in_dir('/usr/share/clearwater/clearwater-config-access/plugins/')
 
     config_choice_help = '\n'.join(choice.help_info for choice in config_classes)
     config_choices = []
@@ -487,9 +488,7 @@ def validate_config(force=False):
     # This next bit should call to the rightconfig.validate, this then returns
     # the log info to be stored and the failed script info
 
-    failed_scripts, log_de, log_err = selected_config.validate()
-    log.debug(log_de)
-    log.error(log_err)
+    failed_scripts = selected_config.validate()
 
     # When we write the bash injection script, it should either be invoked here
     # or be placed in the VALIDATION_SCRIPTS_FOLDER directory to be executed
