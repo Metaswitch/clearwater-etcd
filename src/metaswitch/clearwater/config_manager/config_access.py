@@ -317,8 +317,8 @@ def main(args):
                   args.management_ip)
         etcd_client = etcd.client.Client(host=args.management_ip,
                                          port=4000)
-        selected_config = args.config_type()
         local_store = LocalStore()
+        selected_config = args.config_type(local_store.config_location(args.config_type.name))
         config_loader = ConfigLoader(etcd_client=etcd_client,
                                      etcd_key=args.etcd_key,
                                      site=args.site,
@@ -328,21 +328,22 @@ def main(args):
         sys.exit("Unable to contact the etcd cluster.")
 
     if args.action == "download":
-        log.info("Downloading %s", args.config_type)
+        log.info("Downloading %s", selected_config.name)
         try:
             download_config(config_loader,
-                            args.config_type,
+                            selected_config.name,
                             args.autoconfirm)
         except (UserAbort, ConfigDownloadFailed) as exc:
             log.error("Download failed")
             sys.exit(exc)
 
     if args.action == "upload":
-        log.info("Uploading %s", args.config_type)
+        log.info("Uploading %s", selected_config.name)
         try:
             upload_verified_config(config_loader,
                                    local_store,
-                                   args.config_type,
+                                   selected_config.name,
+                                   selected_config,
                                    args.force,
                                    args.autoconfirm)
         except (UserAbort, ConfigUploadFailed) as exc:
@@ -468,17 +469,18 @@ def download_config(config_loader, config_type, autoskip=False):
 def upload_verified_config(config_loader,
                            local_store,
                            config_type,
+                           selected_config,
                            force=False,
                            autoconfirm=False):
     """Verifies the config, then uploads it to etcd."""
-    validate_config(force)
+    validate_config(selected_config, force)
 
     # An exception should have been thrown if validation fails, so we should
     # only reach this point if the config has been validated successfully.
     upload_config(autoconfirm, config_loader, config_type, force, local_store)
 
 
-def validate_config(force=False):
+def validate_config(selected_config, force=False):
     """
     Validates the config by calling all scripts in the validation folder.
     """

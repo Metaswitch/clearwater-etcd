@@ -887,7 +887,7 @@ class TestDeleteOutdated(unittest.TestCase):
         # Gives time of file creation as 28 days ago
         mock_getmtime.return_value = (time.time() - (28*24*60*60))
         mock_walk.return_value = (('/imaginary_file_name', [], ['testdel.py']),('/imaginary_file_2',[],[]))
-        answer = config_access.delete_outdated_config_files()
+        config_access.delete_outdated_config_files()
         # Need to check os.remove is NOT called
         self.assertIs(mock_remove.call_count, 0)
 
@@ -898,7 +898,7 @@ class TestDeleteOutdated(unittest.TestCase):
         mock_walk.return_value = (
             ('/imaginary_file_name', ['imaginary_file_2'], ['testdel.py']),
             ('/imaginary_file_name/imaginary_file_2',[],[]))
-        answer = config_access.delete_outdated_config_files()
+        config_access.delete_outdated_config_files()
         # Need to check os.remove IS called
         self.assertIs(mock_remove.call_count, 1)
 
@@ -919,7 +919,7 @@ class TestUserDownloadDir(unittest.TestCase):
     @mock.patch("metaswitch.clearwater.config_manager.config_access.get_base_download_dir")
     def test_call_get_base(self, mock_getbase, mock_getuser):
         """check that we call get_base_download_dir and get_user_name """
-        answer = config_access.get_user_download_dir()
+        config_access.get_user_download_dir()
         self.assertIs(mock_getbase.call_count, 1)
         self.assertIs(mock_getuser.call_count, 1)
 
@@ -927,14 +927,14 @@ class TestUserDownloadDir(unittest.TestCase):
 class TestBaseDownloadDir(unittest.TestCase):
     def test_call_osgetenv(self, mock_getenv):
         """check that we call os.getenv(HOME)"""
-        answer = config_access.get_base_download_dir()
+        config_access.get_base_download_dir()
         self.assertIs(mock_getenv.call_count, 1)
 
     def test_get_runtime_error(self, mock_getenv):
         """check that a runtime error is raised when home is none"""
         mock_getenv.return_value = None
         with self.assertRaises(RuntimeError):
-            answer = config_access.get_base_download_dir()
+            config_access.get_base_download_dir()
 
 class TestArguments(unittest.TestCase):
     def test_all_arguments(self):
@@ -990,7 +990,7 @@ class TestArguments(unittest.TestCase):
 
         # There's a config error, so we should fail.
         with self.assertRaises(SystemExit):
-            args = config_access.parse_arguments()
+            config_access.parse_arguments()
 
 # In these tests, we use the mock.mock_open() helper to simulate file access.
 class TestReadFromFile(unittest.TestCase):
@@ -1020,7 +1020,7 @@ class TestReadFromFile(unittest.TestCase):
 
         with mock.patch('metaswitch.clearwater.config_manager.config_access.open', mock_file, create=True):
             with self.assertRaises(config_access.FileTooLarge):
-                config = config_access.read_from_file('example_file')
+                config_access.read_from_file('example_file')
 
     def test_file_does_not_exist(self):
         """Test we throw an IOError if the file doesn't exist."""
@@ -1029,7 +1029,7 @@ class TestReadFromFile(unittest.TestCase):
 
         with mock.patch('metaswitch.clearwater.config_manager.config_access.open', mock_file, create=True):
             with self.assertRaises(IOError):
-                config = config_access.read_from_file('example_file')
+                config_access.read_from_file('example_file')
 
 
 # For added realism, we use some real examples of config files in these tests.
@@ -1225,7 +1225,7 @@ class TestDiffAndSyslog(unittest.TestCase):
 
                 remote_audit_logging_server="10.225.22.158:514\""""
 
-        answer = config_access.print_diff_and_syslog(string1, string2)
+        config_access.print_diff_and_syslog(string1, string2)
         self.assertIs(mock_syslog.openlog.call_count, 1)
         self.assertIs(mock_syslog.syslog.call_count, 1)
         self.assertIs(mock_syslog.closelog.call_count, 1)
