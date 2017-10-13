@@ -7,3 +7,4 @@ src/clearwater_etcd_plugins/clearwater_config_manager/dns_json_plugin.py /usr/sh
 
 src/clearwater_etcd_plugins/clearwater_config_access/shared_config_plugin.py /usr/share/clearwater/clearwater-config-access/plugins/
 src/clearwater_etcd_plugins/clearwater_config_access/dns_json_config_plugin.py /usr/share/clearwater/clearwater-config-access/plugins/
+src/clearwater_etcd_plugins/clearwater_config_access/configtype_plugin.py /usr/share/clearwater/clearwater-config-access/plugins/
