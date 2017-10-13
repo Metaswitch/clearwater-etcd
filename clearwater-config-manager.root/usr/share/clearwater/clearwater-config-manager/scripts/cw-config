@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Copyright (C) Metaswitch Networks 2017
+# If license terms are provided to you in a COPYING file in the root directory
+# of the source code repository by which you are accessing this code, then
+# the license outlined in that COPYING file applies to your use.
+# Otherwise no rights are granted except for those provided to you by
+# Metaswitch Networks in a separate written agreement.
+
+# Wrapper script for move-config.py. Used to extract relevant variables
+# from the config file and do permissions checking.
+
+# Include the current values from the node's config.
+. /etc/clearwater/config
+
+# We only care about whether the user has the necessary permissions if they are
+# trying to use the --force option. If they are forcing, the user must have
+# root permissions.
+if [[ "$@" == *"--force"* ]]
+then
+  . /usr/share/clearwater/utils/check-root-permissions 2
+fi
+
+/usr/share/clearwater/clearwater-config-manager/env/bin/python -m metaswitch.clearwater.config_manager.config_access "$@" --management_ip=${management_local_ip:-$local_ip} --site=${local_site_name:-"site1"} --etcd_key=${etcd_key:-"clearwater"}
