@@ -352,7 +352,8 @@ def main(args):
 
 
 def class_return(key):
-    config_classes = load_plugins_in_dir('/usr/share/clearwater/clearwater-config-access/plugins/')
+    config_classes = load_plugins_in_dir('/usr/share/clearwater/clearwater-'
+                                         'config-access/plugins/')
     dict1 = {}
     for choice in config_classes:
         dict1[choice.name] = choice
