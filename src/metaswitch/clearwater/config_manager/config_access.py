@@ -20,7 +20,7 @@ from metaswitch.common.logging_config import configure_syslog
 
 # Constants
 MAXIMUM_CONFIG_SIZE = 1000000
-VALIDATION_SCRIPT = "clearwater-check-config"
+VALIDATION_SCRIPTS_FOLDER = "/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/"
 LOG_DIR = "/var/log/clearwater-config-manager"
 
 # The directory under $HOME where config will be downloaded to.
@@ -459,24 +459,54 @@ def validate_config(local_store, config_type, force=False):
     """
     Validates the config by calling all scripts in the validation folder.
     """
-    try:
-        log.debug("Running validation script %s", VALIDATION_SCRIPT)
-        subprocess.check_output([VALIDATION_SCRIPT,
-                                 local_store.config_location(config_type)])
-        print "Config successfully validated"
+    script_dir = os.listdir(VALIDATION_SCRIPTS_FOLDER)
 
-    except subprocess.CalledProcessError as exc:
-        log.error("Validation script %s failed with output:\n %s",
-                  VALIDATION_SCRIPT,
-                  exc.output)
-
-        if not force:
-            raise ConfigValidationFailed(
-                "Validation failed while executing {}".format(
-                    VALIDATION_SCRIPT))
-
+    # We can only execute scripts that have execute permissions.
+    scripts_to_run = []
+    for script in script_dir:
+        if os.access(os.path.join(VALIDATION_SCRIPTS_FOLDER, script), os.X_OK):
+            scripts_to_run.append(script)
         else:
-            print "Continuing despite failed validation"
+            # Print a warning for each script that isn't being run because of
+            # execute permissions not being set.
+            log.warning("Skipping script %s", script)
+            print ("Validation script {} will be skipped because it does not "
+                   "have execute permissions")
+
+    failed_scripts = []
+    for script in scripts_to_run:
+        try:
+            log.debug("Running validation script %s", script)
+            subprocess.check_output(script)
+        except subprocess.CalledProcessError as exc:
+            log.error("Validation script %s failed with output:\n %s",
+                      os.path.basename(script),
+                      exc.output)
+
+            # We want to run through all the validation scripts so we can tell
+            # the user all of the problems with their config changes, so don't
+            # bail out of the loop at this point, just record which scripts
+            # have failed.
+            failed_scripts.append(script)
+
+    # When we write the bash injection script, it should either be invoked here
+    # or be placed in the VALIDATION_SCRIPTS_FOLDER directory to be executed
+    # in the above loop.
+
+    # In the forcing case, we proceed even if there have been failures, but
+    # otherwise we want to bail out at this point.
+    if not force and failed_scripts:
+        log.error("One or more validation scripts have failed, aborting")
+        raise ConfigValidationFailed(
+            "Validation failed while executing scripts:\n{}".format(
+                "\n".join(os.path.basename(script)
+                          for script in failed_scripts)))
+
+    if failed_scripts:
+        # We can only get here in the forcing case.
+        print "Continuing despite failed validation"
+    else:
+        print "Config successfully validated"
 
 
 def upload_config(autoconfirm, config_loader, config_type, force, local_store):
