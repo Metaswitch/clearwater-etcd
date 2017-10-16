@@ -2,7 +2,6 @@
 import subprocess
 import os
 import logging
-from metaswitch.common.logging_config import configure_logging
 LOG_DIR = "/var/log/clearwater-config-manager"
 
 log = logging.getLogger("cw-config.main")
@@ -40,17 +39,18 @@ class ConfigType:
 
     def __init__(self, configpath):
         self.configfile = configpath
-        if self.filetype  = 'json'
+        if self.filetype  == 'json':
             def script_finder_json(self):
                 scripts = [['python', self.call_general, self.schema,
                             self.configfile], ]
                 return scripts
-        elif self.filetype == 'xml'
+        elif self.filetype == 'xml':
             def script_finder_xml(self):
                 scripts = [['xmllint', '--format', '--pretty', '1',
                             '--load-trace', '--debug', '--schema',
                             '${}'.format(self.schema),
                             '${}'.format(self.configfile)], ]
+                return scripts
         else:
             pass
 
