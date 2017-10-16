@@ -1071,6 +1071,7 @@ class TestDiffAndSyslog(unittest.TestCase):
     def test_check_iden(self, mock_username, mock_syslog):
         """check that the diff for two identical files returns false"""
         answer = config_access.print_diff_and_syslog(
+            "shared_config",
             'string is a string \n yay',
             'string is a string \n yay')
         self.assertIs(answer, False)
@@ -1161,9 +1162,11 @@ class TestDiffAndSyslog(unittest.TestCase):
 
                 remote_audit_logging_server="10.225.22.158:514\""""
 
-        answer = config_access.print_diff_and_syslog(string1, string2)
+        answer = config_access.print_diff_and_syslog("shared_config",
+                                                     string1,
+                                                     string2)
         self.assertIs(answer, True)
-        textchanges = """Configuration file change: shared_config was modified by user name.
+        textchanges = """Configuration file change: user name has modified shared_config.
  Lines removed:
 "                remote_audit_logging_server="10.225.22.158:524""
  Lines added:
@@ -1258,7 +1261,7 @@ class TestDiffAndSyslog(unittest.TestCase):
 
                 remote_audit_logging_server="10.225.22.158:514\""""
 
-        config_access.print_diff_and_syslog(string1, string2)
+        config_access.print_diff_and_syslog("shared_config", string1, string2)
         self.assertIs(mock_syslog.openlog.call_count, 1)
         self.assertIs(mock_syslog.syslog.call_count, 1)
         self.assertIs(mock_syslog.closelog.call_count, 1)

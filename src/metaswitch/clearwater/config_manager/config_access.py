@@ -681,7 +681,7 @@ def print_diff_and_syslog(config_type, config_1, config_2):
         additions.remove(item)
 
     if additions or deletions or moved:
-        header = "Configuration file change: user {} has modified {}".format(
+        header = "Configuration file change: user {} has modified {}.".format(
             get_user_name(),
             config_type)
 
