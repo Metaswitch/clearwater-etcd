@@ -639,28 +639,68 @@ class TestVerifiedUpload(unittest.TestCase):
         assert mock_upload_config.called
 
 
+@mock.patch('metaswitch.clearwater.config_manager.config_access.os.access')
+@mock.patch('metaswitch.clearwater.config_manager.config_access.os.listdir',
+            return_value=["clearwater-core-validate-config", "other-script"])
 @mock.patch(
     'metaswitch.clearwater.config_manager.config_access.subprocess.check_output')
 @mock.patch('metaswitch.clearwater.config_manager.config_access.LocalStore')
 class TestValidation(unittest.TestCase):
     config_location = "/some/dir/shared_config"
 
-    def test_scripts_run_ok(self, mock_localstore, mock_subprocess):
+    def test_scripts_run_ok(self,
+                            mock_localstore,
+                            mock_subprocess,
+                            mock_listdir,
+                            mock_access):
         """Check that we run the validation scripts we find in the relevant
         folder."""
         mock_localstore.config_location.return_value = self.config_location
 
         config_access.validate_config(mock_localstore, "shared_config", False)
 
+        # We should be calling the default config validation script here.
         self.assertEqual(
-            mock.call([config_access.VALIDATION_SCRIPT, self.config_location]),
+            mock.call([os.path.join(config_access.VALIDATION_SCRIPTS_FOLDER,
+                                    "clearwater-core-validate-config"),
+                       self.config_location]),
             mock_subprocess.call_args_list[0])
 
-    def test_handle_validation_error(self, mock_localstore, mock_subprocess):
+        # Each script should be executed.
+        self.assertEqual(len(mock_subprocess.call_args_list), 2)
+
+    def test_executable_only(self,
+                             mock_localstore,
+                             mock_subprocess,
+                             mock_listdir,
+                             mock_access):
+        """Check that we only try to run those scripts that are executable."""
+        mock_localstore.config_location.return_value = self.config_location
+
+        # Make only one of the scripts executable.
+        mock_access.side_effect = [True, False]
+
+        config_access.validate_config(mock_localstore, "shared_config", False)
+
+        # Check that only the executable script is run.
+        self.assertEqual(len(mock_subprocess.call_args_list), 1)
+        self.assertEqual(
+            mock.call([os.path.join(config_access.VALIDATION_SCRIPTS_FOLDER,
+                                    "clearwater-core-validate-config"),
+                       self.config_location]),
+            mock_subprocess.call_args_list[0])
+
+    def test_handle_validation_error(self,
+                                     mock_localstore,
+                                     mock_subprocess,
+                                     mock_listdir,
+                                     mock_access):
         """Test that we handle validation failure correctly."""
         mock_localstore.config_location.return_value = self.config_location
 
-        mock_subprocess.side_effect = subprocess.CalledProcessError("A", "B")
+        # The second script fails.
+        mock_subprocess.side_effect = [None,
+                                       subprocess.CalledProcessError('A', 'B')]
 
         self.assertRaises(config_access.ConfigValidationFailed,
                           config_access.validate_config,
@@ -668,7 +708,11 @@ class TestValidation(unittest.TestCase):
                           "shared_config",
                           False)
 
-    def test_ignore_validation_error(self, mock_localstore, mock_subprocess):
+    def test_ignore_validation_error(self,
+                                     mock_localstore,
+                                     mock_subprocess,
+                                     mock_listdir,
+                                     mock_access):
         """Test that we ignore validation failure correctly in the force
         case."""
         mock_localstore.config_location.return_value = self.config_location

@@ -465,7 +465,8 @@ def validate_config(local_store, config_type, force=False):
     scripts_to_run = []
     for script in script_dir:
         if os.access(os.path.join(VALIDATION_SCRIPTS_FOLDER, script), os.X_OK):
-            scripts_to_run.append(script)
+            scripts_to_run.append(os.path.join(VALIDATION_SCRIPTS_FOLDER,
+                                               script))
         else:
             # Print a warning for each script that isn't being run because of
             # execute permissions not being set.
@@ -477,7 +478,12 @@ def validate_config(local_store, config_type, force=False):
     for script in scripts_to_run:
         try:
             log.debug("Running validation script %s", script)
-            subprocess.check_output(script)
+            # Pass in the location of the configuration to check as a parameter
+            # as some scripts need the user to specify which config to
+            # validate.
+            subprocess.check_output([script,
+                                     local_store.config_location(config_type)])
+
         except subprocess.CalledProcessError as exc:
             log.error("Validation script %s failed with output:\n %s",
                       os.path.basename(script),
