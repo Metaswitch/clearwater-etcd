@@ -1,6 +1,9 @@
 """This file contains the Base class for all of the config types"""
 import subprocess
 import os
+import logging
+from metaswitch.common.logging_config import configure_logging
+LOG_DIR = "/var/log/clearwater-config-manager"
 
 log = logging.getLogger("cw-config.main")
 
@@ -28,21 +31,25 @@ class ConfigType:
 
         return failed_scripts
 
-    def script_finder_json(self):
-        scripts = [['python', self.call_general, self.schema,
-                    self.configfile], ]
-        return scripts
 
-    def script_finder_xml(self):
-        scripts = [['xmllint', '--format', '--pretty', '1', '--load-trace',
-                    '--debug', '--schema', '${}'.format(self.schema),
-                    '${}'.format(self.configfile)], ]
+
+
 
     def __str__(self):
         return self.name
 
     def __init__(self, configpath):
         self.configfile = configpath
-
+        if json:
+            def script_finder_json(self):
+                scripts = [['python', self.call_general, self.schema,
+                            self.configfile], ]
+                return scripts
+        elif xml:
+            def script_finder_xml(self):
+                scripts = [['xmllint', '--format', '--pretty', '1',
+                            '--load-trace', '--debug', '--schema',
+                            '${}'.format(self.schema),
+                            '${}'.format(self.configfile)], ]
 
 
