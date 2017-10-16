@@ -31,27 +31,26 @@ log = logging.getLogger("cw-config.main")
 
 # Error messages that are displayed to the user (error messages on internal
 # exceptions are not shown here).
-MODIFIED_WHILE_EDITING = """Another user has modified the configuration since
-`cw-config download` was last run. Please download the latest version of
-{}, re-apply the changes and try again."""
+MODIFIED_WHILE_EDITING = ("Another user has modified the configuration since "
+"`cw-config download` was last run. Please download the latest version of "
+"{}, re-apply the changes and try again.")
 
-NO_CHANGES_TO_CONFIG = """There are no differences between the local and remote
-configuration. No upload will be performed."""
+NO_CHANGES_TO_CONFIG = ("There are no differences between the local and "
+"remote configuration. No upload will be performed.")
 
-CANT_LOAD_LOCAL_CONFIG = """Unable to load {} from file. Check the local
-configuration file at {} has not been corrupted."""
+CANT_LOAD_LOCAL_CONFIG = ("Unable to load {} from file. Check the local "
+"configuration file at {} has not been corrupted.")
 
-CANT_SAVE_LOCAL_CONFIG = """Unable to save {} to file. Check the user has
-permissions to write to {}."""
+CANT_SAVE_LOCAL_CONFIG = ("Unable to save {} to file. Check the user has "
+"permissions to write to {}.")
 
-CANT_COMPARE_WITH_MASTER = """Unable to compare with master configuration file.
-No upload will be performed."""
+CANT_COMPARE_WITH_MASTER = ("Unable to compare with master configuration "
+"file. No upload will be performed.")
 
-CONFIG_TYPE_DOESNT_EXIST = """{} does not exist in the configuration
-database."""
+CONFIG_TYPE_DOESNT_EXIST = "{} does not exist in the configuration database."
 
-UNABLE_TO_UPLOAD = """Unable to upload {} to the configuration database. The
-upload has failed."""
+UNABLE_TO_UPLOAD = ("Unable to upload {} to the configuration database. The "
+"upload has failed.")
 
 
 # Exceptions
@@ -326,7 +325,9 @@ def main(args):
         sys.exit("Unable to contact the etcd cluster.")
 
     if args.action == "download":
-        log.info("Downloading %s", args.config_type)
+        log.info("User %s triggered download of %s",
+                 get_user_name(),
+                 args.config_type,)
         try:
             download_config(config_loader,
                             args.config_type,
@@ -336,7 +337,9 @@ def main(args):
             sys.exit(exc)
 
     if args.action == "upload":
-        log.info("Uploading %s", args.config_type)
+        log.info("User %s triggered upload of %s",
+                 get_user_name(),
+                 args.config_type)
         try:
             upload_verified_config(config_loader,
                                    local_store,
@@ -583,7 +586,7 @@ def ready_for_upload_checks(autoconfirm,
         raise ConfigUploadFailed(MODIFIED_WHILE_EDITING.format(config_type))
 
     # Provide a diff of the changes and log to syslog
-    if not print_diff_and_syslog(remote_config, local_config):
+    if not print_diff_and_syslog(config_type, remote_config, local_config):
         # We don't bother uploading if there are no changes to upload.
         log.error("No differences between local and master %s", config_type)
         raise ConfigUploadFailed(NO_CHANGES_TO_CONFIG)
@@ -645,7 +648,7 @@ def get_base_download_dir():
     return os.path.join(home, DOWNLOAD_DIR)
 
 
-def print_diff_and_syslog(config_1, config_2):
+def print_diff_and_syslog(config_type, config_1, config_2):
     """
     Print a readable diff of changes between two texts and log to syslog.
     Returns True if there are changes, that need to be uploaded, or False if
@@ -678,8 +681,9 @@ def print_diff_and_syslog(config_1, config_2):
         additions.remove(item)
 
     if additions or deletions or moved:
-        header = ("Configuration file change: shared_config was modified by "
-                  "user {}.").format(get_user_name())
+        header = "Configuration file change: user {} has modified {}".format(
+            get_user_name(),
+            config_type)
 
         # For the syslog, we want the diff output on one line.
         # For the UI, we want to output on multiple lines, as it's
