@@ -423,6 +423,8 @@ class TestYesNo(unittest.TestCase):
         self.assertIs(answer, False)
 
 
+@mock.patch("metaswitch.clearwater.config_manager.config_access.get_user_name",
+            return_value="username")
 @mock.patch(
     "metaswitch.clearwater.config_manager.config_access.configure_syslog")
 @mock.patch("metaswitch.clearwater.config_manager.config_access.ConfigLoader",
@@ -439,7 +441,8 @@ class TestMainDownload(unittest.TestCase):
                                           mock_download_config,
                                           mock_localstore,
                                           mock_configloader,
-                                          mock_logging):
+                                          mock_logging,
+                                          mock_username):
         """Make sure we always delete outdated config files"""
         args = mock.Mock()
         config_access.main(args)
@@ -450,7 +453,8 @@ class TestMainDownload(unittest.TestCase):
                                        mock_download_config,
                                        mock_localstore,
                                        mock_configloader,
-                                       mock_logging):
+                                       mock_logging,
+                                       mock_username):
         """Make sure that we always call download_config in download mode."""
         args = mock.Mock(action='download')
         config_access.main(args)
@@ -461,7 +465,8 @@ class TestMainDownload(unittest.TestCase):
                                                   mock_download_config,
                                                   mock_localstore,
                                                   mock_configloader,
-                                                  mock_logging):
+                                                  mock_logging,
+                                                  mock_username):
         """Check that we handle a ConfigDownloadFailed exception raised by
         download_config."""
         mock_download_config.side_effect = config_access.ConfigDownloadFailed
@@ -474,7 +479,8 @@ class TestMainDownload(unittest.TestCase):
                                        mock_download_config,
                                        mock_localstore,
                                        mock_configloader,
-                                       mock_logging):
+                                       mock_logging,
+                                       mock_username):
         """Check that we handle a UserAbort exception raised by
         download_config."""
         mock_download_config.side_effect = config_access.UserAbort
@@ -484,6 +490,8 @@ class TestMainDownload(unittest.TestCase):
             config_access.main(args)
 
 
+@mock.patch("metaswitch.clearwater.config_manager.config_access.get_user_name",
+            return_value="username")
 @mock.patch(
     "metaswitch.clearwater.config_manager.config_access.configure_syslog")
 @mock.patch("metaswitch.clearwater.config_manager.config_access.ConfigLoader",
@@ -496,7 +504,8 @@ class TestMainUpload(unittest.TestCase):
                                      mock_upload_config,
                                      mock_localstore,
                                      mock_configloader,
-                                     mock_logging):
+                                     mock_logging,
+                                     mock_username):
         """Make sure that we always call upload_verified_config in upload mode."""
         args = mock.Mock(action='upload')
         config_access.main(args)
@@ -507,7 +516,8 @@ class TestMainUpload(unittest.TestCase):
                                   mock_upload_config,
                                   mock_localstore,
                                   mock_configloader,
-                                  mock_logging):
+                                  mock_logging,
+                                  mock_username):
         """Check that we handle an exception raised by upload_verified_config.
         """
         mock_upload_config.side_effect = config_access.ConfigUploadFailed
@@ -520,7 +530,8 @@ class TestMainUpload(unittest.TestCase):
                                               mock_upload_config,
                                               mock_localstore,
                                               mock_configloader,
-                                              mock_logging):
+                                              mock_logging,
+                                              mock_username):
         """Check that we handle a ConfigUploadFailed exception raised by
         upload_verified_config."""
         mock_upload_config.side_effect = config_access.ConfigUploadFailed
@@ -533,7 +544,8 @@ class TestMainUpload(unittest.TestCase):
                                                   mock_upload_config,
                                                   mock_localstore,
                                                   mock_configloader,
-                                                  mock_logging):
+                                                  mock_logging,
+                                                  mock_username):
         """Check that we handle a ConfigValidationFailed exception raised by
         upload_verified_config."""
         mock_upload_config.side_effect = config_access.ConfigValidationFailed
@@ -546,7 +558,8 @@ class TestMainUpload(unittest.TestCase):
                                      mock_upload_config,
                                      mock_localstore,
                                      mock_configloader,
-                                     mock_logging):
+                                     mock_logging,
+                                     mock_username):
         """Check that we handle a UserAbort exception raised by
         upload_verified_config."""
         mock_upload_config.side_effect = config_access.UserAbort
@@ -559,7 +572,8 @@ class TestMainUpload(unittest.TestCase):
                                   mock_upload_config,
                                   mock_localstore,
                                   mock_configloader,
-                                  mock_logging):
+                                  mock_logging,
+                                  mock_username):
         """Check that we handle an EtcdException raised by
         etcd.client.Client."""
         mock_configloader.side_effect = etcd.EtcdException
