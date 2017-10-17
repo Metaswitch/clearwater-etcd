@@ -327,7 +327,7 @@ def main(args):
     if args.action == "download":
         log.info("User %s triggered download of %s",
                  get_user_name(),
-                 args.config_type,)
+                 args.config_type)
         try:
             download_config(config_loader,
                             args.config_type,
