@@ -638,6 +638,8 @@ class TestVerifiedUpload(unittest.TestCase):
         """Check that we only call upload_config if validation passed."""
         mock_configloader = mock.MagicMock(spec=config_access.ConfigLoader)
         mock_localstore = mock.MagicMock(spec=config_access.LocalStore)
+        mock_selectedconfig = mock.MagicMock(
+            spec=shared_config_config_plugin.SharedConfig)
 
         # Test that if we fail to validate the config, it does not get
         # uploaded.
@@ -645,6 +647,7 @@ class TestVerifiedUpload(unittest.TestCase):
         with self.assertRaises(config_access.ConfigValidationFailed):
             config_access.upload_verified_config(mock_configloader,
                                                  mock_localstore,
+                                                 mock_selectedconfig,
                                                  "shared_config")
         assert not mock_upload_config.called
 
@@ -653,6 +656,7 @@ class TestVerifiedUpload(unittest.TestCase):
         mock_validate_config.side_effect = None
         config_access.upload_verified_config(mock_configloader,
                                              mock_localstore,
+                                             mock_selectedconfig,
                                              "shared_config")
 
         assert mock_upload_config.called
@@ -664,6 +668,7 @@ class TestVerifiedUpload(unittest.TestCase):
 @mock.patch(
     'metaswitch.clearwater.config_manager.config_access.subprocess.check_output')
 @mock.patch('metaswitch.clearwater.config_manager.config_access.LocalStore')
+@mock.patch('metaswitch.clearwater.config_manager.config_access.')
 class TestValidation(unittest.TestCase):
     config_location = "/some/dir/shared_config"
 
@@ -980,10 +985,6 @@ class TestBaseDownloadDir(unittest.TestCase):
         mock_getenv.return_value = None
         with self.assertRaises(RuntimeError):
             config_access.get_base_download_dir()
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/oamp_shared_config_for_admins
 
 
 @mock.patch("metaswitch.clearwater.config_manager.config_access.load_plugins_in_dir",

@@ -22,7 +22,6 @@ from metaswitch.common.logging_config import configure_syslog
 
 # Constants
 MAXIMUM_CONFIG_SIZE = 1000000
-VALIDATION_SCRIPTS_FOLDER = "/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/"
 LOG_DIR = "/var/log/clearwater-config-manager"
 
 # The directory under $HOME where config will be downloaded to.
@@ -474,7 +473,7 @@ def upload_verified_config(config_loader,
                            force=False,
                            autoconfirm=False):
     """Verifies the config, then uploads it to etcd."""
-    validate_config(local_store, config_type, force)
+    validate_config(selected_config, force)
 
     # An exception should have been thrown if validation fails, so we should
     # only reach this point if the config has been validated successfully.
