@@ -475,7 +475,7 @@ def validate_config(local_store, config_type, force=False):
             # execute permissions not being set.
             log.warning("Skipping script %s", script)
             print ("Validation script {} will be skipped because it does not "
-                   "have execute permissions")
+                   "have execute permissions".format(script))
 
     failed_scripts = []
     for script in scripts_to_run:
