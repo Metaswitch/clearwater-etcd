@@ -11,7 +11,7 @@ Homepage: http://projectclearwater.org/
 
 Package: clearwater-etcd
 Architecture: all
-Depends: python-pip, clearwater-infrastructure, clearwater-monit
+Depends: python-pip, clearwater-infrastructure, clearwater-monit, clearwater-log-cleanup
 Description: etcd configured for Clearwater
 
 Package: clearwater-cluster-manager
