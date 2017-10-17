@@ -18,38 +18,42 @@ import datetime
 import time
 from metaswitch.common.logging_config import configure_logging
 from metaswitch.clearwater.config_manager.config_type_plugin_loader import load_plugins_in_dir
+from metaswitch.common.logging_config import configure_syslog
 
 # Constants
 MAXIMUM_CONFIG_SIZE = 1000000
 VALIDATION_SCRIPTS_FOLDER = "/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/"
 LOG_DIR = "/var/log/clearwater-config-manager"
 
+# The directory under $HOME where config will be downloaded to.
+DOWNLOAD_DIR = "clearwater-config-manager"
+
 # Configure logging.
 log = logging.getLogger("cw-config.main")
 
 # Error messages that are displayed to the user (error messages on internal
 # exceptions are not shown here).
-MODIFIED_WHILE_EDITING = """Another user has modified the configuration since
-`cw-config download` was last run. Please download the latest version of
-{}, re-apply the changes and try again."""
+MODIFIED_WHILE_EDITING = ("Another user has modified the configuration since "
+"`cw-config download` was last run. Please download the latest version of "
+"{}, re-apply the changes and try again.")
 
-NO_CHANGES_TO_CONFIG = """There are no differences between the local and remote
-configuration. No upload will be performed."""
+NO_CHANGES_TO_CONFIG = ("There are no differences between the local and "
+"remote configuration. No upload will be performed.")
 
-CANT_LOAD_LOCAL_CONFIG = """Unable to load {} from file. Check the local
-configuration file at {} has not been corrupted."""
+CANT_LOAD_LOCAL_CONFIG = ("Unable to load {} from file. Check the local "
+"configuration file at {} has not been corrupted.")
 
-CANT_SAVE_LOCAL_CONFIG = """Unable to save {} to file. Check the user has
-permissions to write to {}."""
+CANT_SAVE_LOCAL_CONFIG = ("Unable to save {} to file. Check the user has "
+"permissions to write to {}.")
 
-CANT_COMPARE_WITH_MASTER = """Unable to compare with master configuration file.
-No upload will be performed."""
+CANT_COMPARE_WITH_MASTER = ("Unable to compare with master configuration "
+"file. No upload will be performed.")
 
-CONFIG_TYPE_DOESNT_EXIST = """{} does not exist in the configuration
-database."""
+CONFIG_TYPE_DOESNT_EXIST = "{} does not exist in the configuration database."
 
-UNABLE_TO_UPLOAD = """Unable to upload {} to the configuration database. The
-upload has failed."""
+UNABLE_TO_UPLOAD = ("Unable to upload {} to the configuration database. The "
+"upload has failed.")
+
 
 # Exceptions
 class ConfigDownloadFailed(Exception):
@@ -102,7 +106,6 @@ class ConfigLoader(object):
         self._etcd_client = etcd_client
         self.prefix = "/".join(["", etcd_key, site, "configuration"])
         self.local_store = local_store
-        self.download_dir = get_user_download_dir()
 
         # Make sure that the etcd process is actually contactable.
         self._check_connection()
@@ -189,7 +192,6 @@ class ConfigLoader(object):
             log.error("Master revision doesn't match local revision")
             raise ConfigUploadFailed(
                 MODIFIED_WHILE_EDITING.format(config_type))
-
 
     # We need this property for the step in write_config_to_etcd where we log
     # the change in config to file.
@@ -302,10 +304,8 @@ def main(args):
     """
     Main entry point for script.
     """
-    # Set up logging.
-    configure_logging(args.log_level,
-                      args.log_dir,
-                      "cw-config")
+    # Set up logging to syslog.
+    configure_syslog(args.log_level)
 
     # Regardless of passed arguments we want to delete outdated config to not
     # leave unused files on disk.
@@ -329,7 +329,9 @@ def main(args):
         sys.exit("Unable to contact the etcd cluster.")
 
     if args.action == "download":
-        log.info("Downloading %s", selected_config.name)
+        log.info("User %s triggered download of %s",
+                 get_user_name(),
+                 args.config_type)
         try:
             download_config(config_loader,
                             selected_config.name,
@@ -339,7 +341,9 @@ def main(args):
             sys.exit(exc)
 
     if args.action == "upload":
-        log.info("Uploading %s", selected_config.name)
+        log.info("User %s triggered upload of %s",
+                 get_user_name(),
+                 args.config_type)
         try:
             upload_verified_config(config_loader,
                                    local_store,
@@ -382,11 +386,6 @@ def parse_arguments():
                         help="Turns forcing on [default=off]")
 
     # Logging options
-    parser.add_argument("--log-dir",
-                        type=str,
-                        default=LOG_DIR,
-                        help=("Directory that logs will be written to. "
-                              "Defaults to {}".format(LOG_DIR)))
     parser.add_argument("--log-level",
                         type=int,
                         default=logging.INFO,
@@ -475,7 +474,7 @@ def upload_verified_config(config_loader,
                            force=False,
                            autoconfirm=False):
     """Verifies the config, then uploads it to etcd."""
-    validate_config(selected_config, force)
+    validate_config(local_store, config_type, force)
 
     # An exception should have been thrown if validation fails, so we should
     # only reach this point if the config has been validated successfully.
@@ -582,7 +581,7 @@ def ready_for_upload_checks(autoconfirm,
         raise ConfigUploadFailed(MODIFIED_WHILE_EDITING.format(config_type))
 
     # Provide a diff of the changes and log to syslog
-    if not print_diff_and_syslog(remote_config, local_config, config_type):
+    if not print_diff_and_syslog(config_type, remote_config, local_config):
         # We don't bother uploading if there are no changes to upload.
         log.error("No differences between local and master %s", config_type)
         raise ConfigUploadFailed(NO_CHANGES_TO_CONFIG)
@@ -641,10 +640,10 @@ def get_base_download_dir():
     if home is None:
         log.error("There must be a home directory to download config to")
         raise RuntimeError("No home directory found.")
-    return os.path.join(home, 'clearwater-config-manager/staging')
+    return os.path.join(home, DOWNLOAD_DIR)
 
 
-def print_diff_and_syslog(config_1, config_2, config_type):
+def print_diff_and_syslog(config_type, config_1, config_2):
     """
     Print a readable diff of changes between two texts and log to syslog.
     Returns True if there are changes, that need to be uploaded, or False if
@@ -677,8 +676,9 @@ def print_diff_and_syslog(config_1, config_2, config_type):
         additions.remove(item)
 
     if additions or deletions or moved:
-        header = ("Configuration file change: {} was modified by "
-                  "user {}.").format(config_type, get_user_name())
+        header = "Configuration file change: user {} has modified {}.".format(
+            get_user_name(),
+            config_type)
 
         # For the syslog, we want the diff output on one line.
         # For the UI, we want to output on multiple lines, as it's

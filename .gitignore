@@ -6,6 +6,10 @@
 /build_configmgr/
 /build_shared/
 /build_queuemgr/
+/build_cluster_mgr_setup/
+/build_config_mgr_setup/
+/build_queue_mgr_setup/
+/build_shared_setup/
 /clearwater_etcd_tests.egg-info/
 /_env/
 *.pyc
