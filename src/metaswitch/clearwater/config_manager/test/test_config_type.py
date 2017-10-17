@@ -1,11 +1,9 @@
 
 
-import mock
 import unittest
 import subprocess
 import os
-import sys
-import logging
+import mock
 
 import metaswitch.clearwater.config_manager.config_type_plugin_loader as config_type_plugin_loader
 import metaswitch.clearwater.config_manager.config_type_class_plugin as config_type_class_plugin
@@ -14,7 +12,6 @@ from clearwater_etcd_plugins.clearwater_config_access import shared_config_confi
 from clearwater_etcd_plugins.clearwater_config_access import shared_ifcs_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import bgcf_json_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import weatherwax_config_plugin
-import metaswitch.clearwater.config_manager.config_access as config_access
 
 
 @mock.patch("metaswitch.clearwater.config_manager.config_type_class_plugin.log")
@@ -48,12 +45,17 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
         self.assertListEqual(answer, ['script2'])
         self.assertIs(mock_subprocess.call_count, 2)
 
-    def test_init(self, mock_subprocess, mock_log):
+    @mock.patch("metaswitch.clearwater.config_manager.config_type_class_plugin.os")
+    def test_init(self, mock_os, mock_subprocess, mock_log):
         """test ___init__ with filetype and check correct script finder
         picked """
-        ifcs_xml = shared_ifcs_config_plugin.SharedIfcsXml('path')
+
+        mock_os.return_value = ['script1', 'script2']
+
         bgcf_json = bgcf_json_config_plugin.BgcfJson('path')
+        ifcs_xml = shared_ifcs_config_plugin.SharedIfcsXml('path')
         weatherwax = weatherwax_config_plugin.WeatherwaxConfig('path')
+        shared_config = shared_config_config_plugin.SharedConfig('path')
 
         list1 = [['python', '/usr/share/clearwater/clearwater-config-manager/scripts/validate_json.py',
                   '/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/bgcf_schema.json',
@@ -63,10 +65,12 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
                   '$/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/shared_ifcs_schema.xsd',
                   '$path'], ]
         list3 = []
+        list4 = ['script1', 'script2']
 
-        self.assertListEqual(ifcs_xml.scripts, list2)
         self.assertListEqual(bgcf_json.scripts, list1)
+        self.assertListEqual(ifcs_xml.scripts, list2)
         self.assertListEqual(weatherwax.scripts, list3)
+        self.assertListEqual(shared_config.scripts, list4)
 
 
 class TestConfigTypePluginLoader(unittest.TestCase):

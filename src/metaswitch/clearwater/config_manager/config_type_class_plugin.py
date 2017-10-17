@@ -3,6 +3,7 @@ import subprocess
 import os
 import logging
 LOG_DIR = "/var/log/clearwater-config-manager"
+VALIDATION_SCRIPTS_FOLDER = "/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/"
 
 log = logging.getLogger("cw-config.main")
 
@@ -30,16 +31,12 @@ class ConfigType:
 
         return failed_scripts
 
-
-
-
-
     def __str__(self):
         return self.name
 
     def __init__(self, configpath):
         self.configfile = configpath
-        if self.filetype  == 'json':
+        if self.filetype == 'json':
             self.scripts = [['python', self.call_general, self.schema,
                             self.configfile], ]
         elif self.filetype == 'xml':
@@ -47,6 +44,13 @@ class ConfigType:
                              '--load-trace', '--debug', '--schema',
                              '${}'.format(self.schema),
                              '${}'.format(self.configfile)], ]
+        elif self.filetype == 'shared_config':
+            # We can only execute scripts that have execute permissions.
+            script_dir = os.listdir(VALIDATION_SCRIPTS_FOLDER)
+            self.scripts = [os.path.join(VALIDATION_SCRIPTS_FOLDER, s)
+                            for s in script_dir
+                            if os.access(os.path.join(
+                                VALIDATION_SCRIPTS_FOLDER, s), os.X_OK)]
         else:
             pass
 
