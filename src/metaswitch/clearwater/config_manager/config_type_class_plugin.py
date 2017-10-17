@@ -40,17 +40,13 @@ class ConfigType:
     def __init__(self, configpath):
         self.configfile = configpath
         if self.filetype  == 'json':
-            def script_finder_json(self):
-                scripts = [['python', self.call_general, self.schema,
+            self.scripts = [['python', self.call_general, self.schema,
                             self.configfile], ]
-                return scripts
         elif self.filetype == 'xml':
-            def script_finder_xml(self):
-                scripts = [['xmllint', '--format', '--pretty', '1',
-                            '--load-trace', '--debug', '--schema',
-                            '${}'.format(self.schema),
-                            '${}'.format(self.configfile)], ]
-                return scripts
+            self.scripts = [['xmllint', '--format', '--pretty', '1',
+                             '--load-trace', '--debug', '--schema',
+                             '${}'.format(self.schema),
+                             '${}'.format(self.configfile)], ]
         else:
             pass
 
