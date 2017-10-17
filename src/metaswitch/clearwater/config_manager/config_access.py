@@ -318,7 +318,8 @@ def main(args):
         etcd_client = etcd.client.Client(host=args.management_ip,
                                          port=4000)
         local_store = LocalStore()
-        selected_config = args.config_type(local_store.config_location(args.config_type.name))
+        filepath = local_store.config_location(args.config_type)
+        selected_config = class_return(args.config_type, filepath)
         config_loader = ConfigLoader(etcd_client=etcd_client,
                                      etcd_key=args.etcd_key,
                                      site=args.site,
@@ -351,9 +352,9 @@ def main(args):
             sys.exit(exc)
 
 
-def class_return(key):
+def class_return(key, filepath):
     config_classes = load_plugins_in_dir('/usr/share/clearwater/clearwater-'
-                                         'config-access/plugins/')
+                                         'config-access/plugins/', filepath)
     dict1 = {}
     for choice in config_classes:
         dict1[choice.name] = choice
@@ -409,7 +410,7 @@ def parse_arguments():
                         help="The action to perform - {upload | download}",
                         metavar='action')
     parser.add_argument("config_type",
-                        type=class_return,
+                        type=str,
                         choices=config_choices,
                         help=(config_choice_help),
                         metavar='config_type')
