@@ -5,6 +5,7 @@ import unittest
 import subprocess
 import os
 import sys
+import logging
 
 import metaswitch.clearwater.config_manager.config_type_plugin_loader as config_type_plugin_loader
 import metaswitch.clearwater.config_manager.config_type_class_plugin as config_type_class_plugin
@@ -47,7 +48,6 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
         self.assertListEqual(answer, ['script2'])
         self.assertIs(mock_subprocess.call_count, 2)
 
-
     def test_init(self, mock_subprocess, mock_log):
         """test ___init__ with filetype and check correct script finder
         picked """
@@ -76,92 +76,6 @@ class TestConfigTypePluginLoader(unittest.TestCase):
         plugin_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                    "plugins")
         plugins = config_type_plugin_loader.load_plugins_in_dir(plugin_path, None)
-
         # Check that the plugin loaded successfully
         self.assertEqual(plugins[0].__class__.__name__,
                          "PluginLoaderTestPlugin")
-
-# TODO
-# these test config access so may be worth moving these tests into config_access
-@mock.patch("metaswitch.clearwater.config_manager.config_access.load_plugins_in_dir")
-class TestClassReturn(unittest.TestCase):
-
-    def test_class_return(self, mock_loadplugins):
-        """mock load_plugins_in_dir then create mock class structure?!?!
-        then create dict and check with input the return is correct"""
-        mock_loadplugins.side_effect = 'give list of fake classes'
-        key = 'shared_config'
-        answer = config_access.class_return(key)
-        self.assertIs(class1, answer)
-
-
-@mock.patch("metaswitch.clearwater.config_manager.config_access.load_plugins_in_dir")
-class TestArguments(unittest.TestCase):
-    def test_all_arguments(self, mock_loadplugins):
-        """Test that every argument is set correctly."""
-        sys.argv = ["config_access.py",
-                    "--autoconfirm",
-                    "--force",
-                    "--log-dir", "some/dir",
-                    "--log-level", "50",
-                    "upload",
-                    "shared_config",
-                    "--management_ip", "1.2.3.4",
-                    "--site", "siteX",
-                    "--etcd_key", "lockpick"]
-
-        args = config_access.parse_arguments()
-
-        assert args.force
-        assert args.autoconfirm
-        assert args.log_dir == "some/dir"
-        assert args.log_level == 50
-        assert args.action == "upload"
-        assert args.config_type == class1
-        assert args.management_ip == "1.2.3.4"
-        assert args.site == "siteX"
-        assert args.etcd_key == "lockpick"
-
-    def test_mandatory_args_only(self, mock_loadplugins):
-        """Check that we correctly parse only the mandatory arguments."""
-        sys.argv = ["config_access.py",
-                    "download",
-                    "shared_config",
-                    "--management_ip", "1.2.3.4",
-                    "--site", "siteX",
-                    "--etcd_key", "lockpick"]
-
-        args = config_access.parse_arguments()
-
-        assert not args.force
-        assert not args.autoconfirm
-        assert args.log_level == logging.INFO
-        assert args.action == "download"
-        assert args.config_type == class1
-        assert args.management_ip == "1.2.3.4"
-        assert args.site == "siteX"
-        assert args.etcd_key == "lockpick"
-
-    def test_missing_args(self, mock_loadplugins):
-        """Check that when the arguments are invalid we error out."""
-        sys.argv = ["config_access.py",
-                    "reload",
-                    "shard_config"]
-
-        # There's a config error, so we should fail.
-        with self.assertRaises(SystemExit):
-            config_access.parse_arguments()
-
-    def test_wrong_config(self, mock_loadplugins):
-        """check that when a config_type not in the choice list is provided
-        a error is raised"""
-
-        sys.argv = ["config_access.py",
-                    "download",
-                    "bgcf_json",
-                    "--management_ip", "1.2.3.4",
-                    "--site", "siteX",
-                    "--etcd_key", "lockpick"]
-
-        with self.assertRaises(SystemExit):
-            config_access.parse_arguments()

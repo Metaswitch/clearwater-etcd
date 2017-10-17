@@ -17,6 +17,11 @@ import sys
 import etcd.client
 
 import metaswitch.clearwater.config_manager.config_access as config_access
+from clearwater_etcd_plugins.clearwater_config_access import dns_json_config_plugin
+from clearwater_etcd_plugins.clearwater_config_access import shared_config_config_plugin
+from clearwater_etcd_plugins.clearwater_config_access import shared_ifcs_config_plugin
+from clearwater_etcd_plugins.clearwater_config_access import bgcf_json_config_plugin
+from clearwater_etcd_plugins.clearwater_config_access import weatherwax_config_plugin
 
 
 class TestCheckConnection(unittest.TestCase):
@@ -936,8 +941,13 @@ class TestBaseDownloadDir(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             config_access.get_base_download_dir()
 
+
+@mock.patch("metaswitch.clearwater.config_manager.config_access.load_plugins_in_dir",
+            return_value=[dns_json_config_plugin.DnsJson('path'),
+                          bgcf_json_config_plugin.BgcfJson('path'),
+                          shared_config_config_plugin.SharedConfig('path')])
 class TestArguments(unittest.TestCase):
-    def test_all_arguments(self):
+    def test_all_arguments(self, mock_loadplugins):
         """Test that every argument is set correctly."""
         sys.argv = ["config_access.py",
                     "--autoconfirm",
@@ -962,7 +972,7 @@ class TestArguments(unittest.TestCase):
         assert args.site == "siteX"
         assert args.etcd_key == "lockpick"
 
-    def test_mandatory_args_only(self):
+    def test_mandatory_args_only(self, mock_loadplugins):
         """Check that we correctly parse only the mandatory arguments."""
         sys.argv = ["config_access.py",
                     "download",
@@ -982,7 +992,7 @@ class TestArguments(unittest.TestCase):
         assert args.site == "siteX"
         assert args.etcd_key == "lockpick"
 
-    def test_missing_args(self):
+    def test_missing_args(self, mock_loadplugins):
         """Check that when the arguments are invalid we error out."""
         sys.argv = ["config_access.py",
                     "reload",
@@ -991,6 +1001,42 @@ class TestArguments(unittest.TestCase):
         # There's a config error, so we should fail.
         with self.assertRaises(SystemExit):
             config_access.parse_arguments()
+
+    def test_wrong_config(self, mock_loadplugins):
+        """check that when a config_type not in the choice list is provided
+        a error is raised"""
+
+        sys.argv = ["config_access.py",
+                    "download",
+                    "weatherwax_config",
+                    "--management_ip", "1.2.3.4",
+                    "--site", "siteX",
+                    "--etcd_key", "lockpick"]
+
+        with self.assertRaises(SystemExit):
+            config_access.parse_arguments()
+
+
+@mock.patch("metaswitch.clearwater.config_manager.config_access.load_plugins_in_dir",
+            return_value=[dns_json_config_plugin.DnsJson('path'),
+                          bgcf_json_config_plugin.BgcfJson('path'),
+                          shared_config_config_plugin.SharedConfig('path')])
+class TestClassReturn(unittest.TestCase):
+
+    def test_class_return_shared(self, mock_loadplugins):
+        """Check that class return returns the correct class instance of
+        shared_config"""
+        key = 'shared_config'
+        answer = config_access.class_return(key, 'path')
+        self.assertIsInstance(answer, shared_config_config_plugin.SharedConfig)
+
+    def test_class_return_bgcf(self, mock_loadplugins):
+        """Check that class return returns bgcf_json class instance
+        correctly"""
+        key = 'bgcf_json'
+        answer = config_access.class_return(key, 'path')
+        self.assertIsInstance(answer, bgcf_json_config_plugin.BgcfJson)
+
 
 # In these tests, we use the mock.mock_open() helper to simulate file access.
 class TestReadFromFile(unittest.TestCase):
