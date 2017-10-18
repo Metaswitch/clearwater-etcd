@@ -6,7 +6,6 @@ import os
 import mock
 
 import metaswitch.clearwater.config_manager.config_type_plugin_loader as config_type_plugin_loader
-import metaswitch.clearwater.config_manager.config_type_class_plugin as config_type_class_plugin
 from clearwater_etcd_plugins.clearwater_config_access import dns_json_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import shared_config_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import shared_ifcs_config_plugin
@@ -104,7 +103,7 @@ class TestGetValidationScripts(unittest.TestCase):
     def test_get_shared(self, mock_os):
         """tests the get_sharedconfig_validation script calls the
         os function"""
-        shared_config = shared_config_config_plugin.SharedConfig('path')
+        shared_config_config_plugin.SharedConfig('path')
         self.assertIs(mock_os.listdir.call_count, 1)
 
 
