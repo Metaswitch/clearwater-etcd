@@ -478,6 +478,7 @@ def validate_config(local_store, config_type, force=False):
                    "have execute permissions".format(script))
 
     failed_scripts = []
+    error_lines = []
     for script in scripts_to_run:
         try:
             log.debug("Running validation script %s", script)
@@ -488,9 +489,14 @@ def validate_config(local_store, config_type, force=False):
                                      local_store.config_location(config_type)])
 
         except subprocess.CalledProcessError as exc:
-            log.error("Validation script %s failed with output:\n %s",
-                      os.path.basename(script),
-                      exc.output)
+            log.error("Validation script %s failed", os.path.basename(script))
+            log.error("Reasons for failure:")
+            errors = [line for line in exc.output.splitlines()
+                      if "ERROR" in line]
+            error_lines.extend(errors)
+
+            for line in errors:
+                log.error(line)
 
             # We want to run through all the validation scripts so we can tell
             # the user all of the problems with their config changes, so don't
@@ -507,9 +513,12 @@ def validate_config(local_store, config_type, force=False):
     if not force and failed_scripts:
         log.error("One or more validation scripts have failed, aborting")
         raise ConfigValidationFailed(
-            "Validation failed while executing scripts:\n{}".format(
-                "\n".join(os.path.basename(script)
-                          for script in failed_scripts)))
+            "Validation failed while executing scripts:\n"
+            " {}\n"
+            "Errors:\n"
+            " {}".format("\n ".join(os.path.basename(script)
+                                    for script in failed_scripts),
+                         "\n ".join(error_lines)))
 
     if failed_scripts:
         # We can only get here in the forcing case.
