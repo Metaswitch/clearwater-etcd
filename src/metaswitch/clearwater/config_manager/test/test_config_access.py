@@ -661,6 +661,7 @@ class TestVerifiedUpload(unittest.TestCase):
 @mock.patch('metaswitch.clearwater.config_manager.config_access.LocalStore')
 class TestValidation(unittest.TestCase):
     config_location = "/some/dir/shared_config"
+    validation_exception = subprocess.CalledProcessError('A', 'B')
 
     def test_scripts_run_ok(self,
                             mock_localstore,
@@ -713,8 +714,8 @@ class TestValidation(unittest.TestCase):
         mock_localstore.config_location.return_value = self.config_location
 
         # The second script fails.
-        mock_subprocess.side_effect = [None,
-                                       subprocess.CalledProcessError('A', 'B')]
+        self.validation_exception.output = "ERROR: Something went wrong"
+        mock_subprocess.side_effect = [None, self.validation_exception]
 
         self.assertRaises(config_access.ConfigValidationFailed,
                           config_access.validate_config,
@@ -731,7 +732,8 @@ class TestValidation(unittest.TestCase):
         case."""
         mock_localstore.config_location.return_value = self.config_location
 
-        mock_subprocess.side_effect = subprocess.CalledProcessError("A", "B")
+        self.validation_exception.output = "ERROR: Something went wrong"
+        mock_subprocess.side_effect = self.validation_exception
 
         # Even though subprocess raises an exception, we continue because
         # we're in force mode.
