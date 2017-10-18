@@ -34,23 +34,34 @@ class ConfigType:
     def __str__(self):
         return self.name
 
+    def get_json_validation(self):
+        scripts = [['python', self.call_general, self.schema,
+                    self.configfile], ]
+        return scripts
+
+    def get_xml_validation(self):
+        scripts = [['xmllint', '--format', '--pretty', '1', '--load-trace',
+                    '--debug', '--schema', '${}'.format(self.schema),
+                    '${}'.format(self.configfile)], ]
+        return scripts
+
+    def get_sharedconfig_validation(self):
+        script_dir = os.listdir(VALIDATION_SCRIPTS_FOLDER)
+        # We can only execute scripts that have execute permissions.
+        scripts = [os.path.join(VALIDATION_SCRIPTS_FOLDER, s)
+                   for s in script_dir
+                   if os.access(os.path.join(
+                       VALIDATION_SCRIPTS_FOLDER, s), os.X_OK)]
+        return scripts
+
     def __init__(self, configpath):
         self.configfile = configpath
         if self.filetype == 'json':
-            self.scripts = [['python', self.call_general, self.schema,
-                            self.configfile], ]
+            self.scripts = self.get_json_validation()
         elif self.filetype == 'xml':
-            self.scripts = [['xmllint', '--format', '--pretty', '1',
-                             '--load-trace', '--debug', '--schema',
-                             '${}'.format(self.schema),
-                             '${}'.format(self.configfile)], ]
+            self.scripts = self.get_xml_validation()
         elif self.filetype == 'shared_config':
-            # We can only execute scripts that have execute permissions.
-            script_dir = os.listdir(VALIDATION_SCRIPTS_FOLDER)
-            self.scripts = [os.path.join(VALIDATION_SCRIPTS_FOLDER, s)
-                            for s in script_dir
-                            if os.access(os.path.join(
-                                VALIDATION_SCRIPTS_FOLDER, s), os.X_OK)]
+            self.scripts = self.get_sharedconfig_validation()
         else:
             pass
 
