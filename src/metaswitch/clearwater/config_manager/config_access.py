@@ -16,13 +16,15 @@ import syslog
 import sys
 import datetime
 import time
-from metaswitch.common.logging_config import configure_logging
 from metaswitch.clearwater.config_manager.config_type_plugin_loader import load_plugins_in_dir
 from metaswitch.common.logging_config import configure_syslog
 
 # Constants
 MAXIMUM_CONFIG_SIZE = 1000000
 LOG_DIR = "/var/log/clearwater-config-manager"
+
+# The directory on a clearwater node where the subclass config types are stored
+PLUGIN_DIR = "/usr/share/clearwater/clearwater-config-access/plugins/"
 
 # The directory under $HOME where config will be downloaded to.
 DOWNLOAD_DIR = "clearwater-config-manager"
@@ -317,8 +319,8 @@ def main(args):
         etcd_client = etcd.client.Client(host=args.management_ip,
                                          port=4000)
         local_store = LocalStore()
-        filepath = local_store.config_location(args.config_type)
-        selected_config = class_return(args.config_type, filepath)
+        config_location = local_store.config_location(args.config_type)
+        selected_config = lookup_config_type(args.config_type, config_location)
         config_loader = ConfigLoader(etcd_client=etcd_client,
                                      etcd_key=args.etcd_key,
                                      site=args.site,
@@ -333,7 +335,7 @@ def main(args):
                  args.config_type)
         try:
             download_config(config_loader,
-                            selected_config.name,
+                            selected_config,
                             args.autoconfirm)
         except (UserAbort, ConfigDownloadFailed) as exc:
             log.error("Download failed")
@@ -346,7 +348,6 @@ def main(args):
         try:
             upload_verified_config(config_loader,
                                    local_store,
-                                   selected_config.name,
                                    selected_config,
                                    args.force,
                                    args.autoconfirm)
@@ -355,13 +356,17 @@ def main(args):
             sys.exit(exc)
 
 
-def class_return(key, filepath):
-    config_classes = load_plugins_in_dir('/usr/share/clearwater/clearwater-'
-                                         'config-access/plugins/', filepath)
-    dict1 = {}
+def lookup_config_type(config_type, config_location):
+    """
+    This takes the string defining the config_type from arg.parse and returns
+    a instance of the class containing data on the config type selected
+    """
+    config_classes = load_plugins_in_dir(PLUGIN_DIR, config_location)
     for choice in config_classes:
-        dict1[choice.name] = choice
-    return dict1[key]
+        if config_type == choice.name:
+            return choice
+        # The config_type will always be the choice.name of one class as
+        # parse_arguments will make sure config_type == choice.name
 
 
 def parse_arguments():
@@ -370,13 +375,13 @@ def parse_arguments():
     The options for config type are designated by the plugins available
     :return:
     """
-    # pick the options to appear in argument parsing
-    config_classes = load_plugins_in_dir('/usr/share/clearwater/clearwater-config-access/plugins/')
+    # Pick the options to appear in argument parsing, the config types are
+    # loaded as plugin classes onto the node so only the config files available
+    # on the node are able to be changed on the node.
+    config_classes = load_plugins_in_dir(PLUGIN_DIR)
 
     config_choice_help = '\n'.join(choice.help_info for choice in config_classes)
-    config_choices = []
-    for choice in config_classes:
-        config_choices.append(choice.name)
+    config_choices = [choice.name for choice in config_classes]
 
     parser = argparse.ArgumentParser(prog='cw-config')
     parser.add_argument("--autoconfirm", action="store_true",
@@ -410,7 +415,7 @@ def parse_arguments():
     parser.add_argument("config_type",
                         type=str,
                         choices=config_choices,
-                        help=(config_choice_help),
+                        help=config_choice_help,
                         metavar='config_type')
     parser.add_argument("--management_ip", required=True,
                         help=argparse.SUPPRESS)
@@ -443,12 +448,13 @@ def delete_outdated_config_files():
                 os.remove(filepath)
 
 
-def download_config(config_loader, config_type, autoskip=False):
+def download_config(config_loader, selected_config, autoskip=False):
     """
     Downloads the config from etcd and saves a copy to
     DOWNLOADED_CONFIG_PATH/<USER_NAME>.
     """
-    local_config_path = os.path.join(get_user_download_dir(), config_type)
+    local_config_path = os.path.join(get_user_download_dir(),
+                                     selected_config.name)
 
     if os.path.exists(local_config_path):
         # Ask user to confirm if they want to overwrite the file
@@ -456,19 +462,19 @@ def download_config(config_loader, config_type, autoskip=False):
         log.debug("Check user wants to overwrite existing file")
         confirmed = confirm_yn(
             "A local copy of {} is already present. "
-            "Continuing will overwrite the file.".format(config_type),
+            "Continuing will overwrite the file.".format(selected_config.name),
             autoskip)
         if not confirmed:
             log.info("User aborted download")
             raise UserAbort
 
-    config_loader.download_config(config_type)
-    print("{} downloaded to {}".format(config_type, local_config_path))
+    config_loader.download_config(selected_config.name)
+    print("{} downloaded to {}".format(selected_config.name,
+                                       local_config_path))
 
 
 def upload_verified_config(config_loader,
                            local_store,
-                           config_type,
                            selected_config,
                            force=False,
                            autoconfirm=False):
@@ -477,7 +483,8 @@ def upload_verified_config(config_loader,
 
     # An exception should have been thrown if validation fails, so we should
     # only reach this point if the config has been validated successfully.
-    upload_config(autoconfirm, config_loader, config_type, force, local_store)
+    upload_config(autoconfirm, config_loader, selected_config.name,
+                  force, local_store)
 
 
 def validate_config(selected_config, force=False):
@@ -485,16 +492,15 @@ def validate_config(selected_config, force=False):
     Validates the config by calling all scripts in the validation folder.
     """
 
-    # only need to run scripts as defined by the class structure ConfigType.
-
-    # This next bit should call to the rightconfig.validate, this then returns
-    # the log info to be stored and the failed script info
-
+    # This next bit calls to the .validate of the ConfigType, with the
+    # scripts to be used for validation varying depending on the config type.
     failed_scripts = selected_config.validate()
 
     # When we write the bash injection script, it should either be invoked here
     # or be placed in the VALIDATION_SCRIPTS_FOLDER directory to be executed
-    # in the above loop.
+    # in the above loop. The VALIDATION_SCRIPTS_FOLDER is in the ConfigType
+    # base class so see there, this is only ran through for shared_config
+    # validation
 
     # In the forcing case, we proceed even if there have been failures, but
     # otherwise we want to bail out at this point.
