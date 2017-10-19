@@ -43,15 +43,15 @@ class ConfigType:
         if self.filetype == 'json':
             # This is for dns_json, enum_json, bgcf_json, mmf_targets_json and
             # scscf_json.
-            (self.scripts, self.script_names) = self.get_json_validation()
+            self.scripts, self.script_names = self.get_json_validation()
 
         elif self.filetype == 'xml':
             # This is for shared_ifcs_xml and fallback_ifcs_xml
-            (self.scripts, self.script_names) = self.get_xml_validation()
+            self.scripts, self.script_names = self.get_xml_validation()
 
         elif self.filetype == 'shared_config':
             # This is for just shared_config
-            (self.scripts, self.script_names) = self.get_sharedconfig_validation()
+            self.scripts, self.script_names = self.get_sharedconfig_validation()
 
         else:
             # Currently weatherwax and chronos have no validation scripts
