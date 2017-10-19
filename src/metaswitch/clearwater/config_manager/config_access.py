@@ -303,7 +303,7 @@ def main(args):
     Main entry point for script.
     """
     # Set up logging to syslog.
-    configure_syslog(args.log_level)
+    configure_syslog("clearwater-config-manager", args.log_level)
 
     # Regardless of passed arguments we want to delete outdated config to not
     # leave unused files on disk.
