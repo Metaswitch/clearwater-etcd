@@ -83,6 +83,7 @@ class ConfigType:
                    for s in script_dir
                    if os.access(os.path.join(
                        VALIDATION_SCRIPTS_FOLDER, s), os.X_OK)]
+        # script_names is used for logging
         script_names = scripts
         return scripts, script_names
 
