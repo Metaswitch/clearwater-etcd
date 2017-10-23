@@ -64,7 +64,7 @@ class ConfigType:
     def get_json_validation(self):
         scripts = [['python', JSON_GENERIC_UPLOAD, self.schema,
                     self.configfile], ]
-        # This is used for logging
+        # script_names is used for logging
         script_names = [self.schema, ]
         return scripts, script_names
 
@@ -72,23 +72,26 @@ class ConfigType:
         scripts = [['xmllint', '--format', '--pretty', '1', '--load-trace',
                     '--debug', '--schema', '${}'.format(self.schema),
                     '${}'.format(self.configfile)], ]
-        # This is used for logging
+        # script_names is used for logging
         script_names = [self.schema, ]
         return scripts, script_names
 
     def get_sharedconfig_validation(self):
         script_dir = os.listdir(VALIDATION_SCRIPTS_FOLDER)
         # We can only execute scripts that have execute permissions.
-        scripts = [os.path.join(VALIDATION_SCRIPTS_FOLDER, s)
-                   for s in script_dir
-                   if os.access(os.path.join(
-                       VALIDATION_SCRIPTS_FOLDER, s), os.X_OK)]
+        scripts = []
         # script_names is used for logging
-        script_names = scripts
+        script_names = []
+        for s in script_dir:
+            if os.access(os.path.join(VALIDATION_SCRIPTS_FOLDER, s), os.X_OK):
+                add = [os.path.join(VALIDATION_SCRIPTS_FOLDER, s), self.configfile]
+                scripts.append(add)
+                script_names.append(os.path.join(VALIDATION_SCRIPTS_FOLDER, s))
+
         return scripts, script_names
 
     def validate(self):
-        """This method inheritss the scripts to run validation against and then
+        """This method inherits the scripts to run validation against and then
         runs them all before returning a list of those that have failed"""
         # The scripts to validate against are defined by the __init__ method
         # using one of the get validation methods.
@@ -98,7 +101,7 @@ class ConfigType:
         for script in self.scripts:
             try:
                 log.debug("Running validation script %s", self.script_names[i])
-                subprocess.check_output(script, stderr=subprocess.STDOUT)
+                subprocess.check_output(script)
             except subprocess.CalledProcessError as exc:
                 log.error("Validation script %s failed with output:\n %s",
                           os.path.basename(self.script_names[i]),
@@ -107,7 +110,8 @@ class ConfigType:
                 # We want to run through all the validation scripts so we can
                 # tell the user all of the problems with their config changes,
                 # so don't bail out of the loop at this point, just record
-                # which scripts have failed.
+                # which scripts have failed. If any scripts have failed an
+                # exception is raised from the return value
                 failed_scripts.append(self.script_names[i])
             i = i + 1
         return failed_scripts
