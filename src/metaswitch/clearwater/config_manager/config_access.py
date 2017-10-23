@@ -82,6 +82,11 @@ class UserAbort(Exception):
     pass
 
 
+class NoConfigFound(Exception):
+    """There are no ConfigType plugins found at the PLUGIN_DIR"""
+    pass
+
+
 # These exceptions are raised by the LocalStore class.
 class FileTooLarge(IOError):
     """Raised when a config file exceeds MAXIMUM_CONFIG_SIZE."""
@@ -379,6 +384,13 @@ def parse_arguments():
     # loaded as plugin classes onto the node so only the config files available
     # on the node are able to be changed on the node.
     config_classes = load_plugins_in_dir(PLUGIN_DIR)
+
+    # If there are no config_classes loaded from the PLUGIN_DIR this means you
+    # will be unable to select anything, hence you want to raise an error, that
+    # makes sense. Otherwise you would get always get refused by the arg
+    # parsing.
+    if config_classes == []:
+        raise NoConfigFound
 
     config_choice_help = '\n'.join(choice.help_info for choice in config_classes)
     config_choices = [choice.name for choice in config_classes]
