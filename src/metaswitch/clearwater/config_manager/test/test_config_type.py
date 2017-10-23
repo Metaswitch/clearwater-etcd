@@ -1,10 +1,16 @@
-
+# Copyright (C) Metaswitch Networks 2017
+# If license terms are provided to you in a COPYING file in the root directory
+# of the source code repository by which you are accessing this code, then
+# the license outlined in that COPYING file applies to your use.
+# Otherwise no rights are granted except for those provided to you by
+# Metaswitch Networks in a separate written agreement.
 
 import unittest
 import subprocess
 import os
 import mock
 
+import metaswitch.clearwater.config_manager.config_type_class_plugin as config_type_class_plugin
 import metaswitch.clearwater.config_manager.config_type_plugin_loader as config_type_plugin_loader
 from clearwater_etcd_plugins.clearwater_config_access import dns_json_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import shared_config_config_plugin
@@ -36,6 +42,7 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
          check log reports this and failed scripts is not empty"""
         weatherwax_config = weatherwax_config_plugin.WeatherwaxConfig('path')
         weatherwax_config.scripts = ['script1', 'script2']
+        weatherwax_config.script_names = ['name1', 'name2']
         mock_subprocess.side_effect = [None,
                                        subprocess.CalledProcessError("A", "B")]
         # possibly want to run this within assertRaises check as well
@@ -43,7 +50,7 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
 
         self.assertIs(mock_log.debug.call_count, 2)
         self.assertIs(mock_log.error.call_count, 1)
-        self.assertListEqual(answer, ['script2'])
+        self.assertListEqual(answer, ['name2'])
         self.assertIs(mock_subprocess.call_count, 2)
 
     @mock.patch("metaswitch.clearwater.config_manager.config_type_class_plugin.ConfigType.get_json_validation")
@@ -53,25 +60,34 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
         """test ___init__ with filetype and check correct script finder
         picked """
 
-        mock_json.return_value = ['script1', 'script2']
-        mock_xml.return_value = ['script3', 'script4']
-        mock_shared.return_value = ['script5', 'script6']
+        mock_json.return_value = ['script1', 'script2'], ['name1', 'name2']
+        mock_xml.return_value = ['script3', 'script4'], ['name3', 'name4']
+        mock_shared.return_value = ['script5', 'script6'], ['name5', 'name6']
 
         bgcf_json = bgcf_json_config_plugin.BgcfJson('path')
         ifcs_xml = shared_ifcs_config_plugin.SharedIfcsXml('path')
         weatherwax = weatherwax_config_plugin.WeatherwaxConfig('path')
         shared_config = shared_config_config_plugin.SharedConfig('path')
-        print shared_config.scripts
 
-        list1 = ['script1', 'script2']
-        list2 = ['script3', 'script4']
-        list3 = []
-        list4 = ['script5', 'script6']
+        bgcf_fake_scripts = ['script1', 'script2']
+        ifcs_fake_scripts = ['script3', 'script4']
+        weatherwax_fake_scripts = []
+        shared_fake_scripts = ['script5', 'script6']
 
-        self.assertListEqual(bgcf_json.scripts, list1)
-        self.assertListEqual(ifcs_xml.scripts, list2)
-        self.assertListEqual(weatherwax.scripts, list3)
-        self.assertListEqual(shared_config.scripts, list4)
+        bgcf_fake_names = ['name1', 'name2']
+        ifcs_fake_names = ['name3', 'name4']
+        weatherwax_fake_names = []
+        shared_fake_names = ['name5', 'name6']
+
+        self.assertListEqual(bgcf_json.scripts, bgcf_fake_scripts)
+        self.assertListEqual(ifcs_xml.scripts, ifcs_fake_scripts)
+        self.assertListEqual(weatherwax.scripts, weatherwax_fake_scripts)
+        self.assertListEqual(shared_config.scripts, shared_fake_scripts)
+
+        self.assertListEqual(bgcf_json.script_names, bgcf_fake_names)
+        self.assertListEqual(ifcs_xml.script_names, ifcs_fake_names)
+        self.assertListEqual(weatherwax.script_names, weatherwax_fake_names)
+        self.assertListEqual(shared_config.script_names, shared_fake_names)
 
 
 class TestGetValidationScripts(unittest.TestCase):
@@ -80,24 +96,24 @@ class TestGetValidationScripts(unittest.TestCase):
         where each script is a list"""
         # currently only one
         scscf_json = scscf_json_config_plugin.ScscfJson('path')
-        answer = scscf_json.get_json_validation()
-        list1 = [['python',
-                  '/usr/share/clearwater/clearwater-config-manager/scripts/validate_json.py',
-                  '/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/scscf_schema.json',
-                  'path']]
-        self.assertListEqual(answer, list1)
+        answer = scscf_json.get_json_validation()[0]
+        scscsf_expected_script = [['python',
+                                   '/usr/share/clearwater/clearwater-config-manager/scripts/validate_json.py',
+                                   '/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/scscf_schema.json',
+                                   'path']]
+        self.assertListEqual(answer, scscsf_expected_script)
 
     def test_get_xml(self):
         """tests the get_xml_validation returns the correct list of scripts
         where each script is a list"""
         # currently only one
         fallback_ifcs = fallback_ifcs_config_plugin.FallbackIfcsXml('path')
-        answer = fallback_ifcs.get_xml_validation()
-        list2 = [['xmllint', '--format', '--pretty', '1', '--load-trace',
-                  '--debug', '--schema',
-                  '$/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/fallback_ifcs_schema.xsd',
-                  '$path', ]]
-        self.assertListEqual(answer, list2)
+        answer = fallback_ifcs.get_xml_validation()[0]
+        ifcs_expected_script = [['xmllint', '--format', '--pretty', '1',
+                                 '--load-trace', '--debug', '--schema',
+                                 '$/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/fallback_ifcs_schema.xsd',
+                                 '$path', ]]
+        self.assertListEqual(answer, ifcs_expected_script)
 
     @mock.patch("metaswitch.clearwater.config_manager.config_type_class_plugin.os")
     def test_get_shared(self, mock_os):
@@ -107,8 +123,55 @@ class TestGetValidationScripts(unittest.TestCase):
         self.assertIs(mock_os.listdir.call_count, 1)
 
 
+@mock.patch('metaswitch.clearwater.config_manager.config_type_class_plugin.os.access')
+@mock.patch('metaswitch.clearwater.config_manager.config_type_class_plugin.os.listdir',
+            return_value=["clearwater-core-validate-config", "other-script"])
+@mock.patch('metaswitch.clearwater.config_manager.config_type_class_plugin.subprocess.check_output')
+class TestSharedValidation(unittest.TestCase):
+    config_location = "/some/dir/shared_config"
+
+    def test_scripts_find_ok(self,
+                             mock_subprocess,
+                             mock_listdir,
+                             mock_access):
+        """Check that we run the validation scripts we find in the relevant
+        folder."""
+
+        shared_config = shared_config_config_plugin.SharedConfig(self.config_location)
+
+        shared_config.validate()
+
+        # Each script should be executed.
+        self.assertEqual(len(mock_subprocess.call_args_list), 2)
+        # We should be calling the default config validation script here.
+        self.assertEqual(
+            mock.call([os.path.join(config_type_class_plugin.VALIDATION_SCRIPTS_FOLDER,
+                                    "clearwater-core-validate-config"),
+                       self.config_location]),
+            mock_subprocess.call_args_list[0])
+
+    def test_executable_only(self,
+                             mock_subprocess,
+                             mock_listdir,
+                             mock_access):
+        """Check that we only try to run those scripts that are executable."""
+
+        # Make only one of the scripts executable.
+        mock_access.side_effect = [True, False]
+
+        shared_config = shared_config_config_plugin.SharedConfig(self.config_location)
+        shared_config.validate()
+
+        # Check that only the executable script is run.
+        self.assertEqual(len(mock_subprocess.call_args_list), 1)
+        self.assertEqual(
+            mock.call([os.path.join(config_type_class_plugin.VALIDATION_SCRIPTS_FOLDER,
+                                    "clearwater-core-validate-config"),
+                       self.config_location]),
+            mock_subprocess.call_args_list[0])
+
+
 class TestConfigTypePluginLoader(unittest.TestCase):
-    # uses the test for the plugin loader already created
     def test_load(self):
         """tests the plugin loader loads plug ins"""
         plugin_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
