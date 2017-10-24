@@ -471,11 +471,9 @@ def validate_config(local_store, config_type, force=False):
             scripts_to_run.append(os.path.join(VALIDATION_SCRIPTS_FOLDER,
                                                script))
         else:
-            # Print a warning for each script that isn't being run because of
+            # Log a warning for each script that isn't being run because of
             # execute permissions not being set.
             log.warning("Skipping script %s", script)
-            print ("Validation script {} will be skipped because it does not "
-                   "have execute permissions".format(script))
 
     failed_scripts = []
     error_lines = []
