@@ -41,8 +41,7 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
         """use ConfigType.validate and get subprocess to raise a exception and
          check log reports this and failed scripts is not empty"""
         weatherwax_config = weatherwax_config_plugin.WeatherwaxConfig('path')
-        weatherwax_config.scripts = ['script1', 'script2']
-        weatherwax_config.script_names = ['name1', 'name2']
+        weatherwax_config.scripts = {'name1': ['script1'], 'name2': ['script2']}
         mock_subprocess.side_effect = [None,
                                        subprocess.CalledProcessError("A", "B")]
         # possibly want to run this within assertRaises check as well
@@ -50,7 +49,7 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
 
         self.assertIs(mock_log.debug.call_count, 2)
         self.assertIs(mock_log.error.call_count, 1)
-        self.assertListEqual(answer, ['name2'])
+        self.assertListEqual(answer, ['name1'])
         self.assertIs(mock_subprocess.call_count, 2)
 
     @mock.patch("metaswitch.clearwater.config_manager.config_type_class_plugin.ConfigType.get_json_validation")
@@ -60,34 +59,34 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
         """test ___init__ with filetype and check correct script finder
         picked """
 
-        mock_json.return_value = ['script1', 'script2'], ['name1', 'name2']
-        mock_xml.return_value = ['script3', 'script4'], ['name3', 'name4']
-        mock_shared.return_value = ['script5', 'script6'], ['name5', 'name6']
+        mock_json.return_value = {'name1': ['script1'], 'name2': ['script2']}
+        mock_xml.return_value = {'name3': ['script3'], 'name4': ['script4']}
+        mock_shared.return_value = {'name5': ['script5'], 'name6': ['script6']}
 
         bgcf_json = bgcf_json_config_plugin.BgcfJson('path')
         ifcs_xml = shared_ifcs_config_plugin.SharedIfcsXml('path')
         weatherwax = weatherwax_config_plugin.WeatherwaxConfig('path')
         shared_config = shared_config_config_plugin.SharedConfig('path')
 
-        bgcf_fake_scripts = ['script1', 'script2']
-        ifcs_fake_scripts = ['script3', 'script4']
+        bgcf_fake_scripts = [['script1'], ['script2']]
+        ifcs_fake_scripts = [['script3'], ['script4']]
         weatherwax_fake_scripts = []
-        shared_fake_scripts = ['script5', 'script6']
+        shared_fake_scripts = [['script5'], ['script6']]
 
         bgcf_fake_names = ['name1', 'name2']
         ifcs_fake_names = ['name3', 'name4']
         weatherwax_fake_names = []
         shared_fake_names = ['name5', 'name6']
 
-        self.assertListEqual(bgcf_json.scripts, bgcf_fake_scripts)
-        self.assertListEqual(ifcs_xml.scripts, ifcs_fake_scripts)
-        self.assertListEqual(weatherwax.scripts, weatherwax_fake_scripts)
-        self.assertListEqual(shared_config.scripts, shared_fake_scripts)
+        self.assertItemsEqual(bgcf_json.scripts.values(), bgcf_fake_scripts)
+        self.assertItemsEqual(ifcs_xml.scripts.values(), ifcs_fake_scripts)
+        self.assertItemsEqual(weatherwax.scripts.values(), weatherwax_fake_scripts)
+        self.assertItemsEqual(shared_config.scripts.values(), shared_fake_scripts)
 
-        self.assertListEqual(bgcf_json.script_names, bgcf_fake_names)
-        self.assertListEqual(ifcs_xml.script_names, ifcs_fake_names)
-        self.assertListEqual(weatherwax.script_names, weatherwax_fake_names)
-        self.assertListEqual(shared_config.script_names, shared_fake_names)
+        self.assertItemsEqual(bgcf_json.scripts.keys(), bgcf_fake_names)
+        self.assertItemsEqual(ifcs_xml.scripts.keys(), ifcs_fake_names)
+        self.assertItemsEqual(weatherwax.scripts.keys(), weatherwax_fake_names)
+        self.assertItemsEqual(shared_config.scripts.keys(), shared_fake_names)
 
 
 class TestGetValidationScripts(unittest.TestCase):
@@ -96,31 +95,24 @@ class TestGetValidationScripts(unittest.TestCase):
         where each script is a list"""
         # currently only one
         scscf_json = scscf_json_config_plugin.ScscfJson('path')
-        answer = scscf_json.get_json_validation()[0]
+        answer = scscf_json.get_json_validation()
         scscsf_expected_script = [['python',
                                    '/usr/share/clearwater/clearwater-config-manager/scripts/validate_json.py',
                                    '/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/scscf_schema.json',
                                    'path']]
-        self.assertListEqual(answer, scscsf_expected_script)
+        self.assertListEqual(answer.values(), scscsf_expected_script)
 
     def test_get_xml(self):
         """tests the get_xml_validation returns the correct list of scripts
         where each script is a list"""
         # currently only one
         fallback_ifcs = fallback_ifcs_config_plugin.FallbackIfcsXml('path')
-        answer = fallback_ifcs.get_xml_validation()[0]
+        answer = fallback_ifcs.get_xml_validation()
         ifcs_expected_script = [['xmllint', '--format', '--pretty', '1',
                                  '--load-trace', '--debug', '--schema',
                                  '$/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/fallback_ifcs_schema.xsd',
                                  '$path', ]]
-        self.assertListEqual(answer, ifcs_expected_script)
-
-    @mock.patch("metaswitch.clearwater.config_manager.config_type_class_plugin.os")
-    def test_get_shared(self, mock_os):
-        """tests the get_sharedconfig_validation script calls the
-        os function"""
-        shared_config_config_plugin.SharedConfig('path')
-        self.assertIs(mock_os.listdir.call_count, 1)
+        self.assertListEqual(answer.values(), ifcs_expected_script)
 
 
 @mock.patch('metaswitch.clearwater.config_manager.config_type_class_plugin.os.access')
@@ -141,6 +133,7 @@ class TestSharedValidation(unittest.TestCase):
 
         shared_config.validate()
 
+        self.assertIs(mock_listdir.call_count, 1)
         # Each script should be executed.
         self.assertEqual(len(mock_subprocess.call_args_list), 2)
         # We should be calling the default config validation script here.
