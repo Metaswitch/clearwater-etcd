@@ -967,7 +967,7 @@ class TestArguments(unittest.TestCase):
 
     def test_no_config_classes(self, mock_loadplugins):
         mock_loadplugins.return_value = []
-        with self.assertRaises(Exception):
+        with self.assertRaises(SystemExit):
             args = config_access.parse_arguments()
 
     def test_all_arguments(self, mock_loadplugins):
