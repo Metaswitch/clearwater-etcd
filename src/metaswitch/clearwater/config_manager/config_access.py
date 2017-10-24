@@ -159,9 +159,16 @@ class ConfigLoader(object):
             log.debug("Reading etcd config from '%s", key_path)
             download = self._etcd_client.read(key_path)
         except etcd.EtcdKeyNotFound:
-            log.error("etcd key %s is not present in the database", key_path)
-            raise ConfigDownloadFailed(
-                CONFIG_TYPE_DOESNT_EXIST.format(config_type))
+            if config_type == ('shared_ifcs' or 'fallback_ifcs'):
+                log.debug("creating first instance of xml file")
+                value = ''
+                index = 0
+                return value, index
+            else:
+                log.error("etcd key %s is not present in the database",
+                          key_path)
+                raise ConfigDownloadFailed(
+                    CONFIG_TYPE_DOESNT_EXIST.format(config_type))
 
         return download.value, download.modifiedIndex
 
@@ -185,10 +192,17 @@ class ConfigLoader(object):
                     self.local_store.config_location(config_type)))
 
         try:
-            log.debug("Writing etcd config to '%s'", key_path)
-            self._etcd_client.write(key_path,
-                                    upload,
-                                    prevIndex=prev_revision)
+            if (prev_revision == 0 and
+                    config_type == ('shared_ifcs' or 'fallback_ifcs')):
+                log.debug("There was no copy of this xml file previously")
+                log.debug("Writing etcd config to '%s'", key_path)
+                self._etcd_client.write(key_path,
+                                        upload)
+            else:
+                log.debug("Writing etcd config to '%s'", key_path)
+                self._etcd_client.write(key_path,
+                                        upload,
+                                        prevIndex=prev_revision)
         except etcd.EtcdConnectionFailed:
             log.error("Unable to write to etcd database")
             raise ConfigUploadFailed(UNABLE_TO_UPLOAD.format(config_type))
