@@ -100,6 +100,22 @@ class TestConfigLoader(unittest.TestCase):
         etcd_client.read.assert_called_with(
             "/clearwater/site/configuration/shared_config")
 
+    def test_get_ifcs_config_first_time(self, mock_localstore,
+                                        mock_check_connection):
+        """Check that we create a first instance of ifcs when it is needed"""
+        etcd_client = mock.MagicMock(spec=etcd.client.Client)
+        etcd_client.read.side_effect = etcd.EtcdKeyNotFound
+
+        config_loader = config_access.ConfigLoader(
+            etcd_client, "clearwater", "site", mock_localstore)
+
+        config, index = config_loader.get_config_and_index("fallback_ifcs")
+
+        self.assertEqual(config, "")
+        self.assertEqual(index, 0)
+        etcd_client.read.assert_called_with(
+            "/clearwater/site/configuration/fallback_ifcs")
+
     def test_get_config_failed(self, mock_localstore, mock_check_connection):
         """Check we get the right exception on failure."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
@@ -130,6 +146,21 @@ class TestConfigLoader(unittest.TestCase):
             "Fake Config",
             prevIndex=123
         )
+
+    def test_write_ifcs_first_time(self, mock_localstore,
+                                   mock_check_connection):
+        """Check that if the config type is either ifcs and it is the first
+        revision we enter the if loop"""
+        etcd_client = mock.MagicMock(spec=etcd.client.Client)
+        mock_localstore.load_config_and_revision.return_value = ('Fake Config',
+                                                                 0)
+
+        config_loader = config_access.ConfigLoader(
+            etcd_client, "clearwater", "site", mock_localstore)
+        config_loader.write_config_to_etcd("shared_ifcs", 0)
+        etcd_client.write.assert_called_with(
+            "/clearwater/site/configuration/shared_ifcs",
+            "Fake Config")
 
     def test_write_to_etcd_unable_to_load(self,
                                           mock_localstore,

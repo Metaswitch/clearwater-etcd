@@ -159,7 +159,7 @@ class ConfigLoader(object):
             log.debug("Reading etcd config from '%s", key_path)
             download = self._etcd_client.read(key_path)
         except etcd.EtcdKeyNotFound:
-            if config_type == ('shared_ifcs' or 'fallback_ifcs'):
+            if config_type == 'shared_ifcs' or config_type == 'fallback_ifcs':
                 log.debug("creating first instance of xml file")
                 value = ''
                 index = 0
@@ -193,7 +193,8 @@ class ConfigLoader(object):
 
         try:
             if (prev_revision == 0 and
-                    config_type == ('shared_ifcs' or 'fallback_ifcs')):
+                    (config_type == 'shared_ifcs' or
+                     config_type == 'fallback_ifcs')):
                 log.debug("There was no copy of this xml file previously")
                 log.debug("Writing etcd config to '%s'", key_path)
                 self._etcd_client.write(key_path,
