@@ -55,6 +55,9 @@ CONFIG_TYPE_DOESNT_EXIST = "{} does not exist in the configuration database."
 UNABLE_TO_UPLOAD = ("Unable to upload {} to the configuration database. The "
 "upload has failed.")
 
+NO_CONFIG_FOUND = (("There are no ConfigType plugins found at {}").format(
+                    PLUGIN_DIR))
+
 
 # Exceptions
 class ConfigDownloadFailed(Exception):
@@ -79,11 +82,6 @@ class EtcdConnectionFailed(Exception):
 
 class UserAbort(Exception):
     """The user has triggered an abort."""
-    pass
-
-
-class NoConfigFound(Exception):
-    """There are no ConfigType plugins found at the PLUGIN_DIR"""
     pass
 
 
@@ -363,16 +361,16 @@ def main(args):
 
 def lookup_config_type(config_type, config_location):
     """
-    This takes the string defining the config_type from arg.parse and returns
-    a instance of the class containing data on the config type selected
+    This takes the string defining the config_type and a string of the
+    config_location which is where the config is downloaded to and returns
+    an instance of the class containing data on the config type selected
     """
     config_classes = load_plugins_in_dir(PLUGIN_DIR, config_location)
-    for choice in config_classes:
-        if config_type == choice.name:
-            return choice
-        # The config_type will always be the choice.name of one class as
-        # parse_arguments will make sure config_type == choice.name
 
+    # There is no need for an else part as the parse_arguments function
+    # will gurantee there is always a match
+    return next(config for config in config_classes
+                if config.name == config_type)
 
 def parse_arguments():
     """
@@ -380,17 +378,17 @@ def parse_arguments():
     The options for config type are designated by the plugins available
     :return:
     """
-    # Pick the options to appear in argument parsing, the config types are
+    # Pick the options to appear in argument parsing. the config types are
     # loaded as plugin classes onto the node so only the config files available
     # on the node are able to be changed on the node.
     config_classes = load_plugins_in_dir(PLUGIN_DIR)
 
-    # If there are no config_classes loaded from the PLUGIN_DIR this means you
-    # will be unable to select anything, hence you want to raise an error, that
-    # makes sense. Otherwise you would get always get refused by the arg
-    # parsing.
-    if config_classes == []:
-        raise NoConfigFound
+    if not config_classes:
+        # we need to raise an error as otherwise you will always get refused by
+        # the arg parsing. Due to the fact there will be a compulsory selection
+        # with no choices available.
+        log.error(NO_CONFIG_FOUND)
+        sys.exit(NO_CONFIG_FOUND)
 
     config_choice_help = '\n'.join(choice.help_info for choice in config_classes)
     config_choices = [choice.name for choice in config_classes]
@@ -504,15 +502,9 @@ def validate_config(selected_config, force=False):
     Validates the config by calling all scripts in the validation folder.
     """
 
-    # This next bit calls to the .validate of the ConfigType, with the
-    # scripts to be used for validation varying depending on the config type.
+    # selected_config is an instance of the ConfigType class. validate() uses
+    # different scripts to validate against for different ConfigType classes.
     failed_scripts = selected_config.validate()
-
-    # When we write the bash injection script, it should either be invoked here
-    # or be placed in the VALIDATION_SCRIPTS_FOLDER directory to be executed
-    # in the above loop. The VALIDATION_SCRIPTS_FOLDER is in the ConfigType
-    # base class so see there, this is only ran through for shared_config
-    # validation
 
     # In the forcing case, we proceed even if there have been failures, but
     # otherwise we want to bail out at this point.
