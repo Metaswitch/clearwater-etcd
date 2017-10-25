@@ -16,13 +16,8 @@ import sys
 
 import etcd.client
 
-import metaswitch.clearwater.config_manager.config_type_class_plugin as config_type_class_plugin
 import metaswitch.clearwater.config_manager.config_access as config_access
-from clearwater_etcd_plugins.clearwater_config_access import dns_json_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import shared_config_config_plugin
-from clearwater_etcd_plugins.clearwater_config_access import shared_ifcs_config_plugin
-from clearwater_etcd_plugins.clearwater_config_access import bgcf_json_config_plugin
-from clearwater_etcd_plugins.clearwater_config_access import weatherwax_config_plugin
 
 
 class TestClass:
@@ -999,7 +994,7 @@ class TestArguments(unittest.TestCase):
     def test_no_config_classes(self, mock_loadplugins):
         mock_loadplugins.return_value = []
         with self.assertRaises(SystemExit):
-            args = config_access.parse_arguments()
+            config_access.parse_arguments()
 
     def test_all_arguments(self, mock_loadplugins):
         mock_loadplugins.return_value = [TestClass('shared_config'), TestClass('dns_json')]
