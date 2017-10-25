@@ -16,9 +16,9 @@ from clearwater_etcd_plugins.clearwater_config_access import dns_json_config_plu
 from clearwater_etcd_plugins.clearwater_config_access import shared_config_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import shared_ifcs_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import bgcf_json_config_plugin
-from clearwater_etcd_plugins.clearwater_config_access import weatherwax_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import scscf_json_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import fallback_ifcs_config_plugin
+from clearwater_etcd_plugins.clearwater_config_access import chronos_config_plugin
 
 
 @mock.patch("metaswitch.clearwater.config_manager.config_type_class_plugin.log")
@@ -40,12 +40,12 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
     def test_validate_fails(self, mock_subprocess, mock_log):
         """use ConfigType.validate and get subprocess to raise a exception and
          check log reports this and failed scripts is not empty"""
-        weatherwax_config = weatherwax_config_plugin.WeatherwaxConfig('path')
-        weatherwax_config.scripts = {'name1': ['script1'], 'name2': ['script2']}
+        chronos_config = chronos_config_plugin.ChronosSharedConfig('path')
+        chronos_config.scripts = {'name1': ['script1'], 'name2': ['script2']}
         mock_subprocess.side_effect = [None,
                                        subprocess.CalledProcessError("A", "B")]
         # possibly want to run this within assertRaises check as well
-        answer = weatherwax_config.validate()
+        answer = chronos_config.validate()
 
         self.assertIs(mock_log.debug.call_count, 2)
         self.assertIs(mock_log.error.call_count, 1)
@@ -65,27 +65,27 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
 
         bgcf_json = bgcf_json_config_plugin.BgcfJson('path')
         ifcs_xml = shared_ifcs_config_plugin.SharedIfcsXml('path')
-        weatherwax = weatherwax_config_plugin.WeatherwaxConfig('path')
+        chronos = chronos_config_plugin.ChronosSharedConfig('path')
         shared_config = shared_config_config_plugin.SharedConfig('path')
 
         bgcf_fake_scripts = [['script1'], ['script2']]
         ifcs_fake_scripts = [['script3'], ['script4']]
-        weatherwax_fake_scripts = []
+        chronos_fake_scripts = []
         shared_fake_scripts = [['script5'], ['script6']]
 
         bgcf_fake_names = ['name1', 'name2']
         ifcs_fake_names = ['name3', 'name4']
-        weatherwax_fake_names = []
+        chronos_fake_names = []
         shared_fake_names = ['name5', 'name6']
 
         self.assertItemsEqual(bgcf_json.scripts.values(), bgcf_fake_scripts)
         self.assertItemsEqual(ifcs_xml.scripts.values(), ifcs_fake_scripts)
-        self.assertItemsEqual(weatherwax.scripts.values(), weatherwax_fake_scripts)
+        self.assertItemsEqual(chronos.scripts.values(), chronos_fake_scripts)
         self.assertItemsEqual(shared_config.scripts.values(), shared_fake_scripts)
 
         self.assertItemsEqual(bgcf_json.scripts.keys(), bgcf_fake_names)
         self.assertItemsEqual(ifcs_xml.scripts.keys(), ifcs_fake_names)
-        self.assertItemsEqual(weatherwax.scripts.keys(), weatherwax_fake_names)
+        self.assertItemsEqual(chronos.scripts.keys(), chronos_fake_names)
         self.assertItemsEqual(shared_config.scripts.keys(), shared_fake_names)
 
 
