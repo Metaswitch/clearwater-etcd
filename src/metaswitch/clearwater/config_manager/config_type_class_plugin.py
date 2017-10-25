@@ -33,6 +33,9 @@ class ConfigType:
     filetype - Used to pick which validation scripts to use. Different
     config_types take different inputs to being called for validation.
 
+    filename - Used to agree with the current naming system when finding or
+    writing files. This is passed into upload and download.
+
     schema - Used with those config types that require validation to say
     where the vaildation schema can be found.
     """

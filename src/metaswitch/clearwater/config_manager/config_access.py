@@ -479,7 +479,7 @@ def download_config(config_loader, selected_config, autoskip=False):
     DOWNLOADED_CONFIG_PATH/<USER_NAME>.
     """
     local_config_path = os.path.join(get_user_download_dir(),
-                                     selected_config.name)
+                                     selected_config.filename)
 
     if os.path.exists(local_config_path):
         # Ask user to confirm if they want to overwrite the file
@@ -487,14 +487,14 @@ def download_config(config_loader, selected_config, autoskip=False):
         log.debug("Check user wants to overwrite existing file")
         confirmed = confirm_yn(
             "A local copy of {} is already present. "
-            "Continuing will overwrite the file.".format(selected_config.name),
+            "Continuing will overwrite the file.".format(selected_config.filename),
             autoskip)
         if not confirmed:
             log.info("User aborted download")
             raise UserAbort
 
-    config_loader.download_config(selected_config.name)
-    print("{} downloaded to {}".format(selected_config.name,
+    config_loader.download_config(selected_config.filename)
+    print("{} downloaded to {}".format(selected_config.filename,
                                        local_config_path))
 
 
@@ -508,7 +508,7 @@ def upload_verified_config(config_loader,
 
     # An exception should have been thrown if validation fails, so we should
     # only reach this point if the config has been validated successfully.
-    upload_config(autoconfirm, config_loader, selected_config.name,
+    upload_config(autoconfirm, config_loader, selected_config.filename,
                   force, local_store)
 
 
