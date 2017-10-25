@@ -41,7 +41,7 @@ case "$1" in
         fi
 
         # Ensure the log directory exists and is owned by the user.
-        mkdir -p -m 755 /var/log/$NAME
+        mkdir -p -m 777 /var/log/$NAME
         chown -R $NAME:root /var/log/$NAME
 
         # Set up the virtual env

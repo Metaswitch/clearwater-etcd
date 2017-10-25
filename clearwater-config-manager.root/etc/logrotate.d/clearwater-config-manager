@@ -1,0 +1,11 @@
+/var/log/clearwater-config-manager/config-manager.log
+{
+    rotate 4
+    weekly
+    maxsize 100M
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+}
