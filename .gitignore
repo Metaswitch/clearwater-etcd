@@ -19,7 +19,6 @@
 /htmlcov/
 /src/*.egg-info/
 coverage.xml
-.vscode
 
 # Alarm constants generated from JSON files
 src/metaswitch/clearwater/queue_manager/alarm_constants.py
