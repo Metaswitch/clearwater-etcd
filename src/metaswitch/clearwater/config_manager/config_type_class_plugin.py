@@ -25,7 +25,8 @@ class ConfigType:
     validation.
 
     name - Users will reference the config type as this on the command line,
-    eg. `cw-config download [name]`
+    eg. `cw-config download [name]` It is the name of the config file in
+    clearwater-eetcdctl.
 
     help_info - Appears as user-visible help text in the usage statement for
     cw-config.
@@ -33,8 +34,8 @@ class ConfigType:
     filetype - Used to pick which validation scripts to use. Different
     config_types take different inputs to being called for validation.
 
-    filename - Used to agree with the current naming system when finding or
-    writing files. This is passed into upload and download.
+    file_download_name - Used to agree with the current naming system when
+    writing to file.
 
     schema - Used with those config types that require validation to say
     where the vaildation schema can be found.
@@ -82,8 +83,8 @@ class ConfigType:
         scripts = {}
         scripts[self.schema] = ['xmllint', '--format', '--pretty', '1',
                                 '--load-trace', '--debug', '--schema',
-                                '${}'.format(self.schema),
-                                '${}'.format(self.configfile)]
+                                '{}'.format(self.schema),
+                                '{}'.format(self.configfile)]
         # to add more validation scripts add to the dict of scripts
         return scripts
 

@@ -132,25 +132,25 @@ class ConfigLoader(object):
             raise EtcdConnectionFailed(
                 "etcd process not running at {}".format(location))
 
-    def download_config(self, config_type):
+    def download_config(self, selected_config):
         """Save a copy of a given config type to the download directory.
         Raises a ConfigDownloadFailed exception if unsuccessful."""
-        value, index = self.get_config_and_index(config_type)
+        value, index = self.get_config_and_index(selected_config)
 
         # Write the config to file.
         try:
-            self.local_store.save_config_and_revision(config_type,
+            self.local_store.save_config_and_revision(selected_config,
                                                       str(index),
                                                       str(value))
         except IOError:
-            log.error("Failed to save %s to file", config_type)
+            log.error("Failed to save %s to file", selected_config.name)
             raise ConfigDownloadFailed(
-                CANT_SAVE_LOCAL_CONFIG.format(config_type,
+                CANT_SAVE_LOCAL_CONFIG.format(selected_config.name,
                                               self.local_store.download_dir))
 
-    def get_config_and_index(self, config_type):
+    def get_config_and_index(self, selected_config):
         """Extract the config file and index from etcd."""
-        key_path = "/".join([self.prefix, config_type])
+        key_path = "/".join([self.prefix, selected_config.name])
 
         try:
             # First we pull the data down from the etcd cluster. This will
@@ -159,7 +159,8 @@ class ConfigLoader(object):
             log.debug("Reading etcd config from '%s", key_path)
             download = self._etcd_client.read(key_path)
         except etcd.EtcdKeyNotFound:
-            if config_type == 'shared_ifcs' or config_type == 'fallback_ifcs':
+            if (selected_config.name == 'shared_ifcs' or
+                    selected_config.name == 'fallback_ifcs'):
                 log.debug("creating first instance of xml file")
                 value = ''
                 index = 0
@@ -168,33 +169,34 @@ class ConfigLoader(object):
                 log.error("etcd key %s is not present in the database",
                           key_path)
                 raise ConfigDownloadFailed(
-                    CONFIG_TYPE_DOESNT_EXIST.format(config_type))
+                    CONFIG_TYPE_DOESNT_EXIST.format(
+                        selected_config.name))
 
         return download.value, download.modifiedIndex
 
-    def write_config_to_etcd(self, config_type, prev_revision):
+    def write_config_to_etcd(self, selected_config, prev_revision):
         """Upload config contained in the specified file to the etcd database.
         Raises a ConfigUploadFailed exception if unsuccessful.
         """
-        key_path = "/".join([self.prefix, config_type])
+        key_path = "/".join([self.prefix, selected_config.name])
         try:
-            upload, _ = self.local_store.load_config_and_revision(config_type)
+            upload, _ = self.local_store.load_config_and_revision(selected_config.file_download_name)
         except IOError:
             # This exception will be thrown in the following cases:
             # - The download directory doesn't exist
             # - The config file doesn't exist in the download directory
             # - The config file is not readable
             # - The config file is too big
-            log.error("Unable to load %s from file", config_type)
+            log.error("Unable to load %s from file", selected_config.file_download_name)
             raise ConfigUploadFailed(
                 CANT_LOAD_LOCAL_CONFIG.format(
-                    config_type,
-                    self.local_store.config_location(config_type)))
+                    selected_config.name,
+                    selected_config.configfile))
 
         try:
             if (prev_revision == 0 and
-                    (config_type == 'shared_ifcs' or
-                     config_type == 'fallback_ifcs')):
+                    (selected_config.name == 'shared_ifcs' or
+                     selected_config.name == 'fallback_ifcs')):
                 log.debug("There was no copy of this xml file previously")
                 log.debug("Writing etcd config to '%s'", key_path)
                 self._etcd_client.write(key_path,
@@ -206,11 +208,11 @@ class ConfigLoader(object):
                                         prevIndex=prev_revision)
         except etcd.EtcdConnectionFailed:
             log.error("Unable to write to etcd database")
-            raise ConfigUploadFailed(UNABLE_TO_UPLOAD.format(config_type))
+            raise ConfigUploadFailed(UNABLE_TO_UPLOAD.format(selected_config.file_download_name))
         except etcd.EtcdCompareFailed:
             log.error("Master revision doesn't match local revision")
             raise ConfigUploadFailed(
-                MODIFIED_WHILE_EDITING.format(config_type))
+                MODIFIED_WHILE_EDITING.format(selected_config.name))
 
     # We need this property for the step in write_config_to_etcd where we log
     # the change in config to file.
@@ -284,19 +286,21 @@ class LocalStore(object):
 
         return local_config, local_revision
 
-    def save_config_and_revision(self, config_type, index, value):
+    def save_config_and_revision(self, selected_config, index, value):
         """Write the config and revision number to file."""
-        config_file_path = self._get_config_file_path(config_type)
-        index_file_path = self._get_revision_file_path(config_type)
-
-        log.debug("Writing %s to '%s'.", config_type, config_file_path)
+        config_file_path = self._get_config_file_path(
+            selected_config.file_download_name)
+        index_file_path = self._get_revision_file_path(
+            selected_config.file_download_name)
+        log.debug("Writing %s to '%s'.", selected_config.file_download_name,
+                  config_file_path)
 
         try:
             with open(config_file_path, 'w') as config_file:
                 config_file.write(value)
         except IOError:
             log.error("Failed to write %s to %s",
-                      config_type,
+                      selected_config.file_download_name,
                       config_file_path)
             raise UnableToSaveFile("Unable to save config file on disk.")
         # We want to keep track of the index the config had in the etcd cluster
@@ -449,7 +453,7 @@ def parse_arguments():
     parser.add_argument("--etcd_key", required=True, help=argparse.SUPPRESS)
 
     args = parser.parse_args()
-    config_filename = next(config.filename for config in config_classes
+    config_filename = next(config.file_download_name for config in config_classes
                            if config.name == args.config_type)
 
     return args, config_filename
@@ -484,7 +488,7 @@ def download_config(config_loader, selected_config, autoskip=False):
     DOWNLOADED_CONFIG_PATH/<USER_NAME>.
     """
     local_config_path = os.path.join(get_user_download_dir(),
-                                     selected_config.filename)
+                                     selected_config.file_download_name)
 
     if os.path.exists(local_config_path):
         # Ask user to confirm if they want to overwrite the file
@@ -492,14 +496,14 @@ def download_config(config_loader, selected_config, autoskip=False):
         log.debug("Check user wants to overwrite existing file")
         confirmed = confirm_yn(
             "A local copy of {} is already present. "
-            "Continuing will overwrite the file.".format(selected_config.filename),
+            "Continuing will overwrite the file.".format(selected_config.file_download_name),
             autoskip)
         if not confirmed:
             log.info("User aborted download")
             raise UserAbort
 
-    config_loader.download_config(selected_config.filename)
-    print("{} downloaded to {}".format(selected_config.filename,
+    config_loader.download_config(selected_config)
+    print("{} downloaded to {}".format(selected_config.name,
                                        local_config_path))
 
 
@@ -513,7 +517,7 @@ def upload_verified_config(config_loader,
 
     # An exception should have been thrown if validation fails, so we should
     # only reach this point if the config has been validated successfully.
-    upload_config(autoconfirm, config_loader, selected_config.filename,
+    upload_config(autoconfirm, config_loader, selected_config,
                   force, local_store)
 
 
@@ -542,16 +546,16 @@ def validate_config(selected_config, force=False):
         print "Config successfully validated"
 
 
-def upload_config(autoconfirm, config_loader, config_type, force, local_store):
+def upload_config(autoconfirm, config_loader, selected_config, force, local_store):
     """Read the relevant config from file and upload it to etcd."""
     remote_revision = ready_for_upload_checks(autoconfirm,
                                               config_loader,
-                                              config_type,
+                                              selected_config,
                                               local_store)
 
     # Upload the configuration to the etcd cluster. This will trigger the
     # queue manager to schedule nodes to be restarted.
-    config_loader.write_config_to_etcd(config_type, remote_revision)
+    config_loader.write_config_to_etcd(selected_config, remote_revision)
 
     # Clearwater can be run with multiple etcd clusters. The apply_config_key
     # variable stores the information about which etcd cluster the changes
@@ -568,51 +572,51 @@ def upload_config(autoconfirm, config_loader, config_type, force, local_store):
 
     # If we reach this point then config upload was successful. Cleaning up
     # the config file we've uploaded makes sure we don't cause confusion later.
-    local_store.config_cleanup(config_type)
+    local_store.config_cleanup(selected_config.file_download_name)
 
-    print "{} successfully uploaded".format(config_type)
+    print "{} successfully uploaded".format(selected_config.name)
 
 
 def ready_for_upload_checks(autoconfirm,
                             config_loader,
-                            config_type,
+                            selected_config,
                             local_store):
     """Make sure that we can and should upload config. Returns the current
     revision of the master config upload if we should proceed, otherwise throws
     a ConfigUploadFailed exception."""
     try:
         local_config, local_revision = local_store.load_config_and_revision(
-            config_type)
+            selected_config.file_download_name)
     except IOError:
         log.error("Can't read %s from %s",
-                  config_type,
-                  local_store.config_location(config_type))
+                  selected_config.file_download_name,
+                  local_store.config_location(selected_config.file_download_name))
         raise ConfigUploadFailed(
             CANT_LOAD_LOCAL_CONFIG.format(
-                config_type,
-                local_store.config_location(config_type)))
+                selected_config.file_download_name,
+                local_store.config_location(selected_config.file_download_name)))
 
     # In order to confirm that no changes have been made while the user has
     # been editing locally, we download a copy of the master config to compare
     # against.
     try:
         remote_config, remote_revision = config_loader.get_config_and_index(
-            config_type)
+            selected_config)
     except ConfigDownloadFailed:
         log.error("Unable to download %s from config database to compare it "
-                  "with local config", config_type)
+                  "with local config", selected_config.name)
         raise ConfigUploadFailed(CANT_COMPARE_WITH_MASTER)
 
     # Users are not allowed to upload changes if someone else has uploaded
     # config to the etcd cluster in the meantime.
     if local_revision != remote_revision:
-        log.error("Master has different revision to local %s", config_type)
-        raise ConfigUploadFailed(MODIFIED_WHILE_EDITING.format(config_type))
+        log.error("Master has different revision to local %s", selected_config.file_download_name)
+        raise ConfigUploadFailed(MODIFIED_WHILE_EDITING.format(selected_config.file_download_name))
 
     # Provide a diff of the changes and log to syslog
-    if not print_diff_and_syslog(config_type, remote_config, local_config):
+    if not print_diff_and_syslog(selected_config.name, remote_config, local_config):
         # We don't bother uploading if there are no changes to upload.
-        log.error("No differences between local and master %s", config_type)
+        log.error("No differences between local and master %s", selected_config.name)
         raise ConfigUploadFailed(NO_CHANGES_TO_CONFIG)
 
     if not autoconfirm:
