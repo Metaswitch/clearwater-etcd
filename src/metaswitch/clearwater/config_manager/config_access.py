@@ -319,7 +319,7 @@ class LocalStore(object):
         os.remove(revision_path)
 
 
-def main(args):
+def main(args, config_filename):
     """
     Main entry point for script.
     """
@@ -337,7 +337,7 @@ def main(args):
         etcd_client = etcd.client.Client(host=args.management_ip,
                                          port=4000)
         local_store = LocalStore()
-        config_location = local_store.config_location(args.config_type)
+        config_location = local_store.config_location(config_filename)
         selected_config = lookup_config_type(args.config_type, config_location)
         config_loader = ConfigLoader(etcd_client=etcd_client,
                                      etcd_key=args.etcd_key,
@@ -386,6 +386,7 @@ def lookup_config_type(config_type, config_location):
     # will gurantee there is always a match
     return next(config for config in config_classes
                 if config.name == config_type)
+
 
 def parse_arguments():
     """
@@ -447,7 +448,11 @@ def parse_arguments():
     parser.add_argument("--site", required=True, help=argparse.SUPPRESS)
     parser.add_argument("--etcd_key", required=True, help=argparse.SUPPRESS)
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    config_filename = next(config.filename for config in config_classes
+                           if config.name == args.config_type)
+
+    return args, config_filename
 
 
 def delete_outdated_config_files():
@@ -767,6 +772,6 @@ def read_from_file(file_path):
 
 
 # Call main function if script is executed stand-alone
-if __name__ == "__main__": # pragma: no cover
-    arguments = parse_arguments() # pragma: no cover
-    main(arguments) # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover
+    arguments, filename = parse_arguments()  # pragma: no cover
+    main(arguments, filename)  # pragma: no cover
