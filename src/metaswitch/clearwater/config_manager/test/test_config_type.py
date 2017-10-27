@@ -110,8 +110,8 @@ class TestGetValidationScripts(unittest.TestCase):
         answer = fallback_ifcs.get_xml_validation()
         ifcs_expected_script = [['xmllint', '--format', '--pretty', '1',
                                  '--load-trace', '--debug', '--schema',
-                                 '$/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/fallback_ifcs_schema.xsd',
-                                 '$path', ]]
+                                 '/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/fallback_ifcs_schema.xsd',
+                                 'path', ]]
         self.assertListEqual(answer.values(), ifcs_expected_script)
 
 
