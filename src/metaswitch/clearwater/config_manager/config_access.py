@@ -328,7 +328,7 @@ def main(args, config_filename):
     Main entry point for script.
     """
     # Set up logging to syslog.
-    configure_syslog(args.log_level)
+    configure_syslog("clearwater-config-manager", args.log_level)
     logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
 
     # Regardless of passed arguments we want to delete outdated config to not
@@ -539,16 +539,21 @@ def validate_config(selected_config, force=False):
 
     # selected_config is an instance of the ConfigType class. validate() uses
     # different scripts to validate against for different ConfigType classes.
-    failed_scripts = selected_config.validate()
+    failed_scripts, error_lines = selected_config.validate()
+    script_dir = os.listdir(VALIDATION_SCRIPTS_FOLDER)
+
 
     # In the forcing case, we proceed even if there have been failures, but
     # otherwise we want to bail out at this point.
     if not force and failed_scripts:
         log.error("One or more validation scripts have failed, aborting")
         raise ConfigValidationFailed(
-            "Validation failed while executing scripts:\n{}".format(
-                "\n".join(os.path.basename(script)
-                          for script in failed_scripts)))
+            "Validation failed while executing scripts:\n"
+            " {}\n"
+            "Errors:\n"
+            " {}".format("\n ".join(os.path.basename(script)
+                                    for script in failed_scripts),
+                         "\n ".join(error_lines)))
 
     if failed_scripts:
         # We can only get here in the forcing case.
