@@ -329,7 +329,6 @@ def main(args, config_filename):
     """
     # Set up logging to syslog.
     configure_syslog("clearwater-config-manager", args.log_level)
-    logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
 
     # Regardless of passed arguments we want to delete outdated config to not
     # leave unused files on disk.
