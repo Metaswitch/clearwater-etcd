@@ -106,19 +106,24 @@ class ConfigType:
         """
 
         failed_scripts = []
+        error_lines = []
         for script in self.scripts:
             try:
                 log.debug("Running validation script %s", script)
                 subprocess.check_output(self.scripts[script])
             except subprocess.CalledProcessError as exc:
-                log.error("Validation script %s failed with output:\n %s",
-                          os.path.basename(script),
-                          exc.output)
+                log.error("Validation script %s failed", os.path.basename(script))
+                log.error("Reasons for failure:")
+                errors = [line for line in exc.output.splitlines()
+                          if "ERROR" in line]
+                error_lines.extend(errors)
 
+                for line in errors:
+                    log.error(line)
                 # We want to run through all the validation scripts so we can
                 # tell the user all of the problems with their config changes,
                 # so don't bail out of the loop at this point, just record
                 # which scripts have failed. If any scripts have failed an
                 # exception is raised from the return value
                 failed_scripts.append(script)
-        return failed_scripts
+        return failed_scripts, error_lines
