@@ -14,7 +14,7 @@ import glob
 LOG_DIR = "/var/log/clearwater-config-manager"
 VALIDATION_SCRIPTS_FOLDER = "/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/"
 JSON_GENERIC_UPLOAD = '/usr/share/clearwater/clearwater-config-manager/scripts/validate_json.py'
-log = logging.getLogger()
+log = logging.getLogger("cw-config.validate")
 
 
 class ConfigType:
@@ -63,7 +63,7 @@ class ConfigType:
             self.scripts = self.get_sharedconfig_validation()
 
         else:
-            # Currently weatherwax and chronos have no validation scripts
+            # Currently weatherwax has no validation scripts
             self.scripts = {}
 
     def __str__(self):
@@ -82,7 +82,7 @@ class ConfigType:
         """Returns the scripts to be used for xml file validation."""
         scripts = {}
         scripts[self.schema] = ['xmllint', '--format', '--pretty', '1',
-                                '--load-trace', '--debug', '--schema',
+                                '--debug', '--schema',
                                 '{}'.format(self.schema),
                                 '{}'.format(self.configfile)]
         # to add more validation scripts add to the dict of scripts
@@ -91,7 +91,7 @@ class ConfigType:
     def get_sharedconfig_validation(self):
         """Returns the scripts to be used for shared config file validation."""
         script_dir = glob.glob(os.path.join(VALIDATION_SCRIPTS_FOLDER, '*'))
-        # We can only execute scripts that have execute permissions.
+        # We can only execute scripts that have execute permissions.:q
         scripts = {script: [script, self.configfile]
                    for script in script_dir
                    if os.access(script, os.X_OK)}

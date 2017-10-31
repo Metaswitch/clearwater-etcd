@@ -329,6 +329,7 @@ def main(args, config_filename):
     """
     # Set up logging to syslog.
     configure_syslog(args.log_level)
+    logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
 
     # Regardless of passed arguments we want to delete outdated config to not
     # leave unused files on disk.
@@ -413,7 +414,8 @@ def parse_arguments():
     config_choice_help = '\n'.join(choice.help_info for choice in config_classes)
     config_choices = [choice.name for choice in config_classes]
 
-    parser = argparse.ArgumentParser(prog='cw-config')
+    parser = argparse.ArgumentParser(prog='cw-config',
+                                     formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("--autoconfirm", action="store_true",
                         help="Turns autoconfirm on [default=off]")
     parser.add_argument("--force", action="store_true",
@@ -513,6 +515,15 @@ def upload_verified_config(config_loader,
                            force=False,
                            autoconfirm=False):
     """Verifies the config, then uploads it to etcd."""
+
+    # check the file has been downloaded, otherwise raise specific error
+    config_location = local_store.config_location(selected_config.file_download_name)
+    if not os.path.exists(config_location):
+        log.error("The config file does not exist at %s", config_location)
+        raise ConfigUploadFailed(
+            "The config file to upload does not exist at {}".format(
+                config_location))
+
     validate_config(selected_config, force)
 
     # An exception should have been thrown if validation fails, so we should
