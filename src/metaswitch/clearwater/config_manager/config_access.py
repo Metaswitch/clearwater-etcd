@@ -638,7 +638,19 @@ def get_user_name():
     # Worth noting that `whoami` behaves differently to `who am i`, we need the
     # latter.
     process = subprocess.check_output(["who", "am", "i"])
-    return process.split()[0]
+    splits = process.split()
+    if splits:
+        # The format of `who am i` looks like this:
+        #
+        # clearwater      pts/1        2017-10-30 18:25 (:0)
+        #
+        # This is the login that is associated with the current user.
+        return splits[0]
+    else:
+        # `who am i` has not returned anything! This happens if the connection
+        # has been made via the console rather than over ssh. In these
+        # situations, we can use the $USER environment variable as a backup.
+        return os.getenv("USER")
 
 
 def get_user_download_dir():
