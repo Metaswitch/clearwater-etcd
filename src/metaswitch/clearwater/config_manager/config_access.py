@@ -540,8 +540,6 @@ def validate_config(selected_config, force=False):
     # selected_config is an instance of the ConfigType class. validate() uses
     # different scripts to validate against for different ConfigType classes.
     failed_scripts, error_lines = selected_config.validate()
-    script_dir = os.listdir(VALIDATION_SCRIPTS_FOLDER)
-
 
     # In the forcing case, we proceed even if there have been failures, but
     # otherwise we want to bail out at this point.
