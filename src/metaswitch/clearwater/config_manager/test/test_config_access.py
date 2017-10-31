@@ -944,14 +944,26 @@ class TestDeleteOutdated(unittest.TestCase):
         self.assertIs(mock_remove.call_count, 1)
 
 
+@mock.patch("metaswitch.clearwater.config_manager.config_access.os.getenv")
+@mock.patch("metaswitch.clearwater.config_manager.config_access.subprocess.check_output")
 class TestUserName(unittest.TestCase):
-    @mock.patch("metaswitch.clearwater.config_manager.config_access.subprocess.check_output")
-    def test_call_subprocess(self, mock_subp):
-        """check that we call subprocess.popen"""
-        mock_subp.return_value = ('clearwater fdbngh fghj')
+    """Tests the get_user_name() function."""
+    def test_who_am_i(self, mock_subp, mock_getenv):
+        """Check that we correctly return the value from `who am i`"""
+        mock_subp.return_value = 'clearwater fdbngh fghj'
         username = config_access.get_user_name()
-        self.assertIs(mock_subp.call_count, 1)
+        mock_subp.assert_called_with(['who', 'am', 'i'])
         self.assertMultiLineEqual(username, 'clearwater')
+
+    def test_os_environ(self, mock_subp, mock_getenv):
+        """Check that we get information from the OS if `who am i` returns
+        nothing."""
+        mock_subp.return_value = ""
+        mock_getenv.return_value = "user"
+        username = config_access.get_user_name()
+        self.assertIs(mock_getenv.call_count, 1)
+        mock_getenv.assert_called_with('USER')
+        self.assertMultiLineEqual(username, 'user')
 
 
 class TestUserDownloadDir(unittest.TestCase):
