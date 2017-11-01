@@ -13,11 +13,10 @@
 # Include the current values from the node's config.
 . /etc/clearwater/config
 
-# We only care about whether the user has the necessary permissions if they are
-# trying to use the --force option. If they are forcing, the user must have
-# root permissions.
 if [[ "$@" == *"--force"* ]]
 then
+  # The user is trying to bypass config validation checks. To do this, they
+  # must have root permissions.
   . /usr/share/clearwater/utils/check-root-permissions 2
 fi
 
