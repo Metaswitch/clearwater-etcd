@@ -50,6 +50,10 @@ CANT_COMPARE_WITH_MASTER = ("Unable to compare with master configuration "
 UNABLE_TO_UPLOAD = ("Unable to upload {} to the configuration database. The "
 "upload has failed.")
 
+FIRST_DOWNLOAD_WARNING = ("{} is not present in the configuration database. A "
+"blank file has been created for you. You can make changes to this and upload "
+"as normal.")
+
 
 # Exceptions
 class ConfigDownloadFailed(Exception):
@@ -154,6 +158,7 @@ class ConfigLoader(object):
             # If the key isn't present, create an empty file with a default
             # revision number. Users can add the first revision!
             log.info("etcd key %s is not present in the database", key_path)
+            print FIRST_DOWNLOAD_WARNING
             first_value = ""
             first_index = 0
             return first_value, first_index
