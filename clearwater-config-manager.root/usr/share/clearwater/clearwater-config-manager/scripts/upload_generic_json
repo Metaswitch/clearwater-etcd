@@ -52,7 +52,7 @@ then
 fi
 
 # Check we can contact `etcd`
-if nc -z ${management_local_ip:-$local_ip} 4000
+if ! nc -z ${management_local_ip:-$local_ip} 4000
 then
   echo "The Clearwater Configuration store (etcd) is not running"
   echo "Please start it before uploading configuration"
