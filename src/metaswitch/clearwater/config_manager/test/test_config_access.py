@@ -220,17 +220,23 @@ class TestConfigLoader(unittest.TestCase):
 @mock.patch("metaswitch.clearwater.config_manager.config_access.subprocess.check_output",
             return_value="someuser")
 class TestCreateLocalStore(unittest.TestCase):
-    def test_folder_doesnt_exist(self, mock_subprocess, mock_getenv, mock_mkdir, mock_exists):
+    @mock.patch("metaswitch.clearwater.config_manager.config_access.reset_file_ownership")
+    def test_folder_doesnt_exist(self,
+                                 mock_reset,
+                                 mock_subprocess,
+                                 mock_getenv,
+                                 mock_mkdir,
+                                 mock_exists):
         """Make sure we do create a folder if there isn't one already."""
         mock_exists.return_value = False
         config_access.LocalStore()
-        self.assertEqual(mock_mkdir.call_count, 1)
+        mock_mkdir.assert_called_once_with("/home/dir/clearwater-config-manager/someuser")
 
     def test_folder_exists(self, mock_subprocess, mock_getenv, mock_mkdir, mock_exists):
         """Make sure that we don't try to create a folder if one already
         exists."""
         config_access.LocalStore()
-        self.assertEqual(mock_mkdir.call_count, 0)
+        self.assertFalse(mock_mkdir.called)
 
 
 @mock.patch(
@@ -310,10 +316,12 @@ class TestLocalStore(unittest.TestCase):
         with self.assertRaises(config_access.InvalidRevision):
             local_store.load_config_and_revision("shared_config")
 
+    @mock.patch("metaswitch.clearwater.config_manager.config_access.reset_file_ownership")
     def test_save_config_and_revision(self,
                                       mock_ensure_dir,
                                       mock_file_read,
-                                      mock_config_path):
+                                      mock_config_path,
+                                      mock_ownership):
         """Check that we correctly write to file when saving off config and
         revision data."""
         local_store = config_access.LocalStore()
@@ -1111,6 +1119,30 @@ class TestReadFromFile(unittest.TestCase):
                         create=True):
             with self.assertRaises(IOError):
                 config_access.read_from_file('example_file')
+
+
+@mock.patch("metaswitch.clearwater.config_manager.config_access.os.chown")
+@mock.patch("metaswitch.clearwater.config_manager.config_access.pwd.getpwnam")
+@mock.patch("metaswitch.clearwater.config_manager.config_access.os.getenv")
+class TestFixOwnership(unittest.TestCase):
+    def test_run_as_sudo(self, mock_getenv, mock_getpwnam, mock_chown):
+        """If we're being run as sudo, we should change ownership."""
+        mock_getenv.return_value = "username"
+        mock_getpwnam.return_value.pw_uid = 1000
+        mock_getpwnam.return_value.pw_gid = 2000
+
+        config_access.reset_file_ownership('file/path')
+
+        mock_chown.assert_called_once_with('file/path', 1000, 2000)
+
+    def test_not_run_as_sudo(self, mock_getenv, mock_getpwnam, mock_chown):
+        """Check that we don't change ownership if we are not running as sudo.
+        """
+        mock_getenv.return_value = None
+        config_access.reset_file_ownership('file/path')
+
+        self.assertFalse(mock_getpwnam.called)
+        self.assertFalse(mock_chown.called)
 
 
 # For added realism, we use some real examples of config files in these tests.
