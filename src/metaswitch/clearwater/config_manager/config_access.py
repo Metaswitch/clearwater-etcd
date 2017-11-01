@@ -50,6 +50,10 @@ CANT_COMPARE_WITH_MASTER = ("Unable to compare with master configuration "
 UNABLE_TO_UPLOAD = ("Unable to upload {} to the configuration database. The "
 "upload has failed.")
 
+CLUSTER_NOT_HEALTHY = ("No changes to configuration can be made while the "
+"configuration database does not have quorum. Restore connectivity to the "
+"uncontactable nodes in the deployment and try again.")
+
 FIRST_DOWNLOAD_WARNING = ("{} is not present in the configuration database. A "
 "blank file has been created for you. You can make changes to this and upload "
 "as normal.")
@@ -73,6 +77,11 @@ class ConfigValidationFailed(ConfigUploadFailed):
 
 class EtcdConnectionFailed(Exception):
     """Unable to connect to etcd."""
+    pass
+
+
+class EtcdNoQuorum(Exception):
+    """Etcd cluster does not have quorum."""
     pass
 
 
@@ -100,6 +109,10 @@ class UnableToSaveFile(IOError):
 class ConfigLoader(object):
     """Object for interfacing with etcd for uploading and downloading config.
     """
+    ETCD_HEALTH_CHECK = ['/usr/bin/clearwater-etcdctl', 'cluster-health']
+    ETCD_UNHEALTHY_INDICATORS = ["cluster is unhealthy",
+                                 "cluster may be unhealthy"]
+
     def __init__(self, etcd_client, etcd_key, site, local_store):
         # In addition to standard init, we store off the URL to query on the
         # etcd API that will get us our config.
@@ -109,6 +122,9 @@ class ConfigLoader(object):
 
         # Make sure that the etcd process is actually contactable.
         self._check_connection()
+
+        # Make sure that the etcd cluster has quorum.
+        self._check_etcd_cluster_health()
 
     def _check_connection(self):
         """Performs a sanity check to make sure that the etcd process is
@@ -127,6 +143,20 @@ class ConfigLoader(object):
             log.error("Unable to connect to etcd database at %s", location)
             raise EtcdConnectionFailed(
                 "etcd process not running at {}".format(location))
+
+    def _check_etcd_cluster_health(self):
+        """Raises an EtcdNoQuorum exception if the etcd cluster does not have
+        quorum."""
+        try:
+            health_output = subprocess.check_output(self.ETCD_HEALTH_CHECK)
+        except subprocess.CalledProcessError:
+            # We couldn't even run the health check! something must be wrong.
+            raise EtcdNoQuorum()
+
+        if not any(ind in health_output
+                   for ind in self.ETCD_UNHEALTHY_INDICATORS):
+            # The health check has shown there is no quorum!
+            raise EtcdNoQuorum()
 
     def download_config(self, config_type):
         """Save a copy of a given config type to the download directory.
@@ -333,6 +363,9 @@ def main(args):
     except (etcd.EtcdException, EtcdConnectionFailed):
         log.error("etcd cluster uncontactable")
         sys.exit("Unable to contact the etcd cluster.")
+    except EtcdNoQuorum:
+        log.error("etcd cluster doesn't have quorum")
+        sys.exit(CLUSTER_NOT_HEALTHY)
 
     if args.action == "download":
         log.info("User %s triggered download of %s",
