@@ -18,7 +18,6 @@ from clearwater_etcd_plugins.clearwater_config_access import shared_ifcs_config_
 from clearwater_etcd_plugins.clearwater_config_access import bgcf_json_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import scscf_json_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import fallback_ifcs_config_plugin
-from clearwater_etcd_plugins.clearwater_config_access import chronos_config_plugin
 
 
 @mock.patch("metaswitch.clearwater.config_manager.config_type_class_plugin.log")
@@ -34,22 +33,25 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
 
         self.assertIs(mock_log.debug.call_count, 1)
         self.assertIs(mock_log.error.call_count, 0)
-        self.assertListEqual(answer, [])
+        self.assertListEqual(answer[0], [])
+        self.assertListEqual(answer[1], [])
         self.assertIs(mock_subprocess.call_count, 1)
 
     def test_validate_fails(self, mock_subprocess, mock_log):
         """use ConfigType.validate and get subprocess to raise a exception and
          check log reports this and failed scripts is not empty"""
-        chronos_config = chronos_config_plugin.ChronosSharedConfig('path')
-        chronos_config.scripts = {'name1': ['script1'], 'name2': ['script2']}
-        mock_subprocess.side_effect = [None,
-                                       subprocess.CalledProcessError("A", "B")]
+        shared_config = shared_config_config_plugin.SharedConfig('path')
+        shared_config.scripts = {'name1': ['script1'], 'name2': ['script2']}
+        validation_error = subprocess.CalledProcessError('A', 'B')
+        validation_error.output = "ERROR: Something went wrong"
+        mock_subprocess.side_effect = [None, validation_error]
         # possibly want to run this within assertRaises check as well
-        answer = chronos_config.validate()
+        answer = shared_config.validate()
 
         self.assertIs(mock_log.debug.call_count, 2)
-        self.assertIs(mock_log.error.call_count, 1)
-        self.assertListEqual(answer, ['name1'])
+        self.assertIs(mock_log.error.call_count, 3)
+        self.assertListEqual(answer[0], ['name1'])
+        self.assertListEqual(answer[1], ["ERROR: Something went wrong"])
         self.assertIs(mock_subprocess.call_count, 2)
 
     @mock.patch("metaswitch.clearwater.config_manager.config_type_class_plugin.ConfigType.get_json_validation")
@@ -65,27 +67,22 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
 
         bgcf_json = bgcf_json_config_plugin.BgcfJson('path')
         ifcs_xml = shared_ifcs_config_plugin.SharedIfcsXml('path')
-        chronos = chronos_config_plugin.ChronosSharedConfig('path')
         shared_config = shared_config_config_plugin.SharedConfig('path')
 
         bgcf_fake_scripts = [['script1'], ['script2']]
         ifcs_fake_scripts = [['script3'], ['script4']]
-        chronos_fake_scripts = []
         shared_fake_scripts = [['script5'], ['script6']]
 
         bgcf_fake_names = ['name1', 'name2']
         ifcs_fake_names = ['name3', 'name4']
-        chronos_fake_names = []
         shared_fake_names = ['name5', 'name6']
 
         self.assertItemsEqual(bgcf_json.scripts.values(), bgcf_fake_scripts)
         self.assertItemsEqual(ifcs_xml.scripts.values(), ifcs_fake_scripts)
-        self.assertItemsEqual(chronos.scripts.values(), chronos_fake_scripts)
         self.assertItemsEqual(shared_config.scripts.values(), shared_fake_scripts)
 
         self.assertItemsEqual(bgcf_json.scripts.keys(), bgcf_fake_names)
         self.assertItemsEqual(ifcs_xml.scripts.keys(), ifcs_fake_names)
-        self.assertItemsEqual(chronos.scripts.keys(), chronos_fake_names)
         self.assertItemsEqual(shared_config.scripts.keys(), shared_fake_names)
 
 
@@ -109,7 +106,7 @@ class TestGetValidationScripts(unittest.TestCase):
         fallback_ifcs = fallback_ifcs_config_plugin.FallbackIfcsXml('path')
         answer = fallback_ifcs.get_xml_validation()
         ifcs_expected_script = [['xmllint', '--format', '--pretty', '1',
-                                 '--load-trace', '--debug', '--schema',
+                                 '--debug', '--schema',
                                  '/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/fallback_ifcs_schema.xsd',
                                  'path', ]]
         self.assertListEqual(answer.values(), ifcs_expected_script)
