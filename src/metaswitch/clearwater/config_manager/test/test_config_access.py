@@ -98,7 +98,8 @@ class TestConfigLoader(unittest.TestCase):
         etcd_client.read.assert_called_with(
             "/clearwater/site/configuration/shared_config")
 
-    def test_get_new_config(self, mock_localstore, mock_check_connection):
+    def test_get_new_config(self, mock_selected_config,
+                            mock_localstore, mock_check_connection):
         """Check we create a blank file if there's nothing to download."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
         etcd_client.read.side_effect = etcd.EtcdKeyNotFound
@@ -123,7 +124,7 @@ class TestConfigLoader(unittest.TestCase):
             etcd_client, "clearwater", "site", mock_localstore)
         mock_selected_config.name = "dns_json"
 
-        config, revision = config_loader.get_config_and_index('shared_config')
+        config, revision = config_loader.get_config_and_index(mock_selected_config)
         self.assertEqual(config, "")
         self.assertEqual(revision, 0)
 
@@ -140,7 +141,7 @@ class TestConfigLoader(unittest.TestCase):
             etcd_client, "clearwater", "site", mock_localstore)
 
         # Need to provide a cas revision on etcd uploads to avoid conflicts.
-        config_loader.write_config_to_etcd(mock_selected_config, 123)
+        config_loader.write_config_to_etcd(mock_selected_config, 123, 'Fake Config')
 
         etcd_client.write.assert_called_with(
             "/clearwater/site/configuration/shared_config",
@@ -149,6 +150,7 @@ class TestConfigLoader(unittest.TestCase):
         )
 
     def test_write_new_config_to_etcd(self,
+                                      mock_selected_config,
                                       mock_localstore,
                                       mock_check_connection):
         """Check that we can write config to etcd from file."""
@@ -156,12 +158,12 @@ class TestConfigLoader(unittest.TestCase):
 
         mock_localstore.load_config_and_revision.return_value = ("Fake Config",
                                                                  0)
-
+        mock_selected_config.name = "shared_config"
         config_loader = config_access.ConfigLoader(
             etcd_client, "clearwater", "site", mock_localstore)
 
         # This is new config.
-        config_loader.write_config_to_etcd("shared_config", 0)
+        config_loader.write_config_to_etcd(mock_selected_config, 0, 'Fake Config')
 
         # When the config is new, we don't pass in a prev_revision.
         etcd_client.write.assert_called_with(
@@ -169,28 +171,6 @@ class TestConfigLoader(unittest.TestCase):
             "Fake Config"
         )
 
-    def test_write_to_etcd_unable_to_load(self,
-                                          mock_localstore,
-                                          mock_check_connection):
-        """Check for the correct exception on failure.
-
-        Check that failing to open the config file causes the correct
-        exception to be raised."""
-        etcd_client = mock.MagicMock(spec=etcd.client.Client)
-
-        mock_localstore.load_config_and_revision.side_effect = IOError
-        mock_selected_config.name = "enum_json"
-        mock_selected_config.configfile = "/bla/bla/"
-        mock_selected_config.file_download_name = "shared_config"
-
-        config_loader = config_access.ConfigLoader(
-            etcd_client, "clearwater", "site", mock_localstore)
-
-        self.assertRaises(
-            config_access.ConfigUploadFailed,
-            config_loader.write_config_to_etcd,
-            mock_selected_config,
-            123)
 
     def test_write_to_etcd_failure(self, mock_selected_config,
                                    mock_localstore,
@@ -230,14 +210,14 @@ class TestConfigLoader(unittest.TestCase):
                 config_access.ConfigUploadFailed,
                 config_loader.write_config_to_etcd,
                 mock_selected_config,
-                1234)
+                1234, 'Fake Config')
 
             # Second time, we trigger etcd.EtcdCompareFailed
             self.assertRaises(
                 config_access.ConfigUploadFailed,
                 config_loader.write_config_to_etcd,
                 mock_selected_config,
-                1234)
+                1234, 'Fake Config')
 
     def test_uri(self, mock_selected_config,
                  mock_localstore, mock_check_connection):
@@ -731,13 +711,16 @@ class TestConfigDownload(unittest.TestCase):
 
         mock_configloader.download_config.assert_called_once
 
-
+@mock.patch(
+    "metaswitch.clearwater.config_manager.config_access.upload_config")
+@mock.patch(
+    "metaswitch.clearwater.config_manager.config_access.validate_config")
+@mock.patch(
+    "metaswitch.clearwater.config_manager.config_access.os.path")
 class TestVerifiedUpload(unittest.TestCase):
-    @mock.patch(
-        "metaswitch.clearwater.config_manager.config_access.upload_config")
-    @mock.patch(
-        "metaswitch.clearwater.config_manager.config_access.validate_config")
+
     def test_only_upload_validated_config(self,
+                                          mock_os,
                                           mock_validate_config,
                                           mock_upload_config):
         """Check that we only call upload_config if validation passed."""
@@ -745,6 +728,7 @@ class TestVerifiedUpload(unittest.TestCase):
         mock_localstore = mock.MagicMock(spec=config_access.LocalStore)
         mock_selectedconfig = mock.MagicMock(
             spec=shared_config_config_plugin.SharedConfig)
+        mock_os.exists.return_value = True
 
         # Test that if we fail to validate the config, it does not get
         # uploaded.
@@ -766,12 +750,27 @@ class TestVerifiedUpload(unittest.TestCase):
 
         assert mock_upload_config.called
 
+    def test_no_file_to_upload(self,
+                               mock_os,
+                               mock_validate_config,
+                               mock_upload_config):
+        mock_configloader = mock.MagicMock(spec=config_access.ConfigLoader)
+        mock_localstore = mock.MagicMock(spec=config_access.LocalStore)
+        mock_selectedconfig = mock.MagicMock(
+            spec=shared_config_config_plugin.SharedConfig)
+        mock_os.exists.return_value = False
+        with self.assertRaises(config_access.ConfigUploadFailed):
+            config_access.upload_verified_config(mock_configloader,
+                                                 mock_localstore,
+                                                 mock_selectedconfig,
+                                                 "shared_config")
+
 
 class TestValidation(unittest.TestCase):
 
     def setUp(self):
         self.mock_selected_config = mock.MagicMock(spec=shared_config_config_plugin.SharedConfig)
-        self.mock_selected_config.validate.return_value = ['script1']
+        self.mock_selected_config.validate.return_value = ['script1'], ["ERROR: error"]
 
     def test_handle_validation_error(self):
         """Test that we handle validation failure correctly."""
@@ -931,7 +930,8 @@ class TestReadyForUpload(unittest.TestCase):
 
 
 @mock.patch("metaswitch.clearwater.config_manager.config_access.get_user_download_dir")
-@mock.patch("metaswitch.clearwater.config_manager.config_access.ready_for_upload_checks")
+@mock.patch("metaswitch.clearwater.config_manager.config_access.ready_for_upload_checks",
+             return_value=(1,'sdfgh'))
 @mock.patch("metaswitch.clearwater.config_manager.config_access.subprocess")
 @mock.patch("metaswitch.clearwater.config_manager.config_access.LocalStore._ensure_config_dir")
 @mock.patch("metaswitch.clearwater.config_manager.config_access.ConfigLoader", autospec=True)
