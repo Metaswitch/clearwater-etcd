@@ -50,13 +50,15 @@ CANT_SAVE_LOCAL_CONFIG = ("Unable to save {} to file. Check the user has "
 CANT_COMPARE_WITH_MASTER = ("Unable to compare with master configuration "
 "file. No upload will be performed.")
 
-CONFIG_TYPE_DOESNT_EXIST = "{} does not exist in the configuration database."
-
 UNABLE_TO_UPLOAD = ("Unable to upload {} to the configuration database. The "
 "upload has failed.")
 
 NO_CONFIG_FOUND = (("There are no ConfigType plugins found at {}").format(
                     PLUGIN_DIR))
+
+FIRST_DOWNLOAD_WARNING = ("{} is not present in the configuration database. A "
+"blank file has been created for you. You can make changes to this and upload "
+"as normal.")
 
 
 # Exceptions
@@ -159,48 +161,26 @@ class ConfigLoader(object):
             log.debug("Reading etcd config from '%s", key_path)
             download = self._etcd_client.read(key_path)
         except etcd.EtcdKeyNotFound:
-            if (selected_config.name == 'shared_ifcs' or
-                    selected_config.name == 'fallback_ifcs'):
-                log.debug("creating first instance of xml file")
-                value = ''
-                index = 0
-                return value, index
-            else:
-                log.error("etcd key %s is not present in the database",
-                          key_path)
-                raise ConfigDownloadFailed(
-                    CONFIG_TYPE_DOESNT_EXIST.format(
-                        selected_config.name))
+            # If the key isn't present, create an empty file with a default
+            # revision number. Users can add the first revision!
+            log.info("etcd key %s is not present in the database", key_path)
+            print FIRST_DOWNLOAD_WARNING
+            first_value = ""
+            first_index = 0
+            return first_value, first_index
 
         return download.value, download.modifiedIndex
 
-    def write_config_to_etcd(self, selected_config, prev_revision):
+    def write_config_to_etcd(self, selected_config, prev_revision, upload):
         """Upload config contained in the specified file to the etcd database.
         Raises a ConfigUploadFailed exception if unsuccessful.
         """
         key_path = "/".join([self.prefix, selected_config.name])
-        try:
-            upload, _ = self.local_store.load_config_and_revision(selected_config.file_download_name)
-        except IOError:
-            # This exception will be thrown in the following cases:
-            # - The download directory doesn't exist
-            # - The config file doesn't exist in the download directory
-            # - The config file is not readable
-            # - The config file is too big
-            log.error("Unable to load %s from file", selected_config.file_download_name)
-            raise ConfigUploadFailed(
-                CANT_LOAD_LOCAL_CONFIG.format(
-                    selected_config.name,
-                    selected_config.configfile))
 
         try:
-            if (prev_revision == 0 and
-                    (selected_config.name == 'shared_ifcs' or
-                     selected_config.name == 'fallback_ifcs')):
-                log.debug("There was no copy of this xml file previously")
-                log.debug("Writing etcd config to '%s'", key_path)
-                self._etcd_client.write(key_path,
-                                        upload)
+            if prev_revision == 0:
+                log.debug("Writing etcd config to '%s' for the first time")
+                self._etcd_client.write(key_path, upload)
             else:
                 log.debug("Writing etcd config to '%s'", key_path)
                 self._etcd_client.write(key_path,
@@ -561,14 +541,15 @@ def validate_config(selected_config, force=False):
 
 def upload_config(autoconfirm, config_loader, selected_config, force, local_store):
     """Read the relevant config from file and upload it to etcd."""
-    remote_revision = ready_for_upload_checks(autoconfirm,
-                                              config_loader,
-                                              selected_config,
-                                              local_store)
+    remote_revision, upload_string = ready_for_upload_checks(autoconfirm,
+                                                             config_loader,
+                                                             selected_config,
+                                                             local_store)
 
     # Upload the configuration to the etcd cluster. This will trigger the
     # queue manager to schedule nodes to be restarted.
-    config_loader.write_config_to_etcd(selected_config, remote_revision)
+    config_loader.write_config_to_etcd(selected_config, remote_revision,
+                                       upload_string)
 
     # Clearwater can be run with multiple etcd clusters. The apply_config_key
     # variable stores the information about which etcd cluster the changes
@@ -641,7 +622,7 @@ def ready_for_upload_checks(autoconfirm,
             raise UserAbort
 
     log.debug("All checks passed, ready for config upload")
-    return remote_revision
+    return remote_revision, local_config
 
 
 def confirm_yn(prompt, autoskip=False):
