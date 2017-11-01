@@ -78,17 +78,17 @@ class TestConfigLoader(unittest.TestCase):
         etcd_client.read.assert_called_with(
             "/clearwater/site/configuration/shared_config")
 
-    def test_get_config_failed(self, mock_localstore, mock_check_connection):
-        """Check we get the right exception on failure."""
+    def test_get_new_config(self, mock_localstore, mock_check_connection):
+        """Check we create a blank file if there's nothing to download."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
         etcd_client.read.side_effect = etcd.EtcdKeyNotFound
 
         config_loader = config_access.ConfigLoader(
             etcd_client, "clearwater", "site", mock_localstore)
 
-        self.assertRaises(config_access.ConfigDownloadFailed,
-                          config_loader.get_config_and_index,
-                          "shared_config")
+        config, revision = config_loader.get_config_and_index('shared_config')
+        self.assertEqual(config, "")
+        self.assertEqual(revision, 0)
 
     def test_write_config_to_etcd(self, mock_localstore, mock_check_connection):
         """Check that we can write config to etcd from file."""
@@ -107,6 +107,27 @@ class TestConfigLoader(unittest.TestCase):
             "/clearwater/site/configuration/shared_config",
             "Fake Config",
             prevIndex=123
+        )
+
+    def test_write_new_config_to_etcd(self,
+                                      mock_localstore,
+                                      mock_check_connection):
+        """Check that we can write config to etcd from file."""
+        etcd_client = mock.MagicMock(spec=etcd.client.Client)
+
+        mock_localstore.load_config_and_revision.return_value = ("Fake Config",
+                                                                 0)
+
+        config_loader = config_access.ConfigLoader(
+            etcd_client, "clearwater", "site", mock_localstore)
+
+        # This is new config.
+        config_loader.write_config_to_etcd("shared_config", 0)
+
+        # When the config is new, we don't pass in a prev_revision.
+        etcd_client.write.assert_called_with(
+            "/clearwater/site/configuration/shared_config",
+            "Fake Config"
         )
 
     def test_write_to_etcd_unable_to_load(self,
