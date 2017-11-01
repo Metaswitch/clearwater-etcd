@@ -25,7 +25,7 @@ def load_plugins_in_dir(dir, params=None):
     if os.path.isdir(dir):
         files = os.listdir(dir)
         for filename in files:
-            _log.info("Inspecting {}".format(filename))
+            _log.debug("Inspecting {}".format(filename))
             module_name, suffix = os.path.splitext(filename)
             if suffix == ".py":
                 file, pathname, description = imp.find_module(module_name, [dir])
@@ -33,9 +33,9 @@ def load_plugins_in_dir(dir, params=None):
                     mod = imp.load_module(module_name, file, pathname, description)
                     if hasattr(mod, "load_as_plugin"):
                         plugin = mod.load_as_plugin(params)
-                        _log.info("Loading {}".format(filename))
+                        _log.debug("Loading {}".format(filename))
                         if plugin is not None:
-                            _log.info("Loaded {} successfully".format(filename))
+                            _log.debug("Loaded {} successfully".format(filename))
                             plugins.append(plugin)
                         else:
                             _log.info("{} did not load (load_as_plugin returned None)".format(filename))
