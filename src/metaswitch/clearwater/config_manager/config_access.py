@@ -50,13 +50,15 @@ CANT_SAVE_LOCAL_CONFIG = ("Unable to save {} to file. Check the user has "
 CANT_COMPARE_WITH_MASTER = ("Unable to compare with master configuration "
 "file. No upload will be performed.")
 
-CONFIG_TYPE_DOESNT_EXIST = "{} does not exist in the configuration database."
-
 UNABLE_TO_UPLOAD = ("Unable to upload {} to the configuration database. The "
 "upload has failed.")
 
 NO_CONFIG_FOUND = (("There are no ConfigType plugins found at {}").format(
                     PLUGIN_DIR))
+
+FIRST_DOWNLOAD_WARNING = ("{} is not present in the configuration database. A "
+"blank file has been created for you. You can make changes to this and upload "
+"as normal.")
 
 
 # Exceptions
@@ -159,18 +161,13 @@ class ConfigLoader(object):
             log.debug("Reading etcd config from '%s", key_path)
             download = self._etcd_client.read(key_path)
         except etcd.EtcdKeyNotFound:
-            if (selected_config.name == 'shared_ifcs' or
-                    selected_config.name == 'fallback_ifcs'):
-                log.debug("creating first instance of xml file")
-                value = ''
-                index = 0
-                return value, index
-            else:
-                log.error("etcd key %s is not present in the database",
-                          key_path)
-                raise ConfigDownloadFailed(
-                    CONFIG_TYPE_DOESNT_EXIST.format(
-                        selected_config.name))
+            # If the key isn't present, create an empty file with a default
+            # revision number. Users can add the first revision!
+            log.info("etcd key %s is not present in the database", key_path)
+            print FIRST_DOWNLOAD_WARNING
+            first_value = ""
+            first_index = 0
+            return first_value, first_index
 
         return download.value, download.modifiedIndex
 
@@ -181,13 +178,9 @@ class ConfigLoader(object):
         key_path = "/".join([self.prefix, selected_config.name])
 
         try:
-            if (prev_revision == 0 and
-                    (selected_config.name == 'shared_ifcs' or
-                     selected_config.name == 'fallback_ifcs')):
-                log.debug("There was no copy of this xml file previously")
-                log.debug("Writing etcd config to '%s'", key_path)
-                self._etcd_client.write(key_path,
-                                        upload)
+            if prev_revision == 0:
+                log.debug("Writing etcd config to '%s' for the first time")
+                self._etcd_client.write(key_path, upload)
             else:
                 log.debug("Writing etcd config to '%s'", key_path)
                 self._etcd_client.write(key_path,
@@ -660,7 +653,19 @@ def get_user_name():
     # Worth noting that `whoami` behaves differently to `who am i`, we need the
     # latter.
     process = subprocess.check_output(["who", "am", "i"])
-    return process.split()[0]
+    splits = process.split()
+    if splits:
+        # The format of `who am i` looks like this:
+        #
+        # clearwater      pts/1        2017-10-30 18:25 (:0)
+        #
+        # This is the login that is associated with the current user.
+        return splits[0]
+    else:
+        # `who am i` has not returned anything! This happens if the connection
+        # has been made via the console rather than over ssh. In these
+        # situations, we can use the $USER environment variable as a backup.
+        return os.getenv("USER")
 
 
 def get_user_download_dir():

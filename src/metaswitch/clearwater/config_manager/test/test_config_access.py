@@ -98,10 +98,8 @@ class TestConfigLoader(unittest.TestCase):
         etcd_client.read.assert_called_with(
             "/clearwater/site/configuration/shared_config")
 
-    def test_get_ifcs_config_first_time(self, mock_selected_config,
-                                        mock_localstore,
-                                        mock_check_connection):
-        """Check that we create a first instance of ifcs when it is needed"""
+    def test_get_new_config(self, mock_localstore, mock_check_connection):
+        """Check we create a blank file if there's nothing to download."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
         etcd_client.read.side_effect = etcd.EtcdKeyNotFound
 
@@ -125,9 +123,9 @@ class TestConfigLoader(unittest.TestCase):
             etcd_client, "clearwater", "site", mock_localstore)
         mock_selected_config.name = "dns_json"
 
-        self.assertRaises(config_access.ConfigDownloadFailed,
-                          config_loader.get_config_and_index,
-                          mock_selected_config)
+        config, revision = config_loader.get_config_and_index('shared_config')
+        self.assertEqual(config, "")
+        self.assertEqual(revision, 0)
 
     def test_write_config_to_etcd(self, mock_selected_config,
                                   mock_localstore, mock_check_connection):
@@ -150,24 +148,28 @@ class TestConfigLoader(unittest.TestCase):
             prevIndex=123
         )
 
-    def test_write_ifcs_first_time(self, mock_selected_config,
-                                   mock_localstore, mock_check_connection):
-        """Check that if the config type is either ifcs and it is the first
-        revision we enter the if loop"""
+    def test_write_new_config_to_etcd(self,
+                                      mock_localstore,
+                                      mock_check_connection):
+        """Check that we can write config to etcd from file."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
-        mock_localstore.load_config_and_revision.return_value = ('Fake Config',
+
+        mock_localstore.load_config_and_revision.return_value = ("Fake Config",
                                                                  0)
 
         config_loader = config_access.ConfigLoader(
             etcd_client, "clearwater", "site", mock_localstore)
-        mock_selected_config.name = "shared_ifcs"
 
-        config_loader.write_config_to_etcd(mock_selected_config, 0)
+        # This is new config.
+        config_loader.write_config_to_etcd("shared_config", 0)
+
+        # When the config is new, we don't pass in a prev_revision.
         etcd_client.write.assert_called_with(
-            "/clearwater/site/configuration/shared_ifcs",
-            "Fake Config")
+            "/clearwater/site/configuration/shared_config",
+            "Fake Config"
+        )
 
-    def test_write_to_etcd_unable_to_load(self, mock_selected_config,
+    def test_write_to_etcd_unable_to_load(self,
                                           mock_localstore,
                                           mock_check_connection):
         """Check for the correct exception on failure.
@@ -1008,14 +1010,26 @@ class TestDeleteOutdated(unittest.TestCase):
         self.assertIs(mock_remove.call_count, 1)
 
 
+@mock.patch("metaswitch.clearwater.config_manager.config_access.os.getenv")
+@mock.patch("metaswitch.clearwater.config_manager.config_access.subprocess.check_output")
 class TestUserName(unittest.TestCase):
-    @mock.patch("metaswitch.clearwater.config_manager.config_access.subprocess.check_output")
-    def test_call_subprocess(self, mock_subp):
-        """check that we call subprocess.popen"""
-        mock_subp.return_value = ('clearwater fdbngh fghj')
+    """Tests the get_user_name() function."""
+    def test_who_am_i(self, mock_subp, mock_getenv):
+        """Check that we correctly return the value from `who am i`"""
+        mock_subp.return_value = 'clearwater fdbngh fghj'
         username = config_access.get_user_name()
-        self.assertIs(mock_subp.call_count, 1)
+        mock_subp.assert_called_with(['who', 'am', 'i'])
         self.assertMultiLineEqual(username, 'clearwater')
+
+    def test_os_environ(self, mock_subp, mock_getenv):
+        """Check that we get information from the OS if `who am i` returns
+        nothing."""
+        mock_subp.return_value = ""
+        mock_getenv.return_value = "user"
+        username = config_access.get_user_name()
+        self.assertIs(mock_getenv.call_count, 1)
+        mock_getenv.assert_called_with('USER')
+        self.assertMultiLineEqual(username, 'user')
 
 
 class TestUserDownloadDir(unittest.TestCase):
