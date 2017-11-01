@@ -47,10 +47,12 @@ CANT_SAVE_LOCAL_CONFIG = ("Unable to save {} to file. Check the user has "
 CANT_COMPARE_WITH_MASTER = ("Unable to compare with master configuration "
 "file. No upload will be performed.")
 
-CONFIG_TYPE_DOESNT_EXIST = "{} does not exist in the configuration database."
-
 UNABLE_TO_UPLOAD = ("Unable to upload {} to the configuration database. The "
 "upload has failed.")
+
+FIRST_DOWNLOAD_WARNING = ("{} is not present in the configuration database. A "
+"blank file has been created for you. You can make changes to this and upload "
+"as normal.")
 
 
 # Exceptions
@@ -153,9 +155,13 @@ class ConfigLoader(object):
             log.debug("Reading etcd config from '%s", key_path)
             download = self._etcd_client.read(key_path)
         except etcd.EtcdKeyNotFound:
-            log.error("etcd key %s is not present in the database", key_path)
-            raise ConfigDownloadFailed(
-                CONFIG_TYPE_DOESNT_EXIST.format(config_type))
+            # If the key isn't present, create an empty file with a default
+            # revision number. Users can add the first revision!
+            log.info("etcd key %s is not present in the database", key_path)
+            print FIRST_DOWNLOAD_WARNING
+            first_value = ""
+            first_index = 0
+            return first_value, first_index
 
         return download.value, download.modifiedIndex
 
@@ -179,10 +185,14 @@ class ConfigLoader(object):
                     self.local_store.config_location(config_type)))
 
         try:
-            log.debug("Writing etcd config to '%s'", key_path)
-            self._etcd_client.write(key_path,
-                                    upload,
-                                    prevIndex=prev_revision)
+            if prev_revision == 0:
+                log.debug("Writing etcd config to '%s' for the first time")
+                self._etcd_client.write(key_path, upload)
+            else:
+                log.debug("Writing etcd config to '%s'", key_path)
+                self._etcd_client.write(key_path,
+                                        upload,
+                                        prevIndex=prev_revision)
         except etcd.EtcdConnectionFailed:
             log.error("Unable to write to etcd database")
             raise ConfigUploadFailed(UNABLE_TO_UPLOAD.format(config_type))
