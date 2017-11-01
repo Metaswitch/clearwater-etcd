@@ -174,24 +174,11 @@ class ConfigLoader(object):
 
         return download.value, download.modifiedIndex
 
-    def write_config_to_etcd(self, selected_config, prev_revision):
+    def write_config_to_etcd(self, selected_config, prev_revision, upload):
         """Upload config contained in the specified file to the etcd database.
         Raises a ConfigUploadFailed exception if unsuccessful.
         """
         key_path = "/".join([self.prefix, selected_config.name])
-        try:
-            upload, _ = self.local_store.load_config_and_revision(selected_config.file_download_name)
-        except IOError:
-            # This exception will be thrown in the following cases:
-            # - The download directory doesn't exist
-            # - The config file doesn't exist in the download directory
-            # - The config file is not readable
-            # - The config file is too big
-            log.error("Unable to load %s from file", selected_config.file_download_name)
-            raise ConfigUploadFailed(
-                CANT_LOAD_LOCAL_CONFIG.format(
-                    selected_config.name,
-                    selected_config.configfile))
 
         try:
             if (prev_revision == 0 and
@@ -561,14 +548,15 @@ def validate_config(selected_config, force=False):
 
 def upload_config(autoconfirm, config_loader, selected_config, force, local_store):
     """Read the relevant config from file and upload it to etcd."""
-    remote_revision = ready_for_upload_checks(autoconfirm,
-                                              config_loader,
-                                              selected_config,
-                                              local_store)
+    remote_revision, upload_string = ready_for_upload_checks(autoconfirm,
+                                                             config_loader,
+                                                             selected_config,
+                                                             local_store)
 
     # Upload the configuration to the etcd cluster. This will trigger the
     # queue manager to schedule nodes to be restarted.
-    config_loader.write_config_to_etcd(selected_config, remote_revision)
+    config_loader.write_config_to_etcd(selected_config, remote_revision,
+                                       upload_string)
 
     # Clearwater can be run with multiple etcd clusters. The apply_config_key
     # variable stores the information about which etcd cluster the changes
@@ -641,7 +629,7 @@ def ready_for_upload_checks(autoconfirm,
             raise UserAbort
 
     log.debug("All checks passed, ready for config upload")
-    return remote_revision
+    return remote_revision, local_config
 
 
 def confirm_yn(prompt, autoskip=False):
