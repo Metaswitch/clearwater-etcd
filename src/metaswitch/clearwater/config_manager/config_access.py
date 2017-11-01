@@ -153,8 +153,7 @@ class ConfigLoader(object):
             # We couldn't even run the health check! something must be wrong.
             raise EtcdNoQuorum()
 
-        if not any(ind in health_output
-                   for ind in self.ETCD_UNHEALTHY_INDICATORS):
+        if any(ind in health_output for ind in self.ETCD_UNHEALTHY_INDICATORS):
             # The health check has shown there is no quorum!
             raise EtcdNoQuorum()
 
