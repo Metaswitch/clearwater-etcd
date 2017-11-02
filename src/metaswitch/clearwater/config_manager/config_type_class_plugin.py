@@ -13,7 +13,7 @@ import logging
 import glob
 LOG_DIR = "/var/log/clearwater-config-manager"
 VALIDATION_SCRIPTS_FOLDER = "/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/"
-JSON_GENERIC_UPLOAD = '/usr/share/clearwater/clearwater-config-manager/scripts/validate_json.py'
+JSON_GENERIC_VALIDATE = '/usr/share/clearwater/clearwater-config-manager/scripts/validate_json.py'
 log = logging.getLogger("cw-config.validate")
 
 
@@ -73,7 +73,7 @@ class ConfigType:
     def get_json_validation(self):
         """Returns the scripts to be used for json file validation."""
         scripts = {}
-        scripts[self.schema] = ['python', JSON_GENERIC_UPLOAD, self.schema,
+        scripts[self.schema] = ['python', JSON_GENERIC_VALIDATE, self.schema,
                                 self.configfile]
         # to add more validation scripts add to the dict of scripts
         return scripts
@@ -106,24 +106,18 @@ class ConfigType:
         """
 
         failed_scripts = []
-        error_lines = []
         for script in self.scripts:
             try:
                 log.debug("Running validation script %s", script)
                 subprocess.check_output(self.scripts[script])
             except subprocess.CalledProcessError as exc:
                 log.error("Validation script %s failed", os.path.basename(script))
-                log.error("Reasons for failure:")
-                errors = [line for line in exc.output.splitlines()
-                          if "ERROR" in line]
-                error_lines.extend(errors)
+                log.error("Reasons for failure - printed to screen")
 
-                for line in errors:
-                    log.error(line)
                 # We want to run through all the validation scripts so we can
                 # tell the user all of the problems with their config changes,
                 # so don't bail out of the loop at this point, just record
                 # which scripts have failed. If any scripts have failed an
                 # exception is raised from the return value
                 failed_scripts.append(script)
-        return failed_scripts, error_lines
+        return failed_scripts
