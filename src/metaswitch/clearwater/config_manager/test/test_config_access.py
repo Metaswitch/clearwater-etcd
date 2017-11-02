@@ -104,7 +104,7 @@ cluster is healthy"""
                                   mock_connection,
                                   mock_output):
         """Test that if we can't run the healthcheck we throw an error."""
-        mock_output.side_effect = subprocess.CalledProcessError
+        mock_output.side_effect = subprocess.CalledProcessError(1, 'command')
 
         with self.assertRaises(config_access.EtcdNoQuorum):
             config_access.ConfigLoader(mock_etcd,
@@ -691,6 +691,19 @@ class TestMainUpload(unittest.TestCase):
         """Check that we handle an EtcdException raised by
         etcd.client.Client."""
         mock_configloader.side_effect = etcd.EtcdException
+        args = mock.Mock(action='upload')
+
+        with self.assertRaises(SystemExit):
+            config_access.main(args)
+
+    def test_handle_etcdquorumfail(self,
+                                   mock_upload_config,
+                                   mock_localstore,
+                                   mock_configloader,
+                                   mock_logging,
+                                   mock_username):
+        """Check that we handle a lack of Etcd quorum."""
+        mock_configloader.side_effect = config_access.EtcdNoQuorum
         args = mock.Mock(action='upload')
 
         with self.assertRaises(SystemExit):
