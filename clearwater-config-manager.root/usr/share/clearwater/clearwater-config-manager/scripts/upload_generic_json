@@ -10,14 +10,15 @@
 local_site_name=site1
 . /etc/clearwater/config
 
-CONFPATH=/etc/clearwater
-FILENAME=$1
+FILEPATH=$1
 KEY=$2
 SCHEMA=$3
 ALLOW_LARGE_UPLOADS=$4
 
+
+
 function usage() {
-  echo "Usage: upload_generic_json <filename> <key> [<schema>] [--allow-large]"
+  echo "Usage: upload_generic_json <filepath> <key> [<schema>] [--allow-large]"
 }
 
 if [[ $1 == "" || $2 == "" ]]
@@ -30,29 +31,28 @@ fi
 # in place by the user, or created by the plugin at startup if it finds both
 # the file and etcd key missing. If it does not exist, the disk may have been
 # full, or some other error may have occured.
-if [[ ! -f $CONFPATH/$FILENAME ]]
+if [[ ! -f $FILEPATH ]]
 then
-  echo "No configuration file found at $CONFPATH/$FILENAME"
+  echo "No configuration file found at $FILEPATH"
   exit 2
-elif [[ ! -s $CONFPATH/$FILENAME ]]
+elif [[ ! -s $FILEPATH ]]
 then
-  echo "The configuration file at $CONFPATH/$FILENAME is empty, uploading a blank file"
+  echo "The configuration file at $FILEPATH is empty, uploading a blank file"
 elif [[ -f $SCHEMA ]]
 then
   # Validate config json against schema for syntactic errors
-  python /usr/share/clearwater/clearwater-config-manager/scripts/validate_json.py $SCHEMA $CONFPATH/$FILENAME
+  python /usr/share/clearwater/clearwater-config-manager/scripts/validate_json.py $SCHEMA $FILEPATH
 
   # Abort uploading and warn user if validation fails
   rc=$?
   if [[ $rc != 0 ]]; then
-    echo "Unable to upload $FILENAME as it is invalid. Please fix up the errors and retry"
+    echo "Unable to upload $FILEPATH as it is invalid. Please fix up the errors and retry"
     exit $rc
   fi
 fi
 
 # Check we can contact `etcd`
-nc -z ${management_local_ip:-$local_ip} 4000
-if [[ $? != 0 ]]
+if ! nc -z ${management_local_ip:-$local_ip} 4000
 then
   echo "The Clearwater Configuration store (etcd) is not running"
   echo "Please start it before uploading configuration"
@@ -64,17 +64,17 @@ fi
 # All scripts calling this function will pass the optional argument directly to
 # this function to check if it's --allow-large
 uploadsize=10000
-filesize=$(wc -c <"$CONFPATH/$FILENAME")
+filesize=$(wc -c <"$FILEPATH")
 if [[ $filesize -ge $uploadsize && $ALLOW_LARGE_UPLOADS != "--allow-large" ]]
 then
-  echo "The configuration file at $CONFPATH/$FILENAME is larger than the recommended size of $uploadsize bytes"
+  echo "The configuration file at $FILEPATH is larger than the recommended size of $uploadsize bytes"
   echo "Please re-run the command with the --allow-large flag if you want to force upload the file"
   exit 2
 fi
 
 # Upload the file to etcd
 keypath=http://${management_local_ip:-$local_ip}:4000/v2/keys/clearwater/$local_site_name/configuration/$KEY
-curl -X PUT $keypath --data-urlencode value@$CONFPATH/$FILENAME 2> /tmp/upload-json-file.stderr.$$ | tee /tmp/upload-json-file.stdout.$$ | egrep -q "\"action\":\"set\""
+curl -X PUT $keypath --data-urlencode value@$FILEPATH 2> /tmp/upload-json-file.stderr.$$ | tee /tmp/upload-json-file.stdout.$$ | egrep -q "\"action\":\"set\""
 rc=$?
 
 # Check the return code and log if appropriate.
