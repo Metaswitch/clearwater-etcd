@@ -1144,6 +1144,12 @@ class TestFixOwnership(unittest.TestCase):
         self.assertFalse(mock_getpwnam.called)
         self.assertFalse(mock_chown.called)
 
+    def test_handle_failure(self, mock_getenv, mock_getpwnam, mock_chown):
+        """Make sure we don't throw an error if we can't reset the permissions.
+        """
+        mock_chown.side_effect = OSError
+        config_access.reset_file_ownership('file/path')
+
 
 # For added realism, we use some real examples of config files in these tests.
 @mock.patch("metaswitch.clearwater.config_manager.config_access.syslog")
