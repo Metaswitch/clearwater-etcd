@@ -770,7 +770,7 @@ class TestValidation(unittest.TestCase):
 
     def setUp(self):
         self.mock_selected_config = mock.MagicMock(spec=shared_config_config_plugin.SharedConfig)
-        self.mock_selected_config.validate.return_value = ['script1'], ["ERROR: error"]
+        self.mock_selected_config.validate.return_value = ['script1']
 
     def test_handle_validation_error(self):
         """Test that we handle validation failure correctly."""
