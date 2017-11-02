@@ -393,6 +393,15 @@ def parse_arguments():
     config_choice_help = '\n'.join(choice.help_info for choice in config_classes)
     config_choices = [choice.name for choice in config_classes]
 
+    def config_error(config):
+        choices = config_choices
+        if config not in choices:
+            msg = ("invalid choice: {} (choose from {}), however the config "
+                   "you are looking for may be on a different node".format(
+                      config, ', '.join(choices)))
+            raise argparse.ArgumentTypeError(msg)
+        return config
+
     parser = argparse.ArgumentParser(prog='cw-config',
                                      formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("--autoconfirm", action="store_true",
@@ -405,17 +414,17 @@ def parse_arguments():
                         type=int,
                         default=logging.INFO,
                         help="""Set to {} for DEBUG,
-                                Set to {} for INFO,
-                                Set to {} for WARNING,
-                                Set to {} for ERROR,
-                                Set to {} for CRITICAL.
-                                All logs of this level or above will be
-                                written to file.
-                                DEFAULT is INFO""".format(logging.DEBUG,
-                                                          logging.INFO,
-                                                          logging.WARNING,
-                                                          logging.ERROR,
-                                                          logging.CRITICAL))
+    Set to {} for INFO,
+    Set to {} for WARNING,
+    Set to {} for ERROR,
+    Set to {} for CRITICAL.
+    All logs of this level or above will be
+    written to file.
+    DEFAULT is INFO""".format(logging.DEBUG,
+                              logging.INFO,
+                              logging.WARNING,
+                              logging.ERROR,
+                              logging.CRITICAL))
 
     # Positional arguments
     parser.add_argument("action",
@@ -518,7 +527,7 @@ def validate_config(selected_config, force=False):
 
     # selected_config is an instance of the ConfigType class. validate() uses
     # different scripts to validate against for different ConfigType classes.
-    failed_scripts, error_lines = selected_config.validate()
+    failed_scripts = selected_config.validate()
 
     # In the forcing case, we proceed even if there have been failures, but
     # otherwise we want to bail out at this point.
@@ -526,11 +535,8 @@ def validate_config(selected_config, force=False):
         log.error("One or more validation scripts have failed, aborting")
         raise ConfigValidationFailed(
             "Validation failed while executing scripts:\n"
-            " {}\n"
-            "Errors:\n"
-            " {}".format("\n ".join(os.path.basename(script)
-                                    for script in failed_scripts),
-                         "\n ".join(error_lines)))
+            " {}\n".format("\n ".join(os.path.basename(script)
+                                      for script in failed_scripts)))
 
     if failed_scripts:
         # We can only get here in the forcing case.
