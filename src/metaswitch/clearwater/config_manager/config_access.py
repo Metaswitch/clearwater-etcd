@@ -394,11 +394,13 @@ def parse_arguments():
     config_choices = [choice.name for choice in config_classes]
 
     def config_error(config):
+        """This verifies the config_type choice and prints a custom
+           error message if the choice is wrong"""
         choices = config_choices
         if config not in choices:
-            msg = ("invalid choice: {} (choose from {}), however the config "
-                   "you are looking for may be on a different node".format(
-                      config, ', '.join(choices)))
+            msg = ("invalid choice: {} (choose from {}).\n however the config "
+                   "you are looking for may not be on this node, so try a "
+                   "different node type".format(config, ', '.join(choices)))
             raise argparse.ArgumentTypeError(msg)
         return config
 
@@ -433,8 +435,7 @@ def parse_arguments():
                         help="The action to perform - {upload | download}",
                         metavar='action')
     parser.add_argument("config_type",
-                        type=str,
-                        choices=config_choices,
+                        type=config_error,
                         help=config_choice_help,
                         metavar='config_type')
     parser.add_argument("--management_ip", required=True,
@@ -527,7 +528,7 @@ def validate_config(selected_config, force=False):
 
     # selected_config is an instance of the ConfigType class. validate() uses
     # different scripts to validate against for different ConfigType classes.
-    failed_scripts = selected_config.validate()
+    failed_scripts, error_lines = selected_config.validate()
 
     # In the forcing case, we proceed even if there have been failures, but
     # otherwise we want to bail out at this point.
@@ -535,8 +536,11 @@ def validate_config(selected_config, force=False):
         log.error("One or more validation scripts have failed, aborting")
         raise ConfigValidationFailed(
             "Validation failed while executing scripts:\n"
-            " {}\n".format("\n ".join(os.path.basename(script)
-                                      for script in failed_scripts)))
+            " {}\n"
+            "Errors:\n"
+            " {}".format("\n ".join(os.path.basename(script)
+                                    for script in failed_scripts),
+                         "\n ".join(error_lines)))
 
     if failed_scripts:
         # We can only get here in the forcing case.
