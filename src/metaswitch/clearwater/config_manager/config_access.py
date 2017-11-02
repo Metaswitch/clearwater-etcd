@@ -55,6 +55,9 @@ FIRST_DOWNLOAD_WARNING = ("{} is not present in the configuration database. A "
 "blank file has been created for you. You can make changes to this and upload "
 "as normal.")
 
+FILE_PERMISSIONS_WARNING = ("The file permissions may be incorrect on your "
+                            "downloaded files.")
+
 
 # Exceptions
 class ConfigDownloadFailed(Exception):
@@ -788,8 +791,12 @@ def reset_file_ownership(filepath):
     if os.getenv('SUDO_USER'):
         # The script is only being run as sudo if the `SUDO_USER` environment
         # variable is set.
-        pwnam = pwd.getpwnam(os.getenv('SUDO_USER'))
-        os.chown(filepath, pwnam.pw_uid, pwnam.pw_gid)
+        try:
+            pwnam = pwd.getpwnam(os.getenv('SUDO_USER'))
+            os.chown(filepath, pwnam.pw_uid, pwnam.pw_gid)
+        except OSError:
+            # Oh well, we tried.
+            print FILE_PERMISSIONS_WARNING
 
 
 # Call main function if script is executed stand-alone
