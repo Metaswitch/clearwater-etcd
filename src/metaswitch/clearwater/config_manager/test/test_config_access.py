@@ -59,10 +59,10 @@ member ca7f6c28e15bd223 is healthy: got healthy result from http://10.225.166.11
 member fe3cbfd7b0e1c068 is healthy: got healthy result from http://10.225.166.115:4000
 cluster is healthy"""
 
-        config_loader = config_access.ConfigLoader(mock_etcd,
-                                                   "clearwater",
-                                                   "site",
-                                                   mock_localstore)
+        config_access.ConfigLoader(mock_etcd,
+                                   "clearwater",
+                                   "site",
+                                   mock_localstore)
 
         # If we raise an EtcdNoQuorum exception, Something has gone wrong.
         mock_output.assert_called_once()
