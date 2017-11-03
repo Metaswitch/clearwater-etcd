@@ -329,25 +329,6 @@ class TestConfigLoader(unittest.TestCase):
                 mock_selected_config,
                 1234, 'Fake Config')
 
-    def test_uri(self,
-                 mock_selected_config,
-                 mock_localstore,
-                 mock_healthcheck,
-                 mock_check_connection):
-        """Check we can get the correct URI for config in etcd."""
-        etcd_client = mock.MagicMock(spec=etcd.client.Client)
-        etcd_client.base_uri = "http://base_uri"
-        etcd_client.key_endpoint = "key_endpoint"
-
-        config_loader = config_access.ConfigLoader(
-            etcd_client, "clearwater", "site", mock_localstore)
-
-        full_uri = config_loader.full_uri
-
-        self.assertEqual(
-            full_uri,
-            "http://base_uri/key_endpoint/clearwater/site/configuration")
-
 
 @mock.patch("metaswitch.clearwater.config_manager.config_access.os.path.exists",
             return_value=True)
@@ -794,7 +775,9 @@ class TestMainUpload(unittest.TestCase):
             config_access.main(args, filename)
 
     def test_handle_etcdquorumfail(self,
+                                   mock_loadplugins,
                                    mock_upload_config,
+                                   mock_lookup_config,
                                    mock_localstore,
                                    mock_configloader,
                                    mock_logging,
@@ -802,9 +785,10 @@ class TestMainUpload(unittest.TestCase):
         """Check that we handle a lack of Etcd quorum."""
         mock_configloader.side_effect = config_access.EtcdNoQuorum
         args = mock.Mock(action='upload')
+        filename = mock.Mock()
 
         with self.assertRaises(SystemExit):
-            config_access.main(args)
+            config_access.main(args, filename)
 
 
 @mock.patch("metaswitch.clearwater.config_manager.config_access.get_user_download_dir")
