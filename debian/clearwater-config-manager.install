@@ -4,6 +4,3 @@ clearwater-config-manager.root/* /
 # Install the etcd plugins
 src/clearwater_etcd_plugins/clearwater_config_manager/shared_config_plugin.py /usr/share/clearwater/clearwater-config-manager/plugins/
 src/clearwater_etcd_plugins/clearwater_config_manager/dns_json_plugin.py /usr/share/clearwater/clearwater-config-manager/plugins/
-
-src/clearwater_etcd_plugins/clearwater_config_access/shared_config_config_plugin.py /usr/share/clearwater/clearwater-config-access/plugins/
-src/clearwater_etcd_plugins/clearwater_config_access/dns_json_config_plugin.py /usr/share/clearwater/clearwater-config-access/plugins/
