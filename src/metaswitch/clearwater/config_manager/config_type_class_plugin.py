@@ -26,7 +26,7 @@ class ConfigType:
 
     name - Users will reference the config type as this on the command line,
     eg. `cw-config download [name]` It is the name of the config file in
-    clearwater-etcdctl and is used for this purpose to.
+    clearwater-etcdctl and is used for this purpose too.
 
     help_info - Appears as user-visible help text in the usage statement for
     cw-config.

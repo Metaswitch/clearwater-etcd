@@ -137,7 +137,7 @@ class TestSharedValidation(unittest.TestCase):
         self.assertEqual(
             mock.call([os.path.join(config_type_class_plugin.VALIDATION_SCRIPTS_FOLDER,
                                     "clearwater-core-validate-config"),
-                       self.config_location]),
+                       self.config_location], stderr=-2),
             mock_subprocess.call_args_list[0])
 
     def test_executable_only(self,
@@ -157,7 +157,7 @@ class TestSharedValidation(unittest.TestCase):
         self.assertEqual(
             mock.call([os.path.join(config_type_class_plugin.VALIDATION_SCRIPTS_FOLDER,
                                     "clearwater-core-validate-config"),
-                       self.config_location]),
+                       self.config_location], stderr=-2),
             mock_subprocess.call_args_list[0])
 
 

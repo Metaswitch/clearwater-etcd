@@ -1,5 +1,4 @@
 /usr/share/clearwater/clearwater-config-manager/scripts/check_config_sync /usr/sbin/cw-check_config_sync
-/usr/share/clearwater/clearwater-config-manager/scripts/upload_dns_json /usr/bin/cw-upload_dns_json
 /usr/share/clearwater/clearwater-config-manager/scripts/backup_config /usr/sbin/cw-backup_config
 /usr/share/clearwater/clearwater-config-manager/scripts/restore_config /usr/sbin/cw-restore_config
 /usr/share/clearwater/clearwater-config-manager/scripts/cw-config /usr/bin/cw-config
