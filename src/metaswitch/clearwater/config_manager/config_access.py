@@ -677,11 +677,11 @@ def get_user_download_dir():
 
 def get_base_download_dir():
     """Returns the base directory for downloaded config."""
-    home = os.getenv("HOME")
-    if home is None:
-        log.error("There must be a home directory to download config to")
-        raise RuntimeError("No home directory found.")
-    return os.path.join(home, DOWNLOAD_DIR)
+    base_dir = os.getenv("HOME") or os.getcwd()
+    if base_dir is None:
+        log.error("There must be a directory to download config to")
+        raise RuntimeError("No directory found.")
+    return os.path.join(base_dir, DOWNLOAD_DIR)
 
 
 def print_diff_and_syslog(config_type, config_1, config_2):

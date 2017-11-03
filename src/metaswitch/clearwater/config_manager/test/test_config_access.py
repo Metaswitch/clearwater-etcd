@@ -1007,15 +1007,25 @@ class TestUserDownloadDir(unittest.TestCase):
 
 
 @mock.patch("metaswitch.clearwater.config_manager.config_access.os.getenv")
+@mock.patch("metaswitch.clearwater.config_manager.config_access.os.getcwd")
 class TestBaseDownloadDir(unittest.TestCase):
-    def test_call_osgetenv(self, mock_getenv):
+    def test_call_osgetenv(self, mock_getcwd, mock_getenv):
         """check that we call os.getenv(HOME)"""
         config_access.get_base_download_dir()
         self.assertIs(mock_getenv.call_count, 1)
+        self.assertIs(mock_getcwd.call_count, 0)
 
-    def test_get_runtime_error(self, mock_getenv):
-        """check that a runtime error is raised when home is none"""
+    def test_no_home_dir(self, mock_getcwd, mock_getenv):
+        """check that we fall back to the working directory if no home dir."""
         mock_getenv.return_value = None
+        config_access.get_base_download_dir()
+        self.assertIs(mock_getcwd.call_count, 1)
+
+    def test_get_runtime_error(self, mock_getcwd, mock_getenv):
+        """check that a runtime error is raised when no directory is found"""
+        config_access.get_base_download_dir()
+        mock_getenv.return_value = None
+        mock_getcwd.return_value = None
         with self.assertRaises(RuntimeError):
             config_access.get_base_download_dir()
 
