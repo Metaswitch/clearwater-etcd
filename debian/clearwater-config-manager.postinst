@@ -41,8 +41,11 @@ case "$1" in
         fi
 
         # Ensure the log directory exists and is owned by the user.
+        # Log files need to be accessible to users in the adm group -
+        # setting the sticky bit on the folder ensures that happens.
         mkdir -p -m 777 /var/log/$NAME
-        chown -R $NAME:root /var/log/$NAME
+        chown -R $NAME:adm /var/log/$NAME
+        chmod g+s /var/log/$NAME
 
         # Set up the virtual env
         rm -rf $BASE_DIR/env

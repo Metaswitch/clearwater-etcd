@@ -54,8 +54,12 @@ CANT_COMPARE_WITH_MASTER = ("Unable to compare with master configuration "
 UNABLE_TO_UPLOAD = ("Unable to upload {} to the configuration database. The "
 "upload has failed.")
 
-NO_CONFIG_FOUND = (("There are no ConfigType plugins found at {}").format(
-                    PLUGIN_DIR))
+NO_CONFIG_FOUND = "There are no ConfigType plugins found at {}".format(
+    PLUGIN_DIR)
+
+CLUSTER_NOT_HEALTHY = ("No changes to configuration can be made while the "
+"configuration database does not have quorum. Restore connectivity to the "
+"uncontactable nodes in the deployment and try again.")
 
 FIRST_DOWNLOAD_WARNING = ("{} is not present in the configuration database. A "
 "blank file has been created for you. You can make changes to this and upload "
@@ -86,6 +90,11 @@ class EtcdConnectionFailed(Exception):
     pass
 
 
+class EtcdNoQuorum(Exception):
+    """Etcd cluster does not have quorum."""
+    pass
+
+
 class UserAbort(Exception):
     """The user has triggered an abort."""
     pass
@@ -110,6 +119,10 @@ class UnableToSaveFile(IOError):
 class ConfigLoader(object):
     """Object for interfacing with etcd for uploading and downloading config.
     """
+    ETCD_HEALTH_CHECK = ['/usr/bin/clearwater-etcdctl', 'cluster-health']
+    ETCD_UNHEALTHY_INDICATORS = ["cluster is unhealthy",
+                                 "cluster may be unhealthy"]
+
     def __init__(self, etcd_client, etcd_key, site, local_store):
         # In addition to standard init, we store off the URL to query on the
         # etcd API that will get us our config.
@@ -119,6 +132,9 @@ class ConfigLoader(object):
 
         # Make sure that the etcd process is actually contactable.
         self._check_connection()
+
+        # Make sure that the etcd cluster has quorum.
+        self._check_etcd_cluster_health()
 
     def _check_connection(self):
         """Performs a sanity check to make sure that the etcd process is
@@ -137,6 +153,19 @@ class ConfigLoader(object):
             log.error("Unable to connect to etcd database at %s", location)
             raise EtcdConnectionFailed(
                 "etcd process not running at {}".format(location))
+
+    def _check_etcd_cluster_health(self):
+        """Raises an EtcdNoQuorum exception if the etcd cluster does not have
+        quorum."""
+        try:
+            health_output = subprocess.check_output(self.ETCD_HEALTH_CHECK)
+        except subprocess.CalledProcessError:
+            # We couldn't even run the health check! something must be wrong.
+            raise EtcdNoQuorum()
+
+        if any(ind in health_output for ind in self.ETCD_UNHEALTHY_INDICATORS):
+            # The health check has shown there is no quorum!
+            raise EtcdNoQuorum()
 
     def download_config(self, selected_config):
         """Save a copy of a given config type to the download directory.
@@ -190,24 +219,15 @@ class ConfigLoader(object):
                 self._etcd_client.write(key_path,
                                         upload,
                                         prevIndex=prev_revision)
-        except etcd.EtcdConnectionFailed:
-            log.error("Unable to write to etcd database")
-            raise ConfigUploadFailed(UNABLE_TO_UPLOAD.format(selected_config.file_download_name))
+
         except etcd.EtcdCompareFailed:
             log.error("Master revision doesn't match local revision")
             raise ConfigUploadFailed(
                 MODIFIED_WHILE_EDITING.format(selected_config.name))
-
-    # We need this property for the step in write_config_to_etcd where we log
-    # the change in config to file.
-    @property
-    def full_uri(self):
-        """Returns a URI that represents the folder containing the config
-        files."""
-        return (self._etcd_client.base_uri +
-                '/' +
-                self._etcd_client.key_endpoint +
-                self.prefix)
+        except etcd.EtcdException:
+            log.error("Unable to write to etcd database")
+            raise ConfigUploadFailed(UNABLE_TO_UPLOAD.format(
+                selected_config.file_download_name))
 
 
 class LocalStore(object):
@@ -337,6 +357,9 @@ def main(args, config_filename):
     except (etcd.EtcdException, EtcdConnectionFailed):
         log.error("etcd cluster uncontactable")
         sys.exit("Unable to contact the etcd cluster.")
+    except EtcdNoQuorum:
+        log.error("etcd cluster doesn't have quorum")
+        sys.exit(CLUSTER_NOT_HEALTHY)
 
     if args.action == "download":
         log.info("User %s triggered download of %s",
@@ -694,11 +717,11 @@ def get_user_download_dir():
 
 def get_base_download_dir():
     """Returns the base directory for downloaded config."""
-    home = os.getenv("HOME")
-    if home is None:
-        log.error("There must be a home directory to download config to")
-        raise RuntimeError("No home directory found.")
-    return os.path.join(home, DOWNLOAD_DIR)
+    base_dir = os.getenv("HOME") or os.getcwd()
+    if base_dir is None:
+        log.error("There must be a directory to download config to")
+        raise RuntimeError("No directory found.")
+    return os.path.join(base_dir, DOWNLOAD_DIR)
 
 
 def print_diff_and_syslog(config_type, config_1, config_2):

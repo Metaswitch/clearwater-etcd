@@ -5,7 +5,7 @@
 # Otherwise no rights are granted except for those provided to you by
 # Metaswitch Networks in a separate written agreement.
 
-from os import sys
+from os import sys, umask
 import etcd
 import logging
 from metaswitch.clearwater.queue_manager.etcd_synchronizer import EtcdSynchronizer, WriteToEtcdStatus
@@ -19,6 +19,9 @@ logfile = "/var/log/clearwater-queue-manager/queue_operation.log"
 _log = logging.getLogger("queue_manager.modify_nodes")
 _log.setLevel(logging.DEBUG)
 
+# Need the logfile to be writable by group members, even when running as
+# root.
+umask(0002)
 handler = logging.FileHandler(logfile)
 handler.setLevel(logging.DEBUG)
 log_format = logging.Formatter(fmt="%(asctime)s.%(msecs)03d UTC %(levelname)s %(filename)s:%(lineno)d: %(message)s",
