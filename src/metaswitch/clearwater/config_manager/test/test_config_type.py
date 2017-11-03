@@ -20,6 +20,14 @@ from clearwater_etcd_plugins.clearwater_config_access import fallback_ifcs_confi
 from clearwater_etcd_plugins.clearwater_config_access import enum_json_config_plugin
 
 
+class TestClass(config_type_class_plugin.ConfigType):
+    """This class is used to test returning no scripts as a sub clsss"""
+    name = 'random'
+    help_info = 'help'
+    file_download_name = 'random_config'
+    filetype = 'random'
+
+
 @mock.patch("metaswitch.clearwater.config_manager.config_type_class_plugin.log")
 @mock.patch("metaswitch.clearwater.config_manager.config_type_class_plugin.subprocess.check_output")
 class TestConfigTypeClassPlugin(unittest.TestCase):
@@ -68,6 +76,10 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
         enum_json = enum_json_config_plugin.EnumJson('path')
         ifcs_xml = shared_ifcs_config_plugin.SharedIfcsXml('path')
         shared_config = shared_config_config_plugin.SharedConfig('path')
+        random_config = TestClass('path')
+
+        # this is done to provide coverage on the __str__ function
+        print random_config
 
         enum_fake_scripts = [['script1'], ['script2']]
         ifcs_fake_scripts = [['script3'], ['script4']]
@@ -80,6 +92,7 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
         self.assertItemsEqual(enum_json.scripts.values(), enum_fake_scripts)
         self.assertItemsEqual(ifcs_xml.scripts.values(), ifcs_fake_scripts)
         self.assertItemsEqual(shared_config.scripts.values(), shared_fake_scripts)
+        self.assertEqual(random_config.scripts, {})
 
         self.assertItemsEqual(enum_json.scripts.keys(), enum_fake_names)
         self.assertItemsEqual(ifcs_xml.scripts.keys(), ifcs_fake_names)
