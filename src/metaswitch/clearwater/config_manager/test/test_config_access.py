@@ -37,12 +37,90 @@ class TestCheckConnection(unittest.TestCase):
                                        mock_localstore)
 
 
+@mock.patch(
+    "metaswitch.clearwater.config_manager.config_access.subprocess.check_output")
+@mock.patch(
+    "metaswitch.clearwater.config_manager.config_access.ConfigLoader._check_connection")
+@mock.patch("metaswitch.clearwater.config_manager.config_access.etcd.client.Client",
+            autospec=True)
+@mock.patch("metaswitch.clearwater.config_manager.config_access.LocalStore",
+            autospec=True)
+class TestCheckClusterHealth(unittest.TestCase):
+    def test_check_cluster_healthy(self,
+                                   mock_localstore,
+                                   mock_etcd,
+                                   mock_connection,
+                                   mock_output):
+        """Check that if the cluster is healthy, we don't throw an exception.
+        """
+        mock_output.return_value = """
+member 2218b3ecf31a3664 is healthy: got healthy result from http://10.225.166.116:4000
+member ca7f6c28e15bd223 is healthy: got healthy result from http://10.225.166.114:4000
+member fe3cbfd7b0e1c068 is healthy: got healthy result from http://10.225.166.115:4000
+cluster is healthy"""
+
+        config_access.ConfigLoader(mock_etcd,
+                                   "clearwater",
+                                   "site",
+                                   mock_localstore)
+
+        # If we raise an EtcdNoQuorum exception, Something has gone wrong.
+        mock_output.assert_called_once()
+
+    def test_check_cluster_unhealthy(self,
+                                     mock_localstore,
+                                     mock_etcd,
+                                     mock_connection,
+                                     mock_output):
+        """Test that if our health check indicates that the cluster is
+        unhealthy, we throw an exception."""
+        # For each of these return values, we should expect an exception to be
+        # thrown.
+        mock_output.side_effect = [
+            """member 2218b3ecf31a3664 is unhealthy: got unhealthy result from http://10.225.166.116:4000
+            member ca7f6c28e15bd223 is healthy: got healthy result from http://10.225.166.114:4000
+            member fe3cbfd7b0e1c068 is healthy: got healthy result from http://10.225.166.115:4000
+            cluster is unhealthy""",
+            """member 2218b3ecf31a3664 is unhealthy: got unhealthy result from http://10.225.166.116:4000
+            member ca7f6c28e15bd223 is healthy: got healthy result from http://10.225.166.114:4000
+            member fe3cbfd7b0e1c068 is healthy: got healthy result from http://10.225.166.115:4000
+            cluster may be unhealthy"""]
+
+        with self.assertRaises(config_access.EtcdNoQuorum):
+            config_access.ConfigLoader(mock_etcd,
+                                       "clearwater",
+                                       "site",
+                                       mock_localstore)
+
+        with self.assertRaises(config_access.EtcdNoQuorum):
+            config_access.ConfigLoader(mock_etcd,
+                                       "clearwater",
+                                       "site",
+                                       mock_localstore)
+
+    def test_check_no_healthcheck(self,
+                                  mock_localstore,
+                                  mock_etcd,
+                                  mock_connection,
+                                  mock_output):
+        """Test that if we can't run the healthcheck we throw an error."""
+        mock_output.side_effect = subprocess.CalledProcessError(1, 'command')
+
+        with self.assertRaises(config_access.EtcdNoQuorum):
+            config_access.ConfigLoader(mock_etcd,
+                                       "clearwater",
+                                       "site",
+                                       mock_localstore)
+
+
 @mock.patch("metaswitch.clearwater.config_manager.config_access.ConfigLoader._check_connection")
+@mock.patch("metaswitch.clearwater.config_manager.config_access.ConfigLoader._check_etcd_cluster_health")
 @mock.patch("metaswitch.clearwater.config_manager.config_access.LocalStore",
             autospec=True)
 class TestConfigLoader(unittest.TestCase):
     def test_download_unable_to_save(self,
                                      mock_localstore,
+                                     mock_healthcheck,
                                      mock_check_connection):
         """Check for the correct exception on failure.
 
@@ -60,7 +138,10 @@ class TestConfigLoader(unittest.TestCase):
             config_loader.download_config,
             "shared_config")
 
-    def test_get_config(self, mock_localstore, mock_check_connection):
+    def test_get_config(self,
+                        mock_localstore,
+                        mock_healthcheck,
+                        mock_check_connection):
         """Check we use the right URI to download config."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
         etcd_result = mock.MagicMock()
@@ -78,7 +159,10 @@ class TestConfigLoader(unittest.TestCase):
         etcd_client.read.assert_called_with(
             "/clearwater/site/configuration/shared_config")
 
-    def test_get_new_config(self, mock_localstore, mock_check_connection):
+    def test_get_new_config(self,
+                            mock_localstore,
+                            mock_healthcheck,
+                            mock_check_connection):
         """Check we create a blank file if there's nothing to download."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
         etcd_client.read.side_effect = etcd.EtcdKeyNotFound
@@ -90,7 +174,10 @@ class TestConfigLoader(unittest.TestCase):
         self.assertEqual(config, "")
         self.assertEqual(revision, 0)
 
-    def test_write_config_to_etcd(self, mock_localstore, mock_check_connection):
+    def test_write_config_to_etcd(self,
+                                  mock_localstore,
+                                  mock_healthcheck,
+                                  mock_check_connection):
         """Check that we can write config to etcd from file."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
 
@@ -111,6 +198,7 @@ class TestConfigLoader(unittest.TestCase):
 
     def test_write_new_config_to_etcd(self,
                                       mock_localstore,
+                                      mock_healthcheck,
                                       mock_check_connection):
         """Check that we can write config to etcd from file."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
@@ -132,6 +220,7 @@ class TestConfigLoader(unittest.TestCase):
 
     def test_write_to_etcd_unable_to_load(self,
                                           mock_localstore,
+                                          mock_healthcheck,
                                           mock_check_connection):
         """Check for the correct exception on failure.
 
@@ -152,6 +241,7 @@ class TestConfigLoader(unittest.TestCase):
 
     def test_write_to_etcd_failure(self,
                                    mock_localstore,
+                                   mock_healthcheck,
                                    mock_check_connection):
         """Check for the correct exception on failure.
 
@@ -196,7 +286,10 @@ class TestConfigLoader(unittest.TestCase):
                 "shared_config",
                 1234)
 
-    def test_uri(self, mock_localstore, mock_check_connection):
+    def test_uri(self,
+                 mock_localstore,
+                 mock_healthcheck,
+                 mock_check_connection):
         """Check we can get the correct URI for config in etcd."""
         etcd_client = mock.MagicMock(spec=etcd.client.Client)
         etcd_client.base_uri = "http://base_uri"
@@ -606,6 +699,19 @@ class TestMainUpload(unittest.TestCase):
         """Check that we handle an EtcdException raised by
         etcd.client.Client."""
         mock_configloader.side_effect = etcd.EtcdException
+        args = mock.Mock(action='upload')
+
+        with self.assertRaises(SystemExit):
+            config_access.main(args)
+
+    def test_handle_etcdquorumfail(self,
+                                   mock_upload_config,
+                                   mock_localstore,
+                                   mock_configloader,
+                                   mock_logging,
+                                   mock_username):
+        """Check that we handle a lack of Etcd quorum."""
+        mock_configloader.side_effect = config_access.EtcdNoQuorum
         args = mock.Mock(action='upload')
 
         with self.assertRaises(SystemExit):
