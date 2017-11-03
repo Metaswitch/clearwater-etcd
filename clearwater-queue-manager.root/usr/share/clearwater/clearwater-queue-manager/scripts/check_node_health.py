@@ -31,10 +31,15 @@ def check_status():
         return Status.CRITICAL
 
     result = Status.OK
+
+    # Critical errors will prevent the queue manager from declaring the node
+    # healthy and allowing other nodes to start restarting
     critical_errors = [
         'Does not exist',
         'Initializing',
         'Data access error',
+        'Execution failed',
+        'Wait parent',
     ]
     warning_errors = [
         'Uptime failed',
@@ -47,7 +52,8 @@ def check_status():
     ]
 
     for line in output.split('\n'):
-        if line.startswith('Process') or line.startswith('Program'):
+        line = line.strip()
+        if line.endswith('Process') or line.endswith('Program'):
             if any(err in line for err in critical_errors):
                 result = Status.CRITICAL
             elif any(err in line for err in warning_errors) or \
