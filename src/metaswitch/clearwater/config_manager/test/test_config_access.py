@@ -230,8 +230,10 @@ class TestConfigLoader(unittest.TestCase):
 
         mock_localstore.load_config_and_revision.side_effect = IOError
 
-        config_loader = config_access.ConfigLoader(
-            etcd_client, "clearwater", "site", mock_localstore)
+        config_access.ConfigLoader(etcd_client,
+                                   "clearwater",
+                                   "site",
+                                   mock_localstore)
 
         self.assertRaises(
             config_access.ConfigUploadFailed,
