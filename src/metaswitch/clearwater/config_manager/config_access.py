@@ -398,9 +398,11 @@ def parse_arguments():
            error message if the choice is wrong"""
         choices = config_choices
         if config not in choices:
-            msg = ("invalid choice: {} (choose from {}).\n however the config "
-                   "you are looking for may not be on this node, so try a "
-                   "different node type".format(config, ', '.join(choices)))
+            msg = ("invalid choice: {} (choose from {}).\nHowever some "
+                   "configuration is only available on a specific node type. "
+                   "Check that you are using the correct node type for the "
+                   "configuration type you are trying to modify.".format(
+                       config, ', '.join(choices)))
             raise argparse.ArgumentTypeError(msg)
         return config
 
