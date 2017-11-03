@@ -766,24 +766,28 @@ class TestVerifiedUpload(unittest.TestCase):
                                                  "shared_config")
 
 
+@mock.patch("clearwater_etcd_plugins.clearwater_config_access.shared_config_config_plugin.SharedConfig", autospec=True)
 class TestValidation(unittest.TestCase):
 
-    def setUp(self):
-        self.mock_selected_config = mock.MagicMock(spec=shared_config_config_plugin.SharedConfig)
-        self.mock_selected_config.validate.return_value = (['script1'], ['ERROR: '])
-
-    def test_handle_validation_error(self):
+    def test_handle_validation_error(self, mock_selected_config):
         """Test that we handle validation failure correctly."""
+        mock_selected_config.validate.return_value = (['script1'], ['ERROR: '])
         # a script has failed and is in failed_scripts.
         with self.assertRaises(config_access.ConfigValidationFailed):
-            config_access.validate_config(self.mock_selected_config, False)
+            config_access.validate_config(mock_selected_config, False)
 
-    def test_ignore_validation_error(self):
+    def test_ignore_validation_error(self, mock_selected_config):
         """Test that we ignore validation failure correctly in the force
         case."""
+        mock_selected_config.validate.return_value = (['script1'], ['ERROR: '])
         # Even though subprocess raises an exception, we continue because
         # we're in force mode.
-        config_access.validate_config(self.mock_selected_config, True)
+        config_access.validate_config(mock_selected_config, True)
+
+    def test_no_errors(self, mock_selected_config):
+        """test everything runs ok when it returns no errors"""
+        mock_selected_config.validate.return_value = ([], [])
+        config_access.validate_config(mock_selected_config, False)
 
 
 @mock.patch("metaswitch.clearwater.config_manager.config_access.ConfigLoader",

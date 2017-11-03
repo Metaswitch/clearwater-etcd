@@ -15,9 +15,9 @@ import metaswitch.clearwater.config_manager.config_type_plugin_loader as config_
 from clearwater_etcd_plugins.clearwater_config_access import dns_json_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import shared_config_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import shared_ifcs_config_plugin
-from clearwater_etcd_plugins.clearwater_config_access import bgcf_json_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import scscf_json_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import fallback_ifcs_config_plugin
+from clearwater_etcd_plugins.clearwater_config_access import enum_json_config_plugin
 
 
 @mock.patch("metaswitch.clearwater.config_manager.config_type_class_plugin.log")
@@ -65,23 +65,23 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
         mock_xml.return_value = {'name3': ['script3'], 'name4': ['script4']}
         mock_shared.return_value = {'name5': ['script5'], 'name6': ['script6']}
 
-        bgcf_json = bgcf_json_config_plugin.BgcfJson('path')
+        enum_json = enum_json_config_plugin.EnumJson('path')
         ifcs_xml = shared_ifcs_config_plugin.SharedIfcsXml('path')
         shared_config = shared_config_config_plugin.SharedConfig('path')
 
-        bgcf_fake_scripts = [['script1'], ['script2']]
+        enum_fake_scripts = [['script1'], ['script2']]
         ifcs_fake_scripts = [['script3'], ['script4']]
         shared_fake_scripts = [['script5'], ['script6']]
 
-        bgcf_fake_names = ['name1', 'name2']
+        enum_fake_names = ['name1', 'name2']
         ifcs_fake_names = ['name3', 'name4']
         shared_fake_names = ['name5', 'name6']
 
-        self.assertItemsEqual(bgcf_json.scripts.values(), bgcf_fake_scripts)
+        self.assertItemsEqual(enum_json.scripts.values(), enum_fake_scripts)
         self.assertItemsEqual(ifcs_xml.scripts.values(), ifcs_fake_scripts)
         self.assertItemsEqual(shared_config.scripts.values(), shared_fake_scripts)
 
-        self.assertItemsEqual(bgcf_json.scripts.keys(), bgcf_fake_names)
+        self.assertItemsEqual(enum_json.scripts.keys(), enum_fake_names)
         self.assertItemsEqual(ifcs_xml.scripts.keys(), ifcs_fake_names)
         self.assertItemsEqual(shared_config.scripts.keys(), shared_fake_names)
 
