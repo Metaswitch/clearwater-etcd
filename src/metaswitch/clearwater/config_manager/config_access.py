@@ -222,13 +222,13 @@ class ConfigLoader(object):
                 self._etcd_client.write(key_path,
                                         upload,
                                         prevIndex=prev_revision)
-        except etcd.EtcdConnectionFailed:
-            log.error("Unable to write to etcd database")
-            raise ConfigUploadFailed(UNABLE_TO_UPLOAD.format(config_type))
         except etcd.EtcdCompareFailed:
             log.error("Master revision doesn't match local revision")
             raise ConfigUploadFailed(
                 MODIFIED_WHILE_EDITING.format(config_type))
+        except etcd.EtcdException:
+            log.error("Unable to write to etcd database")
+            raise ConfigUploadFailed(UNABLE_TO_UPLOAD.format(config_type))
 
     # We need this property for the step in write_config_to_etcd where we log
     # the change in config to file.
