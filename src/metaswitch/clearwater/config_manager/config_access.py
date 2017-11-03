@@ -9,6 +9,7 @@ import subprocess
 import etcd
 import etcd.client
 import os
+import pwd
 import argparse
 import logging
 import difflib
@@ -59,6 +60,9 @@ NO_CONFIG_FOUND = (("There are no ConfigType plugins found at {}").format(
 FIRST_DOWNLOAD_WARNING = ("{} is not present in the configuration database. A "
 "blank file has been created for you. You can make changes to this and upload "
 "as normal.")
+
+FILE_PERMISSIONS_WARNING = ("The file permissions may be incorrect on your "
+                            "downloaded files.")
 
 
 # Exceptions
@@ -217,6 +221,7 @@ class LocalStore(object):
         if not os.path.exists(self.download_dir):
             log.debug("Creating download directory %s", self.download_dir)
             os.makedirs(self.download_dir)
+            reset_file_ownership(self.download_dir)
 
     def _get_config_file_path(self, config_type):
         return os.path.join(self.download_dir, config_type)
@@ -278,6 +283,7 @@ class LocalStore(object):
         try:
             with open(config_file_path, 'w') as config_file:
                 config_file.write(value)
+            reset_file_ownership(config_file_path)
         except IOError:
             log.error("Failed to write %s to %s",
                       selected_config.file_download_name,
@@ -289,6 +295,7 @@ class LocalStore(object):
         try:
             with open(index_file_path, 'w') as index_file:
                 index_file.write(index)
+            reset_file_ownership(index_file_path)
         except IOError:
             log.error("Failed to write revision number to %s", index_file_path)
             raise UnableToSaveFile("Unable to save revision file on disk.")
@@ -791,6 +798,22 @@ def read_from_file(file_path):
         raise
 
     return contents
+
+def reset_file_ownership(filepath):
+    """If a user runs this module with `sudo`, any created files or directories
+    will be owned by root. This may prevent users from making subsequent
+    modifications to them. This function resets the permissions on the
+    specified file to that of the user who ran the command, rather than root.
+    """
+    if os.getenv('SUDO_USER'):
+        # The script is only being run as sudo if the `SUDO_USER` environment
+        # variable is set.
+        try:
+            pwnam = pwd.getpwnam(os.getenv('SUDO_USER'))
+            os.chown(filepath, pwnam.pw_uid, pwnam.pw_gid)
+        except OSError:
+            # Oh well, we tried.
+            print FILE_PERMISSIONS_WARNING
 
 
 # Call main function if script is executed stand-alone
