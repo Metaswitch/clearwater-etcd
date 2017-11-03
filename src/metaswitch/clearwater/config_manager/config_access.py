@@ -406,8 +406,8 @@ def parse_arguments():
         choices = config_choices
         if config not in choices:
             msg = ("invalid choice: {} (choose from {}).\nHowever some "
-                   "configuration is only available on a specific node type. "
-                   "Check that you are using the correct node type for the "
+                   "configuration is only available on a specific node type.\n"
+                   "Check that you are using the correct node type for the \n"
                    "configuration type you are trying to modify.".format(
                        config, ', '.join(choices)))
             raise argparse.ArgumentTypeError(msg)
