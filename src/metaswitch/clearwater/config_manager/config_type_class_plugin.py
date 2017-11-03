@@ -115,15 +115,7 @@ class ConfigType:
                 log.error("Validation script %s failed", os.path.basename(script))
                 log.error("Reasons for failure:")
 
-                if self.filetype == 'shared_config':
-                    errors = [line for line in exc.output.splitlines()
-                              if "ERROR" in line]
-                if self.filetype == 'xml':
-                    errors = [line for line in exc.output.splitlines()
-                              if "xml" in line]
-                if self.filetype == 'json':
-                    list_errors = exc.output.splitlines()
-                    errors = list_errors[2:]
+                errors = exc.output.splitlines()
                 error_lines.extend(errors)
 
                 for line in errors:
