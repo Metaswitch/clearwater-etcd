@@ -965,6 +965,17 @@ class TestUserDownloadDir(unittest.TestCase):
         self.assertIs(mock_getuser.call_count, 1)
 
 
+    @mock.patch("metaswitch.clearwater.config_manager.config_access.get_user_name")
+    @mock.patch("metaswitch.clearwater.config_manager.config_access.get_base_download_dir")
+    def test_call_get_base_no_username(self, mock_getbase, mock_getuser):
+        """check that we call get_base_download_dir and get_user_name """
+        mock_getuser.return_value = None
+        mock_getbase.return_value = "/base_dir"
+        user_download_dir = config_access.get_user_download_dir()
+        self.assertIs(mock_getbase.call_count, 1)
+        self.assertEqual(user_download_dir, "/base_dir/")
+
+
 @mock.patch("metaswitch.clearwater.config_manager.config_access.os.getenv")
 @mock.patch("metaswitch.clearwater.config_manager.config_access.os.getcwd")
 class TestBaseDownloadDir(unittest.TestCase):
