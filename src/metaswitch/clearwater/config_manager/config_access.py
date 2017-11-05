@@ -691,6 +691,7 @@ def get_user_name():
     """
     Returns the local user name if no RADIUS server was used and returns the
     user name that was used to authenticate with a RADIUS server, if used.
+    Note that this only works if called from the terminal.
     """
     # Worth noting that `whoami` behaves differently to `who am i`, we need the
     # latter.
@@ -712,7 +713,9 @@ def get_user_name():
 
 def get_user_download_dir():
     """Returns the user-specific directory for downloaded config."""
-    return os.path.join(get_base_download_dir(), get_user_name())
+    username = get_user_name()
+    sub_dir = username if username is not None else ""
+    return os.path.join(get_base_download_dir(), sub_dir)
 
 
 def get_base_download_dir():
