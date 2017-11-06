@@ -19,7 +19,8 @@ _log = logging.getLogger(__name__)
 class Status:
     OK = 0
     WARN = 1
-    CRITICAL = 2
+    ERROR = 2
+    CRITICAL = 3
 
 
 def check_status():
@@ -31,14 +32,28 @@ def check_status():
         return Status.CRITICAL
 
     result = Status.OK
+
+    # Critical errors are those which must have been cleared for 30s before we
+    # declare a node healthy
     critical_errors = [
         'Does not exist',
         'Initializing',
         'Data access error',
+        'Execution failed',
+        'Wait parent',
     ]
-    warning_errors = [
+
+    # Errors are treated differently depending on the process/program that is
+    # errored.
+    # For uptime checking scripts, an error must have cleared before we declare
+    # the node healthy, but don't need to have been cleared for 30s.
+    # For other processes, errors must have been cleared for 30s before we
+    # declare the node healthy
+    errors = [
         'Uptime failed',
+        'Status failed',
     ]
+
     successes = [
         'Running',
         'Status ok',
@@ -47,12 +62,28 @@ def check_status():
     ]
 
     for line in output.split('\n'):
-        if line.startswith('Process') or line.startswith('Program'):
-            if any(err in line for err in critical_errors):
-                result = Status.CRITICAL
-            elif any(err in line for err in warning_errors) or \
-                    not any(status in line for status in successes):
-                result = max(result, Status.WARN)
+        line = line.strip()
+        if line.endswith('Process') or line.endswith('Program'):
+            if '_uptime' in line:
+                # This program is just checking the uptime of another process
+                # Critical errors put us in the CRITICAL state, but errors just
+                # put us in the ERROR state
+                if any(err in line for err in critical_errors):
+                    result = Status.CRITICAL
+                    break
+                elif any(err in line for err in errors):
+                    result = Status.ERROR
+                elif not any(status in line for status in successes):
+                    result = max(result, Status.WARN)
+            else:
+                # For this program, any errors are CRITICAL
+                if (any(err in line for err in critical_errors) or
+                    any(err in line for err in errors)):
+                    result = Status.CRITICAL
+                    break
+                elif not any(status in line for status in successes):
+                    result = max(result, Status.WARN)
+
     _log.debug("Current status is %s" % result)
     return result
 
@@ -60,24 +91,26 @@ def check_status():
 def run_loop():
     # Seconds after which we return an error
     time_remaining = 450
-    success_count = 0
+    count_since_critical = 0
 
     while time_remaining:
         status = check_status()
 
-        if status in (Status.OK, Status.WARN):
-            success_count += 1
-
         if status == Status.CRITICAL:
-            success_count = 0
+            count_since_critical = 0
+        else:
+            count_since_critical += 1
 
-        if success_count >= 30:
+        # We require that all critical errors have been cleared for at least
+        # 30s, and that there are no other errors
+        if count_since_critical > 30 and status in (Status.OK, Status.WARN):
             return True
 
         sleep(1)
         time_remaining -= 1
 
     return False
+
 
 if not os.getuid() == 0:
     _log.error("Insufficient permissions to run the check status script")
