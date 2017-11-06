@@ -102,7 +102,7 @@ def run_loop():
             count_since_critical += 1
 
         # We require that all critical errors have been cleared for at least
-        # 30s, and that there are no other errirs
+        # 30s, and that there are no other errors
         if count_since_critical > 30 and status in (Status.OK, Status.WARN):
             return True
 
@@ -110,6 +110,7 @@ def run_loop():
         time_remaining -= 1
 
     return False
+
 
 if not os.getuid() == 0:
     _log.error("Insufficient permissions to run the check status script")
