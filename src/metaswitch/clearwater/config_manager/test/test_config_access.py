@@ -29,12 +29,8 @@ class TestCheckConnection(unittest.TestCase):
         etcd_client.host = "host"
         etcd_client.port = "0000"
 
-        mock_localstore = mock.MagicMock(spec=config_access.LocalStore)
         with self.assertRaises(config_access.EtcdConnectionFailed):
-            config_access.ConfigLoader(etcd_client,
-                                       "clearwater",
-                                       "site",
-                                       mock_localstore)
+            config_access.ConfigLoader(etcd_client, "clearwater", "site")
 
 
 @mock.patch("metaswitch.clearwater.config_manager.config_access.ConfigLoader._check_connection")
@@ -52,12 +48,17 @@ class TestConfigLoader(unittest.TestCase):
         mock_localstore.download_dir = "/some/directory"
         mock_localstore.save_config_and_revision.side_effect = IOError
 
-        config_loader = config_access.ConfigLoader(
-            etcd_client, "clearwater", "site", mock_localstore)
+        config_loader = config_access.ConfigLoader(etcd_client,
+                                                   "clearwater",
+                                                   "site")
+
+        # TODO: KAF Need to call config_loader.download_config and get
+        # local_store.save_config_and_revision to throw exception
 
         self.assertRaises(
             config_access.ConfigDownloadFailed,
             config_loader.download_config,
+            mock_localstore,
             "shared_config")
 
     def test_get_config(self, mock_localstore, mock_check_connection):
@@ -69,7 +70,7 @@ class TestConfigLoader(unittest.TestCase):
         etcd_client.read.return_value = etcd_result
 
         config_loader = config_access.ConfigLoader(
-            etcd_client, "clearwater", "site", mock_localstore)
+            etcd_client, "clearwater", "site")
 
         config, index = config_loader.get_config_and_index("shared_config")
 
@@ -84,7 +85,7 @@ class TestConfigLoader(unittest.TestCase):
         etcd_client.read.side_effect = etcd.EtcdKeyNotFound
 
         config_loader = config_access.ConfigLoader(
-            etcd_client, "clearwater", "site", mock_localstore)
+            etcd_client, "clearwater", "site")
 
         self.assertRaises(config_access.ConfigDownloadFailed,
                           config_loader.get_config_and_index,
@@ -98,10 +99,10 @@ class TestConfigLoader(unittest.TestCase):
                                                                  1000)
 
         config_loader = config_access.ConfigLoader(
-            etcd_client, "clearwater", "site", mock_localstore)
+            etcd_client, "clearwater", "site")
 
         # Need to provide a cas revision on etcd uploads to avoid conflicts.
-        config_loader.write_config_to_etcd("shared_config", 123)
+        config_loader.write_config_to_etcd(mock_localstore, "shared_config", 123)
 
         etcd_client.write.assert_called_with(
             "/clearwater/site/configuration/shared_config",
@@ -121,11 +122,12 @@ class TestConfigLoader(unittest.TestCase):
         mock_localstore.load_config_and_revision.side_effect = IOError
 
         config_loader = config_access.ConfigLoader(
-            etcd_client, "clearwater", "site", mock_localstore)
+            etcd_client, "clearwater", "site")
 
         self.assertRaises(
             config_access.ConfigUploadFailed,
             config_loader.write_config_to_etcd,
+            mock_localstore,
             "shared_config",
             123)
 
@@ -156,8 +158,7 @@ class TestConfigLoader(unittest.TestCase):
 
         config_loader = config_access.ConfigLoader(etcd_client,
                                                    "clearwater",
-                                                   "site",
-                                                   mock_localstore)
+                                                   "site")
 
         with mock.patch("metaswitch.clearwater.config_manager.config_access.open",
                         mock_open):
@@ -165,6 +166,7 @@ class TestConfigLoader(unittest.TestCase):
             self.assertRaises(
                 config_access.ConfigUploadFailed,
                 config_loader.write_config_to_etcd,
+                mock_localstore,
                 "shared_config",
                 1234)
 
@@ -172,6 +174,7 @@ class TestConfigLoader(unittest.TestCase):
             self.assertRaises(
                 config_access.ConfigUploadFailed,
                 config_loader.write_config_to_etcd,
+                mock_localstore,
                 "shared_config",
                 1234)
 
@@ -182,7 +185,7 @@ class TestConfigLoader(unittest.TestCase):
         etcd_client.key_endpoint = "key_endpoint"
 
         config_loader = config_access.ConfigLoader(
-            etcd_client, "clearwater", "site", mock_localstore)
+            etcd_client, "clearwater", "site")
 
         full_uri = config_loader.full_uri
 
@@ -211,6 +214,12 @@ class TestCreateLocalStore(unittest.TestCase):
         config_access.LocalStore()
         self.assertEqual(mock_mkdir.call_count, 0)
 
+    def test_non_standard_folder(self, mock_subprocess, mock_getenv, mock_mkdir, mock_exists):
+        """Check that we can handle a non-standard directory."""
+        config_access.LocalStore("/tmp")
+        self.assertEqual(mock_mkdir.call_count, 0)
+        self.assertEqual(mock.call("/tmp"),
+                         mock_exists.call_args_list[0])
 
 @mock.patch(
     "metaswitch.clearwater.config_manager.config_access.get_user_download_dir",

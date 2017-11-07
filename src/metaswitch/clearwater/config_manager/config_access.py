@@ -205,7 +205,7 @@ class ConfigLoader(object):
 
 class LocalStore(object):
     """Class for controlling and making changes to the local config."""
-    def __init__(self, download_dir):
+    def __init__(self, download_dir = None):
         if download_dir:
             log.debug("Overriding download dir")
             self.download_dir = download_dir
