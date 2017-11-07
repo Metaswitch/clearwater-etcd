@@ -98,12 +98,11 @@ class UnableToSaveFile(IOError):
 class ConfigLoader(object):
     """Object for interfacing with etcd for uploading and downloading config.
     """
-    def __init__(self, etcd_client, etcd_key, site, local_store):
+    def __init__(self, etcd_client, etcd_key, site):
         # In addition to standard init, we store off the URL to query on the
         # etcd API that will get us our config.
         self._etcd_client = etcd_client
         self.prefix = "/".join(["", etcd_key, site, "configuration"])
-        self.local_store = local_store
 
         # Make sure that the etcd process is actually contactable.
         self._check_connection()
@@ -126,21 +125,22 @@ class ConfigLoader(object):
             raise EtcdConnectionFailed(
                 "etcd process not running at {}".format(location))
 
-    def download_config(self, config_type):
-        """Save a copy of a given config type to the download directory.
+    def download_config(self, local_store, config_type):
+
+        """Save a copy of a given config type to the specified local store.
         Raises a ConfigDownloadFailed exception if unsuccessful."""
         value, index = self.get_config_and_index(config_type)
 
         # Write the config to file.
         try:
-            self.local_store.save_config_and_revision(config_type,
-                                                      str(index),
-                                                      str(value))
+            local_store.save_config_and_revision(config_type,
+                                                 str(index),
+                                                 str(value))
         except IOError:
             log.error("Failed to save %s to file", config_type)
             raise ConfigDownloadFailed(
                 CANT_SAVE_LOCAL_CONFIG.format(config_type,
-                                              self.local_store.download_dir))
+                                              local_store.download_dir))
 
     def get_config_and_index(self, config_type):
         """Extract the config file and index from etcd."""
@@ -159,13 +159,13 @@ class ConfigLoader(object):
 
         return download.value, download.modifiedIndex
 
-    def write_config_to_etcd(self, config_type, prev_revision):
+    def write_config_to_etcd(self, local_store, config_type, prev_revision):
         """Upload config contained in the specified file to the etcd database.
         Raises a ConfigUploadFailed exception if unsuccessful.
         """
         key_path = "/".join([self.prefix, config_type])
         try:
-            upload, _ = self.local_store.load_config_and_revision(config_type)
+            upload, _ = local_store.load_config_and_revision(config_type)
         except IOError:
             # This exception will be thrown in the following cases:
             # - The download directory doesn't exist
@@ -176,7 +176,7 @@ class ConfigLoader(object):
             raise ConfigUploadFailed(
                 CANT_LOAD_LOCAL_CONFIG.format(
                     config_type,
-                    self.local_store.config_location(config_type)))
+                    local_store.config_location(config_type)))
 
         try:
             log.debug("Writing etcd config to '%s'", key_path)
@@ -205,8 +205,16 @@ class ConfigLoader(object):
 
 class LocalStore(object):
     """Class for controlling and making changes to the local config."""
-    def __init__(self):
-        self.download_dir = get_user_download_dir()
+    def __init__(self, download_dir):
+        if download_dir:
+            log.debug("Overriding download dir")
+            self.download_dir = download_dir
+        else:
+            log.debug("Using default download dir")
+            self.download_dir = get_user_download_dir()
+
+        log.debug("Download dir: %s", self.download_dir)
+
         self._ensure_config_dir()
 
     def _ensure_config_dir(self):
@@ -315,11 +323,10 @@ def main(args):
                   args.management_ip)
         etcd_client = etcd.client.Client(host=args.management_ip,
                                          port=4000)
-        local_store = LocalStore()
+        local_store = LocalStore(args.download_dir)
         config_loader = ConfigLoader(etcd_client=etcd_client,
                                      etcd_key=args.etcd_key,
-                                     site=args.site,
-                                     local_store=local_store)
+                                     site=args.site)
     except (etcd.EtcdException, EtcdConnectionFailed):
         log.error("etcd cluster uncontactable")
         sys.exit("Unable to contact the etcd cluster.")
@@ -330,6 +337,7 @@ def main(args):
                  args.config_type)
         try:
             download_config(config_loader,
+                            local_store,
                             args.config_type,
                             args.autoconfirm)
         except (UserAbort, ConfigDownloadFailed) as exc:
@@ -361,6 +369,8 @@ def parse_arguments():
                         help="Turns autoconfirm on [default=off]")
     parser.add_argument("--force", action="store_true",
                         help="Turns forcing on [default=off]")
+    parser.add_argument("--dir", dest='download_dir',
+                        help=argparse.SUPPRESS)
 
     # Logging options
     parser.add_argument("--log-level",
@@ -402,7 +412,8 @@ def parse_arguments():
 def delete_outdated_config_files():
     """
     Deletes all config files in any subfolder of DOWNLOADED_CONFIG_PATH that is
-    older than 30 days.
+    older than 30 days. Note that this is the download destination. No attempt
+    is made to police files downloaded to non-standard directories.
     :return:
     """
     log.debug("Deleting outdated config files")
@@ -422,12 +433,12 @@ def delete_outdated_config_files():
                 os.remove(filepath)
 
 
-def download_config(config_loader, config_type, autoskip=False):
+def download_config(config_loader, local_store, config_type, autoskip=False):
     """
     Downloads the config from etcd and saves a copy to
     DOWNLOADED_CONFIG_PATH/<USER_NAME>.
     """
-    local_config_path = os.path.join(get_user_download_dir(), config_type)
+    local_config_path = local_store.config_location(config_type)
 
     if os.path.exists(local_config_path):
         # Ask user to confirm if they want to overwrite the file
@@ -441,7 +452,7 @@ def download_config(config_loader, config_type, autoskip=False):
             log.info("User aborted download")
             raise UserAbort
 
-    config_loader.download_config(config_type)
+    config_loader.download_config(local_store, config_type)
     print("{} downloaded to {}".format(config_type, local_config_path))
 
 
@@ -534,7 +545,7 @@ def upload_config(autoconfirm, config_loader, config_type, force, local_store):
 
     # Upload the configuration to the etcd cluster. This will trigger the
     # queue manager to schedule nodes to be restarted.
-    config_loader.write_config_to_etcd(config_type, remote_revision)
+    config_loader.write_config_to_etcd(local_store, config_type, remote_revision)
 
     # Clearwater can be run with multiple etcd clusters. The apply_config_key
     # variable stores the information about which etcd cluster the changes
