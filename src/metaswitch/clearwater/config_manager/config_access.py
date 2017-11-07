@@ -85,6 +85,11 @@ class ConfigValidationFailed(ConfigUploadFailed):
     pass
 
 
+class ConfigUnchanged(ConfigUploadFailed):
+    """There are no differences between the config to be uploaded and what is
+    already on etcd."""
+
+
 class EtcdConnectionFailed(Exception):
     """Unable to connect to etcd."""
     pass
@@ -383,6 +388,12 @@ def main(args, config_filename):
                                    selected_config,
                                    args.force,
                                    args.autoconfirm)
+        except ConfigUnchanged:
+            # If there are no changes to the config, we don't execute an
+            # upload. But that doesn't mean there was a failure - the config
+            # on etcd is what the user wanted it to be. We print a message to
+            # the user and return a zero error code.
+            print NO_CHANGES_TO_CONFIG
         except (UserAbort, ConfigUploadFailed) as exc:
             log.error("Upload failed")
             sys.exit(exc)
@@ -653,7 +664,7 @@ def ready_for_upload_checks(autoconfirm,
     if not print_diff_and_syslog(selected_config.name, remote_config, local_config):
         # We don't bother uploading if there are no changes to upload.
         log.error("No differences between local and master %s", selected_config.name)
-        raise ConfigUploadFailed(NO_CHANGES_TO_CONFIG)
+        raise ConfigUnchanged
 
     if not autoconfirm:
         confirmed = confirm_yn(

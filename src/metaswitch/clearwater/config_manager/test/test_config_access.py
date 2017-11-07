@@ -725,6 +725,28 @@ class TestMainUpload(unittest.TestCase):
         with self.assertRaises(SystemExit):
             config_access.main(args, filename)
 
+    @mock.patch('metaswitch.clearwater.config_manager.config_access.sys.exit')
+    def test_handle_upload_no_change(self,
+                                     mock_sysexit,
+                                     mock_loadplugins,
+                                     mock_upload_config,
+                                     mock_lookup_config,
+                                     mock_localstore,
+                                     mock_configloader,
+                                     mock_logging,
+                                     mock_username):
+        """Check that we handle a ConfigUploadFailed exception raised by
+        upload_verified_config."""
+        mock_upload_config.side_effect = config_access.ConfigUnchanged
+        args = mock.Mock(action='upload')
+        filename = mock.Mock()
+
+        config_access.main(args, filename)
+
+        # We should not have called through to sys.exit() because the test
+        # has not failed.
+        self.assertEqual(mock_sysexit.call_count, 0)
+
     def test_handle_upload_configvalidationfailed(self,
                                                   mock_loadplugins,
                                                   mock_upload_config,
