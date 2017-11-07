@@ -52,9 +52,6 @@ class TestConfigLoader(unittest.TestCase):
                                                    "clearwater",
                                                    "site")
 
-        # TODO: KAF Need to call config_loader.download_config and get
-        # local_store.save_config_and_revision to throw exception
-
         self.assertRaises(
             config_access.ConfigDownloadFailed,
             config_loader.download_config,
