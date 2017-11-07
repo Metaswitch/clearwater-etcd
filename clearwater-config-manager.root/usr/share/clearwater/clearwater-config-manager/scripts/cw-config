@@ -7,17 +7,16 @@
 # Otherwise no rights are granted except for those provided to you by
 # Metaswitch Networks in a separate written agreement.
 
-# Wrapper script for move-config.py. Used to extract relevant variables
+# Wrapper script for config_access.py. Used to extract relevant variables
 # from the config file and do permissions checking.
 
 # Include the current values from the node's config.
 . /etc/clearwater/config
 
-# We only care about whether the user has the necessary permissions if they are
-# trying to use the --force option. If they are forcing, the user must have
-# root permissions.
 if [[ "$@" == *"--force"* ]]
 then
+  # The user is trying to bypass config validation checks. To do this, they
+  # must have root permissions.
   . /usr/share/clearwater/utils/check-root-permissions 2
 fi
 

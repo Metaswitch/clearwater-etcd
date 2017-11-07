@@ -9,6 +9,7 @@ import subprocess
 import etcd
 import etcd.client
 import os
+import pwd
 import argparse
 import logging
 import difflib
@@ -16,12 +17,15 @@ import syslog
 import sys
 import datetime
 import time
+from metaswitch.clearwater.config_manager.config_type_plugin_loader import load_plugins_in_dir
 from metaswitch.common.logging_config import configure_syslog
 
 # Constants
 MAXIMUM_CONFIG_SIZE = 1000000
-VALIDATION_SCRIPTS_FOLDER = "/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/"
 LOG_DIR = "/var/log/clearwater-config-manager"
+
+# The directory on a clearwater node where the subclass config types are stored
+PLUGIN_DIR = "/usr/share/clearwater/clearwater-config-access/plugins/"
 
 # The directory under $HOME where config will be downloaded to.
 DOWNLOAD_DIR = "clearwater-config-manager"
@@ -47,10 +51,22 @@ CANT_SAVE_LOCAL_CONFIG = ("Unable to save {} to file. Check the user has "
 CANT_COMPARE_WITH_MASTER = ("Unable to compare with master configuration "
 "file. No upload will be performed.")
 
-CONFIG_TYPE_DOESNT_EXIST = "{} does not exist in the configuration database."
-
 UNABLE_TO_UPLOAD = ("Unable to upload {} to the configuration database. The "
 "upload has failed.")
+
+NO_CONFIG_FOUND = "There are no ConfigType plugins found at {}".format(
+    PLUGIN_DIR)
+
+CLUSTER_NOT_HEALTHY = ("No changes to configuration can be made while the "
+"configuration database does not have quorum. Restore connectivity to the "
+"uncontactable nodes in the deployment and try again.")
+
+FIRST_DOWNLOAD_WARNING = ("{} is not present in the configuration database. A "
+"blank file has been created for you. You can make changes to this and upload "
+"as normal.")
+
+FILE_PERMISSIONS_WARNING = ("The file permissions may be incorrect on your "
+                            "downloaded files.")
 
 
 # Exceptions
@@ -71,6 +87,11 @@ class ConfigValidationFailed(ConfigUploadFailed):
 
 class EtcdConnectionFailed(Exception):
     """Unable to connect to etcd."""
+    pass
+
+
+class EtcdNoQuorum(Exception):
+    """Etcd cluster does not have quorum."""
     pass
 
 
@@ -98,6 +119,10 @@ class UnableToSaveFile(IOError):
 class ConfigLoader(object):
     """Object for interfacing with etcd for uploading and downloading config.
     """
+    ETCD_HEALTH_CHECK = ['/usr/bin/clearwater-etcdctl', 'cluster-health']
+    ETCD_UNHEALTHY_INDICATORS = ["cluster is unhealthy",
+                                 "cluster may be unhealthy"]
+
     def __init__(self, etcd_client, etcd_key, site):
         # In addition to standard init, we store off the URL to query on the
         # etcd API that will get us our config.
@@ -106,6 +131,9 @@ class ConfigLoader(object):
 
         # Make sure that the etcd process is actually contactable.
         self._check_connection()
+
+        # Make sure that the etcd cluster has quorum.
+        self._check_etcd_cluster_health()
 
     def _check_connection(self):
         """Performs a sanity check to make sure that the etcd process is
@@ -125,26 +153,39 @@ class ConfigLoader(object):
             raise EtcdConnectionFailed(
                 "etcd process not running at {}".format(location))
 
+    def _check_etcd_cluster_health(self):
+        """Raises an EtcdNoQuorum exception if the etcd cluster does not have
+        quorum."""
+        try:
+            health_output = subprocess.check_output(self.ETCD_HEALTH_CHECK)
+        except subprocess.CalledProcessError:
+            # We couldn't even run the health check! something must be wrong.
+            raise EtcdNoQuorum()
+
+        if any(ind in health_output for ind in self.ETCD_UNHEALTHY_INDICATORS):
+            # The health check has shown there is no quorum!
+            raise EtcdNoQuorum()
+
     def download_config(self, local_store, config_type):
 
         """Save a copy of a given config type to the specified local store.
         Raises a ConfigDownloadFailed exception if unsuccessful."""
-        value, index = self.get_config_and_index(config_type)
+        value, index = self.get_config_and_index(selected_config)
 
         # Write the config to file.
         try:
-            local_store.save_config_and_revision(config_type,
+            local_store.save_config_and_revision(selected_config,
                                                  str(index),
                                                  str(value))
         except IOError:
-            log.error("Failed to save %s to file", config_type)
+            log.error("Failed to save %s to file", selected_config.name)
             raise ConfigDownloadFailed(
-                CANT_SAVE_LOCAL_CONFIG.format(config_type,
+                CANT_SAVE_LOCAL_CONFIG.format(selected_config.name,
                                               local_store.download_dir))
 
-    def get_config_and_index(self, config_type):
+    def get_config_and_index(self, selected_config):
         """Extract the config file and index from etcd."""
-        key_path = "/".join([self.prefix, config_type])
+        key_path = "/".join([self.prefix, selected_config.name])
 
         try:
             # First we pull the data down from the etcd cluster. This will
@@ -153,54 +194,44 @@ class ConfigLoader(object):
             log.debug("Reading etcd config from '%s", key_path)
             download = self._etcd_client.read(key_path)
         except etcd.EtcdKeyNotFound:
-            log.error("etcd key %s is not present in the database", key_path)
-            raise ConfigDownloadFailed(
-                CONFIG_TYPE_DOESNT_EXIST.format(config_type))
+            # If the key isn't present, create an empty file with a default
+            # revision number. Users can add the first revision!
+            log.info("etcd key %s is not present in the database", key_path)
+            print FIRST_DOWNLOAD_WARNING
+            first_value = ""
+            first_index = 0
+            return first_value, first_index
 
         return download.value, download.modifiedIndex
 
-    def write_config_to_etcd(self, local_store, config_type, prev_revision):
+    def write_config_to_etcd(self,
+                             local_store,
+                             selected_config,
+                             prev_revision,
+                             upload):
         """Upload config contained in the specified file to the etcd database.
         Raises a ConfigUploadFailed exception if unsuccessful.
         """
-        key_path = "/".join([self.prefix, config_type])
-        try:
-            upload, _ = local_store.load_config_and_revision(config_type)
-        except IOError:
-            # This exception will be thrown in the following cases:
-            # - The download directory doesn't exist
-            # - The config file doesn't exist in the download directory
-            # - The config file is not readable
-            # - The config file is too big
-            log.error("Unable to load %s from file", config_type)
-            raise ConfigUploadFailed(
-                CANT_LOAD_LOCAL_CONFIG.format(
-                    config_type,
-                    local_store.config_location(config_type)))
+        key_path = "/".join([self.prefix, selected_config.name])
 
         try:
-            log.debug("Writing etcd config to '%s'", key_path)
-            self._etcd_client.write(key_path,
-                                    upload,
-                                    prevIndex=prev_revision)
-        except etcd.EtcdConnectionFailed:
-            log.error("Unable to write to etcd database")
-            raise ConfigUploadFailed(UNABLE_TO_UPLOAD.format(config_type))
+            if prev_revision == 0:
+                log.debug("Writing etcd config to '%s' for the first time")
+                self._etcd_client.write(key_path, upload)
+            else:
+                log.debug("Writing etcd config to '%s'", key_path)
+                self._etcd_client.write(key_path,
+                                        upload,
+                                        prevIndex=prev_revision)
+
         except etcd.EtcdCompareFailed:
             log.error("Master revision doesn't match local revision")
             raise ConfigUploadFailed(
-                MODIFIED_WHILE_EDITING.format(config_type))
-
-    # We need this property for the step in write_config_to_etcd where we log
-    # the change in config to file.
-    @property
-    def full_uri(self):
-        """Returns a URI that represents the folder containing the config
-        files."""
-        return (self._etcd_client.base_uri +
-                '/' +
-                self._etcd_client.key_endpoint +
-                self.prefix)
+                MODIFIED_WHILE_EDITING.format(selected_config.name))
+        except etcd.EtcdException:
+            log.error("Unable to write to etcd database")
+            raise ConfigUploadFailed(UNABLE_TO_UPLOAD.format(
+                selected_config.file_download_name))
 
 
 class LocalStore(object):
@@ -222,6 +253,7 @@ class LocalStore(object):
         if not os.path.exists(self.download_dir):
             log.debug("Creating download directory %s", self.download_dir)
             os.makedirs(self.download_dir)
+            reset_file_ownership(self.download_dir)
 
     def _get_config_file_path(self, config_type):
         return os.path.join(self.download_dir, config_type)
@@ -271,19 +303,22 @@ class LocalStore(object):
 
         return local_config, local_revision
 
-    def save_config_and_revision(self, config_type, index, value):
+    def save_config_and_revision(self, selected_config, index, value):
         """Write the config and revision number to file."""
-        config_file_path = self._get_config_file_path(config_type)
-        index_file_path = self._get_revision_file_path(config_type)
-
-        log.debug("Writing %s to '%s'.", config_type, config_file_path)
+        config_file_path = self._get_config_file_path(
+            selected_config.file_download_name)
+        index_file_path = self._get_revision_file_path(
+            selected_config.file_download_name)
+        log.debug("Writing %s to '%s'.", selected_config.file_download_name,
+                  config_file_path)
 
         try:
             with open(config_file_path, 'w') as config_file:
                 config_file.write(value)
+            reset_file_ownership(config_file_path)
         except IOError:
             log.error("Failed to write %s to %s",
-                      config_type,
+                      selected_config.file_download_name,
                       config_file_path)
             raise UnableToSaveFile("Unable to save config file on disk.")
         # We want to keep track of the index the config had in the etcd cluster
@@ -292,6 +327,7 @@ class LocalStore(object):
         try:
             with open(index_file_path, 'w') as index_file:
                 index_file.write(index)
+            reset_file_ownership(index_file_path)
         except IOError:
             log.error("Failed to write revision number to %s", index_file_path)
             raise UnableToSaveFile("Unable to save revision file on disk.")
@@ -306,7 +342,7 @@ class LocalStore(object):
         os.remove(revision_path)
 
 
-def main(args):
+def main(args, config_filename):
     """
     Main entry point for script.
     """
@@ -324,12 +360,19 @@ def main(args):
         etcd_client = etcd.client.Client(host=args.management_ip,
                                          port=4000)
         local_store = LocalStore(args.download_dir)
+
+        config_location = local_store.config_location(config_filename)
+
+        selected_config = lookup_config_type(args.config_type, config_location)
         config_loader = ConfigLoader(etcd_client=etcd_client,
                                      etcd_key=args.etcd_key,
                                      site=args.site)
     except (etcd.EtcdException, EtcdConnectionFailed):
         log.error("etcd cluster uncontactable")
         sys.exit("Unable to contact the etcd cluster.")
+    except EtcdNoQuorum:
+        log.error("etcd cluster doesn't have quorum")
+        sys.exit(CLUSTER_NOT_HEALTHY)
 
     if args.action == "download":
         log.info("User %s triggered download of %s",
@@ -338,7 +381,7 @@ def main(args):
         try:
             download_config(config_loader,
                             local_store,
-                            args.config_type,
+                            selected_config,
                             args.autoconfirm)
         except (UserAbort, ConfigDownloadFailed) as exc:
             log.error("Download failed")
@@ -351,7 +394,7 @@ def main(args):
         try:
             upload_verified_config(config_loader,
                                    local_store,
-                                   args.config_type,
+                                   selected_config,
                                    args.force,
                                    args.autoconfirm)
         except (UserAbort, ConfigUploadFailed) as exc:
@@ -359,12 +402,56 @@ def main(args):
             sys.exit(exc)
 
 
+def lookup_config_type(config_type, config_location):
+    """
+    This takes the string defining the config_type and a string of the
+    config_location which is where the config is downloaded to and returns
+    an instance of the class containing data on the config type selected
+    """
+    config_classes = load_plugins_in_dir(PLUGIN_DIR, config_location)
+
+    # There is no need for an else part as the parse_arguments function
+    # will gurantee there is always a match
+    return next(config for config in config_classes
+                if config.name == config_type)
+
+
 def parse_arguments():
     """
     Parse the arguments passed to the script.
+    The options for config type are designated by the plugins available
     :return:
     """
-    parser = argparse.ArgumentParser(prog='cw-config')
+    # Pick the options to appear in argument parsing. the config types are
+    # loaded as plugin classes onto the node so only the config files available
+    # on the node are able to be changed on the node.
+    config_classes = load_plugins_in_dir(PLUGIN_DIR)
+
+    if not config_classes:
+        # we need to raise an error as otherwise you will always get refused by
+        # the arg parsing. Due to the fact there will be a compulsory selection
+        # with no choices available.
+        log.error(NO_CONFIG_FOUND)
+        sys.exit(NO_CONFIG_FOUND)
+
+    config_choice_help = '\n'.join(choice.help_info for choice in config_classes)
+    config_choices = [choice.name for choice in config_classes]
+
+    def config_error(config):
+        """This verifies the config_type choice and prints a custom
+           error message if the choice is wrong"""
+        choices = config_choices
+        if config not in choices:
+            msg = ("invalid choice: {} (choose from {}).\nHowever some "
+                   "configuration is only available on a specific node type.\n"
+                   "Check that you are using the correct node type for the \n"
+                   "configuration type you are trying to modify.".format(
+                       config, ', '.join(choices)))
+            raise argparse.ArgumentTypeError(msg)
+        return config
+
+    parser = argparse.ArgumentParser(prog='cw-config',
+                                     formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("--autoconfirm", action="store_true",
                         help="Turns autoconfirm on [default=off]")
     parser.add_argument("--force", action="store_true",
@@ -380,17 +467,17 @@ def parse_arguments():
                         type=int,
                         default=logging.INFO,
                         help="""Set to {} for DEBUG,
-                                Set to {} for INFO,
-                                Set to {} for WARNING,
-                                Set to {} for ERROR,
-                                Set to {} for CRITICAL.
-                                All logs of this level or above will be
-                                written to file.
-                                DEFAULT is INFO""".format(logging.DEBUG,
-                                                          logging.INFO,
-                                                          logging.WARNING,
-                                                          logging.ERROR,
-                                                          logging.CRITICAL))
+    Set to {} for INFO,
+    Set to {} for WARNING,
+    Set to {} for ERROR,
+    Set to {} for CRITICAL.
+    All logs of this level or above will be
+    written to file.
+    DEFAULT is INFO""".format(logging.DEBUG,
+                              logging.INFO,
+                              logging.WARNING,
+                              logging.ERROR,
+                              logging.CRITICAL))
 
     # Positional arguments
     parser.add_argument("action",
@@ -399,17 +486,19 @@ def parse_arguments():
                         help="The action to perform - {upload | download}",
                         metavar='action')
     parser.add_argument("config_type",
-                        type=str,
-                        choices=['shared_config'],
-                        help=("The config type to use - {shared_config} - only"
-                              " one option currently"),
+                        type=config_error,
+                        help=config_choice_help,
                         metavar='config_type')
     parser.add_argument("--management_ip", required=True,
                         help=argparse.SUPPRESS)
     parser.add_argument("--site", required=True, help=argparse.SUPPRESS)
     parser.add_argument("--etcd_key", required=True, help=argparse.SUPPRESS)
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    config_filename = next(config.file_download_name for config in config_classes
+                           if config.name == args.config_type)
+
+    return args, config_filename
 
 
 def delete_outdated_config_files():
@@ -436,12 +525,12 @@ def delete_outdated_config_files():
                 os.remove(filepath)
 
 
-def download_config(config_loader, local_store, config_type, autoskip=False):
+def download_config(config_loader, local_store, selected_config, autoskip=False):
     """
     Downloads the config from etcd and saves a copy to
     DOWNLOADED_CONFIG_PATH/<USER_NAME>.
     """
-    local_config_path = local_store.config_location(config_type)
+    local_config_path = local_store.config_location(selected_config.file_download_name)
 
     if os.path.exists(local_config_path):
         # Ask user to confirm if they want to overwrite the file
@@ -449,76 +538,48 @@ def download_config(config_loader, local_store, config_type, autoskip=False):
         log.debug("Check user wants to overwrite existing file")
         confirmed = confirm_yn(
             "A local copy of {} is already present. "
-            "Continuing will overwrite the file.".format(config_type),
+            "Continuing will overwrite the file.".format(selected_config.file_download_name),
             autoskip)
         if not confirmed:
             log.info("User aborted download")
             raise UserAbort
 
-    config_loader.download_config(local_store, config_type)
-    print("{} downloaded to {}".format(config_type, local_config_path))
+    config_loader.download_config(local_store, selected_config)
+    print("{} downloaded to {}".format(selected_config.name,
+                                       local_config_path))
 
 
 def upload_verified_config(config_loader,
                            local_store,
-                           config_type,
+                           selected_config,
                            force=False,
                            autoconfirm=False):
     """Verifies the config, then uploads it to etcd."""
-    validate_config(local_store, config_type, force)
+
+    # check the file has been downloaded, otherwise raise specific error
+    config_location = local_store.config_location(selected_config.file_download_name)
+    if not os.path.exists(config_location):
+        log.error("The config file does not exist at %s", config_location)
+        raise ConfigUploadFailed(
+            "The config file to upload does not exist at {}".format(
+                config_location))
+
+    validate_config(selected_config, force)
 
     # An exception should have been thrown if validation fails, so we should
     # only reach this point if the config has been validated successfully.
-    upload_config(autoconfirm, config_loader, config_type, force, local_store)
+    upload_config(autoconfirm, config_loader, selected_config,
+                  force, local_store)
 
 
-def validate_config(local_store, config_type, force=False):
+def validate_config(selected_config, force=False):
     """
     Validates the config by calling all scripts in the validation folder.
     """
-    script_dir = os.listdir(VALIDATION_SCRIPTS_FOLDER)
 
-    # We can only execute scripts that have execute permissions.
-    scripts_to_run = []
-    for script in script_dir:
-        if os.access(os.path.join(VALIDATION_SCRIPTS_FOLDER, script), os.X_OK):
-            scripts_to_run.append(os.path.join(VALIDATION_SCRIPTS_FOLDER,
-                                               script))
-        else:
-            # Log a warning for each script that isn't being run because of
-            # execute permissions not being set.
-            log.warning("Skipping script %s", script)
-
-    failed_scripts = []
-    error_lines = []
-    for script in scripts_to_run:
-        try:
-            log.debug("Running validation script %s", script)
-            # Pass in the location of the configuration to check as a parameter
-            # as some scripts need the user to specify which config to
-            # validate.
-            subprocess.check_output([script,
-                                     local_store.config_location(config_type)])
-
-        except subprocess.CalledProcessError as exc:
-            log.error("Validation script %s failed", os.path.basename(script))
-            log.error("Reasons for failure:")
-            errors = [line for line in exc.output.splitlines()
-                      if "ERROR" in line]
-            error_lines.extend(errors)
-
-            for line in errors:
-                log.error(line)
-
-            # We want to run through all the validation scripts so we can tell
-            # the user all of the problems with their config changes, so don't
-            # bail out of the loop at this point, just record which scripts
-            # have failed.
-            failed_scripts.append(script)
-
-    # When we write the bash injection script, it should either be invoked here
-    # or be placed in the VALIDATION_SCRIPTS_FOLDER directory to be executed
-    # in the above loop.
+    # selected_config is an instance of the ConfigType class. validate() uses
+    # different scripts to validate against for different ConfigType classes.
+    failed_scripts, error_lines = selected_config.validate()
 
     # In the forcing case, we proceed even if there have been failures, but
     # otherwise we want to bail out at this point.
@@ -539,16 +600,19 @@ def validate_config(local_store, config_type, force=False):
         print "Config successfully validated"
 
 
-def upload_config(autoconfirm, config_loader, config_type, force, local_store):
+def upload_config(autoconfirm, config_loader, selected_config, force, local_store):
     """Read the relevant config from file and upload it to etcd."""
-    remote_revision = ready_for_upload_checks(autoconfirm,
-                                              config_loader,
-                                              config_type,
-                                              local_store)
+    remote_revision, upload_string = ready_for_upload_checks(autoconfirm,
+                                                             config_loader,
+                                                             selected_config,
+                                                             local_store)
 
     # Upload the configuration to the etcd cluster. This will trigger the
     # queue manager to schedule nodes to be restarted.
-    config_loader.write_config_to_etcd(local_store, config_type, remote_revision)
+    config_loader.write_config_to_etcd(local_store,
+                                       selected_config,
+                                       remote_revision,
+                                       upload_string)
 
     # Clearwater can be run with multiple etcd clusters. The apply_config_key
     # variable stores the information about which etcd cluster the changes
@@ -565,51 +629,51 @@ def upload_config(autoconfirm, config_loader, config_type, force, local_store):
 
     # If we reach this point then config upload was successful. Cleaning up
     # the config file we've uploaded makes sure we don't cause confusion later.
-    local_store.config_cleanup(config_type)
+    local_store.config_cleanup(selected_config.file_download_name)
 
-    print "{} successfully uploaded".format(config_type)
+    print "{} successfully uploaded".format(selected_config.name)
 
 
 def ready_for_upload_checks(autoconfirm,
                             config_loader,
-                            config_type,
+                            selected_config,
                             local_store):
     """Make sure that we can and should upload config. Returns the current
     revision of the master config upload if we should proceed, otherwise throws
     a ConfigUploadFailed exception."""
     try:
         local_config, local_revision = local_store.load_config_and_revision(
-            config_type)
+            selected_config.file_download_name)
     except IOError:
         log.error("Can't read %s from %s",
-                  config_type,
-                  local_store.config_location(config_type))
+                  selected_config.file_download_name,
+                  local_store.config_location(selected_config.file_download_name))
         raise ConfigUploadFailed(
             CANT_LOAD_LOCAL_CONFIG.format(
-                config_type,
-                local_store.config_location(config_type)))
+                selected_config.file_download_name,
+                local_store.config_location(selected_config.file_download_name)))
 
     # In order to confirm that no changes have been made while the user has
     # been editing locally, we download a copy of the master config to compare
     # against.
     try:
         remote_config, remote_revision = config_loader.get_config_and_index(
-            config_type)
+            selected_config)
     except ConfigDownloadFailed:
         log.error("Unable to download %s from config database to compare it "
-                  "with local config", config_type)
+                  "with local config", selected_config.name)
         raise ConfigUploadFailed(CANT_COMPARE_WITH_MASTER)
 
     # Users are not allowed to upload changes if someone else has uploaded
     # config to the etcd cluster in the meantime.
     if local_revision != remote_revision:
-        log.error("Master has different revision to local %s", config_type)
-        raise ConfigUploadFailed(MODIFIED_WHILE_EDITING.format(config_type))
+        log.error("Master has different revision to local %s", selected_config.file_download_name)
+        raise ConfigUploadFailed(MODIFIED_WHILE_EDITING.format(selected_config.file_download_name))
 
     # Provide a diff of the changes and log to syslog
-    if not print_diff_and_syslog(config_type, remote_config, local_config):
+    if not print_diff_and_syslog(selected_config.name, remote_config, local_config):
         # We don't bother uploading if there are no changes to upload.
-        log.error("No differences between local and master %s", config_type)
+        log.error("No differences between local and master %s", selected_config.name)
         raise ConfigUploadFailed(NO_CHANGES_TO_CONFIG)
 
     if not autoconfirm:
@@ -621,7 +685,7 @@ def ready_for_upload_checks(autoconfirm,
             raise UserAbort
 
     log.debug("All checks passed, ready for config upload")
-    return remote_revision
+    return remote_revision, local_config
 
 
 def confirm_yn(prompt, autoskip=False):
@@ -653,7 +717,19 @@ def get_user_name():
     # Worth noting that `whoami` behaves differently to `who am i`, we need the
     # latter.
     process = subprocess.check_output(["who", "am", "i"])
-    return process.split()[0]
+    splits = process.split()
+    if splits:
+        # The format of `who am i` looks like this:
+        #
+        # clearwater      pts/1        2017-10-30 18:25 (:0)
+        #
+        # This is the login that is associated with the current user.
+        return splits[0]
+    else:
+        # `who am i` has not returned anything! This happens if the connection
+        # has been made via the console rather than over ssh. In these
+        # situations, we can use the $USER environment variable as a backup.
+        return os.getenv("USER")
 
 
 def get_user_download_dir():
@@ -744,7 +820,7 @@ def print_diff_and_syslog(config_type, config_1, config_2):
 
         return True
     else:
-        print("No changes detected in shared configuration file.")
+        print("No changes detected in {} file.").format(config_type)
         return False
 
 
@@ -770,8 +846,24 @@ def read_from_file(file_path):
 
     return contents
 
+def reset_file_ownership(filepath):
+    """If a user runs this module with `sudo`, any created files or directories
+    will be owned by root. This may prevent users from making subsequent
+    modifications to them. This function resets the permissions on the
+    specified file to that of the user who ran the command, rather than root.
+    """
+    if os.getenv('SUDO_USER'):
+        # The script is only being run as sudo if the `SUDO_USER` environment
+        # variable is set.
+        try:
+            pwnam = pwd.getpwnam(os.getenv('SUDO_USER'))
+            os.chown(filepath, pwnam.pw_uid, pwnam.pw_gid)
+        except OSError:
+            # Oh well, we tried.
+            print FILE_PERMISSIONS_WARNING
+
 
 # Call main function if script is executed stand-alone
-if __name__ == "__main__": # pragma: no cover
-    arguments = parse_arguments() # pragma: no cover
-    main(arguments) # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover
+    arguments, filename = parse_arguments()  # pragma: no cover
+    main(arguments, filename)  # pragma: no cover
