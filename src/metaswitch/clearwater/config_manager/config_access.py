@@ -166,7 +166,7 @@ class ConfigLoader(object):
             # The health check has shown there is no quorum!
             raise EtcdNoQuorum()
 
-    def download_config(self, local_store, config_type):
+    def download_config(self, local_store, selected_config):
 
         """Save a copy of a given config type to the specified local store.
         Raises a ConfigDownloadFailed exception if unsuccessful."""
