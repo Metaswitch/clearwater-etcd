@@ -369,6 +369,9 @@ def parse_arguments():
                         help="Turns autoconfirm on [default=off]")
     parser.add_argument("--force", action="store_true",
                         help="Turns forcing on [default=off]")
+
+    # Hidden option to allow you to specify which directory you want to
+    # download files to/upload files from.
     parser.add_argument("--dir", dest='download_dir',
                         help=argparse.SUPPRESS)
 
