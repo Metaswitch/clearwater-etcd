@@ -399,4 +399,4 @@ class CommonEtcdSynchronizer(object):
             try:
                 future.result()
             except Exception as e:
-                _log.exception(e)
+                _log.exception("%s: %s", type(e).__name__, e.__str__())
