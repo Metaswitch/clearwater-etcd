@@ -130,9 +130,9 @@ class TestGetValidationScripts(unittest.TestCase):
 class TestRphValidation(unittest.TestCase):
     config_location = "/some/dir/rph.json"
 
-    def test_scripts_find_ok(self,
-                             mock_subprocess,
-                             mock_access):
+    def test_rph_script_found_ok(self,
+                                 mock_subprocess,
+                                 mock_access):
         """Check that we run the correct rph validation script."""
         rph_config = rph_json_config_plugin.RphJson(self.config_location)
         rph_config.validate()
