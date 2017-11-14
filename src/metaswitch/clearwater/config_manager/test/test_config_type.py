@@ -125,6 +125,10 @@ class TestGetValidationScripts(unittest.TestCase):
                                  'path', ]]
         self.assertListEqual(answer.values(), ifcs_expected_script)
 
+
+# Once the technical debt in config_type_class_plugin.py has been addressed, so
+# that RphJson does not need a custom validate() function, then this test can
+# be removed.
 @mock.patch('metaswitch.clearwater.config_manager.config_type_class_plugin.os.access')
 @mock.patch('metaswitch.clearwater.config_manager.config_type_class_plugin.subprocess.check_output')
 class TestRphValidation(unittest.TestCase):

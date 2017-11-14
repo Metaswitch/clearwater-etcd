@@ -7,13 +7,13 @@
 # Otherwise no rights are granted except for those provided to you by
 # Metaswitch Networks in a separate written agreement.
 
+from clearwater_etcd_plugins.clearwater_config_manager.rph_json_plugin import RPHJSONPlugin
 import unittest
 import mock
 import logging
 
 _log = logging.getLogger()
 
-from clearwater_etcd_plugins.clearwater_config_manager.rph_json_plugin import RPHJSONPlugin
 
 class TestRphJsonPlugin(unittest.TestCase):
     @mock.patch("metaswitch.clearwater.config_manager.alarms.ConfigAlarm")
@@ -30,16 +30,17 @@ class TestRphJsonPlugin(unittest.TestCase):
         new_config_string = "This is a different config string. \n Like, totally different."
 
         # Call 'on_config_changed' with file.open mocked out
-        with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.rph_json_plugin.open',\
-                        mock.mock_open(read_data=old_config_string), create=True) as mock_open:
+        with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.rph_json_plugin.open',
+                        mock.mock_open(read_data=old_config_string),
+                        create=True) as mock_open:
             plugin.on_config_changed(new_config_string, mock_alarm)
 
         # Test assertions
         mock_open.assert_called_once_with(plugin.file(), "r")
-        mock_safely_write.assert_called_once_with(plugin.file(), new_config_string)
+        mock_safely_write.assert_called_once_with(plugin.file(),
+                                                  new_config_string)
         mock_run_command.assert_called_once_with(["/usr/share/clearwater/bin/reload_rph_json"])
         mock_alarm.update_file.assert_called_once_with(plugin.file())
-
 
     @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.rph_json_plugin.safely_write')
     @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.rph_json_plugin.run_command')
@@ -54,8 +55,9 @@ class TestRphJsonPlugin(unittest.TestCase):
         new_config_string = old_config_string
 
         # Call 'on_config_changed' with file.open mocked out
-        with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.rph_json_plugin.open',\
-                        mock.mock_open(read_data=old_config_string), create=True) as mock_open:
+        with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.rph_json_plugin.open',
+                        mock.mock_open(read_data=old_config_string),
+                        create=True) as mock_open:
             plugin.on_config_changed(new_config_string, None)
 
         # Test assertions
@@ -77,13 +79,14 @@ class TestRphJsonPlugin(unittest.TestCase):
         new_config_string = plugin.default_value()
 
         # Call 'on_config_changed' with file.open mocked out
-        with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.rph_json_plugin.open',\
-                        mock.mock_open(read_data=old_config_string), create=True) as mock_open:
+        with mock.patch('clearwater_etcd_plugins.clearwater_config_manager.rph_json_plugin.open',
+                        mock.mock_open(read_data=old_config_string),
+                        create=True) as mock_open:
             plugin.on_config_changed(new_config_string, mock_alarm)
 
         # Test assertions
         mock_open.assert_called_once_with(plugin.file(), "r")
-        mock_safely_write.assert_called_once_with(plugin.file(), plugin.default_value())
+        mock_safely_write.assert_called_once_with(plugin.file(),
+                                                  plugin.default_value())
         mock_run_command.assert_called_once_with(["/usr/share/clearwater/bin/reload_rph_json"])
         mock_alarm.update_file.assert_called_once_with(plugin.file())
-
