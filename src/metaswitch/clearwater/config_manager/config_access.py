@@ -825,8 +825,8 @@ def print_diff_and_syslog(config_type, config_1, config_2):
         print(output_str)
 
         # Log the changes
-        syslog.openlog("audit-log", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_NOTICE, syslog_str, facility=syslog.LOG_AUTH)
+        syslog.openlog("audit-log", syslog.LOG_PID, facility=syslog.LOG_AUTH)
+        syslog.syslog(syslog.LOG_NOTICE, syslog_str)
         syslog.closelog()
 
         return True
