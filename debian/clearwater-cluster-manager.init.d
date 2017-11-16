@@ -247,7 +247,7 @@ case "$1" in
   decommission)
 	log_daemon_msg "Decommissioning the cluster manager"
 	do_decommission
-	return $?
+	exit $?
 	;;
   abort-restart)
         log_daemon_msg "Abort-Restarting $DESC" "$NAME"
