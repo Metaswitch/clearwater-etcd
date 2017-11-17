@@ -102,6 +102,7 @@ if error_list:
     print(yaml.dump(temp_dict, default_flow_style=False).replace("u'", "'"))
     sys.exit(1)
 
+
 # Carry out final check, that no duplicated keys are present.
 # This check should be done last, after we have confirmed the json is valid.
 def fail_if_duplicated_keys(json_info):
@@ -117,6 +118,7 @@ def fail_if_duplicated_keys(json_info):
         raise KeyError(duplicated_key)
     else:
         return parsed_json
+
 
 try:
     json_file = json.load(open(config_file),
