@@ -45,8 +45,8 @@ except ValueError as e:
 # Check that no duplicated keys are present.
 # This check is done only after we have confirmed the json is valid.
 # This function is passed into json.load, and when json.load is called, it
-# passes each layer of the json file into this function as a list of tuples, and
-# takes the return value of this function as the parsed json.
+# passes each layer of the json file into this function as a list of tuples,
+# and takes the return value of this function as the parsed json.
 def fail_if_duplicated_keys(json_info):
     parsed_json = dict(json_info)
     if (len(parsed_json) != len(json_info)):
@@ -54,10 +54,11 @@ def fail_if_duplicated_keys(json_info):
         encountered_keys = []
         for key in json_info:
             if key[0] in encountered_keys:
-                duplicated_key = str(key[0])
+                duplicated_key = key[0]
             else:
                 encountered_keys.append(key[0])
-        raise ValueError("Config file contains the key {} twice in the same item.".format(duplicated_key))
+        error = "Config file contains the key '{}' twice in the same item.".format(duplicated_key)
+        raise ValueError(error)
     else:
         return parsed_json
 
@@ -65,7 +66,7 @@ def fail_if_duplicated_keys(json_info):
 try:
     json_file = json.load(open(config_file),
                           object_pairs_hook=fail_if_duplicated_keys)
-except KeyError as e:
+except ValueError as e:
     print "{} is not valid.".format(config_file)
     print "The errors are displayed below:"
     print e.message
