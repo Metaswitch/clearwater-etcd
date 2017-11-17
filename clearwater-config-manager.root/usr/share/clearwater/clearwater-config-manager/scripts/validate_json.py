@@ -57,7 +57,7 @@ def fail_if_duplicated_keys(json_info):
                 duplicated_key = key[0]
             else:
                 encountered_keys.append(key[0])
-        error = "Config file contains the key '{}' twice in the same item.".format(duplicated_key)
+        error = "The config file contains the key '{}' twice in the same item.".format(duplicated_key)
         raise ValueError(error)
     else:
         return parsed_json
