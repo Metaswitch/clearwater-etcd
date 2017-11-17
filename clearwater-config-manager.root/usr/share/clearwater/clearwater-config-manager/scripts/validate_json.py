@@ -41,6 +41,36 @@ except ValueError as e:
     print e.message
     sys.exit(1)
 
+
+# Check that no duplicated keys are present.
+# This check is done only after we have confirmed the json is valid.
+# This function is passed into json.load, and when json.load is called, it
+# passes each layer of the json file into this function as a list of tuples, and
+# takes the return value of this function as the parsed json.
+def fail_if_duplicated_keys(json_info):
+    parsed_json = dict(json_info)
+    if (len(parsed_json) != len(json_info)):
+        duplicated_key = ''
+        encountered_keys = []
+        for key in json_info:
+            if key[0] in encountered_keys:
+                duplicated_key = str(key[0])
+            else:
+                encountered_keys.append(key[0])
+        raise ValueError("Config file contains the key {} twice in the same item.".format(duplicated_key))
+    else:
+        return parsed_json
+
+
+try:
+    json_file = json.load(open(config_file),
+                          object_pairs_hook=fail_if_duplicated_keys)
+except KeyError as e:
+    print "{} is not valid.".format(config_file)
+    print "The errors are displayed below:"
+    print e.message
+    sys.exit(1)
+
 # Validate the configuration file against the schema
 validator = jsonschema.Draft4Validator(schema)
 error_list=sorted(validator.iter_errors(config), key=lambda e: e.path)
@@ -100,30 +130,4 @@ if error_list:
         nest.setdefault(str(last), {}).setdefault('The errors are', []).append(error.message)
 
     print(yaml.dump(temp_dict, default_flow_style=False).replace("u'", "'"))
-    sys.exit(1)
-
-
-# Carry out final check, that no duplicated keys are present.
-# This check should be done last, after we have confirmed the json is valid.
-def fail_if_duplicated_keys(json_info):
-    parsed_json = dict(json_info)
-    if (len(parsed_json) != len(json_info)):
-        duplicated_key = ''
-        encountered_keys = []
-        for key in json_info:
-            if key[0] in encountered_keys:
-                duplicated_key = str(key[0])
-            else:
-                encountered_keys.append(key[0])
-        raise KeyError(duplicated_key)
-    else:
-        return parsed_json
-
-
-try:
-    json_file = json.load(open(config_file),
-                          object_pairs_hook=fail_if_duplicated_keys)
-except KeyError as e:
-    print "{} is not valid.".format(config_file)
-    print "It contains the key ({}) twice in the same object, which is not permitted.".format(e)
     sys.exit(1)
