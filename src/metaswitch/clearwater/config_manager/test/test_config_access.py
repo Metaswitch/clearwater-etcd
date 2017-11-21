@@ -1383,22 +1383,54 @@ class TestFixOwnership(unittest.TestCase):
 
 
 # For added realism, we use some real examples of config files in these tests.
+@mock.patch("metaswitch.clearwater.config_manager.config_access.load_plugins_in_dir")
 @mock.patch("metaswitch.clearwater.config_manager.config_access.syslog")
 @mock.patch("metaswitch.clearwater.config_manager.config_access.get_user_name")
 class TestDiffAndSyslog(unittest.TestCase):
-    def test_check_iden(self, mock_username, mock_syslog):
+
+    def test_no_plugins(self, mock_username, mock_syslog, mock_plugins):
         """check that the diff for two identical files returns false"""
+        mock_plugins.return_value = None
+
+        with self.assertRaises(RuntimeError):
+            config_access.print_diff_and_syslog("shared_config",
+                                                'string is a string \n yay',
+                                                'string is a string \n yay')
+
+    def test_no_matching_plugins(self, mock_username, mock_syslog, mock_plugins):
+        """check that the diff for two identical files returns false"""
+        mock_plugins.return_value = ["not_shared_config", "me neither"]
+
+        with self.assertRaises(RuntimeError):
+            config_access.print_diff_and_syslog("shared_config",
+                                                'string is a string \n yay',
+                                                'string is a string \n yay')
+
+    def test_check_iden(self, mock_username, mock_syslog, mock_plugins):
+        """check that the diff for two identical files returns false"""
+        mock_plugins.return_value = ["shared_config"]
         answer = config_access.print_diff_and_syslog(
             "shared_config",
             'string is a string \n yay',
             'string is a string \n yay')
         self.assertIs(answer, False)
 
+    def test_blank_username(self, mock_username, mock_syslog, mock_plugins):
+        """check that we can handle blank usernames from the get_user_name function"""
+        mock_plugins.return_value = ["shared_config"]
+        mock_username.return_value = ""
+        answer = config_access.print_diff_and_syslog(
+            "shared_config",
+            'string is a string \n yay',
+            'string is a string \n nay')
+        self.assertIs(answer, False)
+
     @mock.patch("metaswitch.clearwater.config_manager.config_access.sys.stdout",
                 new_callable=StringIO)
-    def test_check_diff(self, mock_stdout, mock_getname, mock_syslog):
+    def test_check_diff(self, mock_stdout, mock_getname, mock_syslog, mock_plugins):
         """Check that for two different files with additions, deletions and
         moves the syslog_str and output_str represent the differences."""
+        mock_plugins.return_value = ["shared_config"]
         mock_getname.return_value = 'name'
         string1 = """# Config for deployment, local site site1
                 sprout_hostname='sprout.site1.md6-clearwater.clearwater.test'
@@ -1495,9 +1527,10 @@ class TestDiffAndSyslog(unittest.TestCase):
 "                scscf='5054'\"\n"""
         self.assertMultiLineEqual(mock_stdout.getvalue(), textchanges)
 
-    def test_call_syslog(self, mock_getname, mock_syslog):
+    def test_call_syslog(self, mock_getname, mock_syslog, mock_plugins):
         """check that syslog.openlog, syslog.syslog and syslog.closelog are
         called"""
+        mock_plugins.return_value = ["shared_config"]
         mock_getname.return_value = 'name'
         string1 = """# Config for deployment, local site site1
                 sprout_hostname='sprout.site1.md6-clearwater.clearwater.test'
