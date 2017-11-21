@@ -68,6 +68,8 @@ FIRST_DOWNLOAD_WARNING = ("{} is not present in the configuration database. A "
 FILE_PERMISSIONS_WARNING = ("The file permissions may be incorrect on your "
                             "downloaded files.")
 
+CONFIG_TYPE_NOT_RECOGNIZED = "Configuration type {} not recognized"
+
 
 # Exceptions
 class ConfigDownloadFailed(Exception):
@@ -765,6 +767,19 @@ def print_diff_and_syslog(config_type, config_1, config_2):
     Returns True if there are changes, that need to be uploaded, or False if
     the two are the same.
     """
+
+    # Check we've got a valid config type - this function might not be called
+    # directly from within the module.
+    config_classes = load_plugins_in_dir(PLUGIN_DIR)
+
+    if not config_classes:
+        log.error(NO_CONFIG_FOUND)
+        raise RuntimeError(NO_CONFIG_FOUND)
+
+    if not config_type in config_classes:
+        log.error(CONFIG_TYPE_NOT_RECOGNIZED.format(config_type))
+        raise RuntimeError(CONFIG_TYPE_NOT_RECOGNIZED.format(config_type))
+
     # We do care about line order changes (so don't sort lines) as we want line
     # changes to count as config changes for allowing the config to upload.
     config_lines_1 = config_1.splitlines()
@@ -792,8 +807,17 @@ def print_diff_and_syslog(config_type, config_1, config_2):
         additions.remove(item)
 
     if additions or deletions or moved:
-        header = "Configuration file change: user {} has modified {}.".format(
-            get_user_name(),
+
+        # If this is being run via ssh then we won't be able to get the user
+        # name. We'll already have logged elsewhere, so just log the changes.
+        user = get_user_name()
+        if user and len(user) > 0:
+            user_desc = "user {}".format(user)
+        else:
+            user_desc = "user"
+
+        header = "Configuration file change: {} has modified {}.".format(
+            user_desc,
             config_type)
 
         # For the syslog, we want the diff output on one line.
