@@ -202,7 +202,7 @@ class ConfigLoader(object):
             # If the key isn't present, create an empty file with a default
             # revision number. Users can add the first revision!
             log.info("etcd key %s is not present in the database", key_path)
-            print FIRST_DOWNLOAD_WARNING
+            print FIRST_DOWNLOAD_WARNING.format(selected_config.name)
             first_value = ""
             first_index = 0
             return first_value, first_index
@@ -825,7 +825,7 @@ def print_diff_and_syslog(config_type, config_1, config_2):
         print(output_str)
 
         # Log the changes
-        syslog.openlog("audit-log", syslog.LOG_PID)
+        syslog.openlog("audit-log", syslog.LOG_PID, facility=syslog.LOG_AUTH)
         syslog.syslog(syslog.LOG_NOTICE, syslog_str)
         syslog.closelog()
 

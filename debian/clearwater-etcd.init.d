@@ -652,7 +652,7 @@ case "$1" in
 
         log_daemon_msg "Decommissioning etcd"
         do_decommission
-        return $?
+        exit $?
         ;;
   abort-restart)
         log_daemon_msg "Abort-Restarting $DESC" "$NAME"
