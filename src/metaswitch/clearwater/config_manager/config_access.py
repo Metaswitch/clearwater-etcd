@@ -17,6 +17,7 @@ import syslog
 import sys
 import datetime
 import time
+import locale
 from metaswitch.clearwater.config_manager.config_type_plugin_loader import load_plugins_in_dir
 from metaswitch.common.logging_config import configure_syslog
 
@@ -817,6 +818,9 @@ def print_diff_and_syslog(config_type, config_1, config_2):
             syslog_str += ", ".join(['"' + line + '"' for line in moved])
             output_str += "\n".join(['"' + line + '"' for line in moved])
 
+        # Decode the syslog_str using the locale codec to allow encoding
+        decode_codec = locale.getpreferredencoding()
+        syslog_str = syslog_str.decode(decode_codec)
         # Force encoding so logstr prints and syslogs nicely
         syslog_str = syslog_str.encode("utf-8")
 
