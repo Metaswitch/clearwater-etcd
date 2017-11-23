@@ -786,9 +786,14 @@ def print_diff_and_syslog(config_type, config_1, config_2):
 
     # If something is in both deletions and additions it means the line has
     # moved so will be in third category and removed from the other two.
-    moved = [x for x in deletions for y in additions if x == y]
+    moved = []
+    for item in additions:
+        if item in deletions:
+            deletions.remove(item)
+            moved.append(item)
+            continue
+
     for item in moved:
-        deletions.remove(item)
         additions.remove(item)
 
     if additions or deletions or moved:

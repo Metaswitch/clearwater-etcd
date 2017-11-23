@@ -1490,9 +1490,9 @@ class TestDiffAndSyslog(unittest.TestCase):
  Lines added:
 "                remote_audit_logging_server="10.225.22.158:514""
  Lines moved:
-"                snmp_notification_types='enterprise'"
+"                scscf='5054'"
 "                icscf='5052'"
-"                scscf='5054'\"\n"""
+"                snmp_notification_types='enterprise'\"\n"""
         self.assertMultiLineEqual(mock_stdout.getvalue(), textchanges)
 
     def test_call_syslog(self, mock_getname, mock_syslog):
@@ -1583,3 +1583,33 @@ class TestDiffAndSyslog(unittest.TestCase):
         self.assertIs(mock_syslog.openlog.call_count, 1)
         self.assertIs(mock_syslog.syslog.call_count, 1)
         self.assertIs(mock_syslog.closelog.call_count, 1)
+
+    @mock.patch("metaswitch.clearwater.config_manager.config_access.sys.stdout",
+                new_callable=StringIO)
+    def test_duplicate_and_move(self, mock_stdout, mock_getname, mock_syslog):
+        """Check that a moved file that is duplicated doesn't cause issues."""
+        mock_getname.return_value = 'name'
+        string1 = """Config
+                     Line 1
+                     Line 2
+                     Line 3"""
+
+        string2 = """Config
+                     Line 2
+                     Line 3
+                     Line 1
+                     Line 1"""
+
+        answer = config_access.print_diff_and_syslog("shared_config",
+                                                     string1,
+                                                     string2)
+        self.assertIs(answer, True)
+        textchanges = """Configuration file change: user name has modified shared_config.
+ Lines added:
+"                     Line 1"
+ Lines moved:
+"                     Line 1"
+"""
+        self.assertMultiLineEqual(mock_stdout.getvalue(), textchanges)
+
+
