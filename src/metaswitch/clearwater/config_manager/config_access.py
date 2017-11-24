@@ -13,7 +13,6 @@ import pwd
 import argparse
 import logging
 import difflib
-import syslog
 import sys
 import datetime
 import time
