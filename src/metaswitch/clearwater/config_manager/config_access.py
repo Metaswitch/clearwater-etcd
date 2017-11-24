@@ -13,12 +13,14 @@ import pwd
 import argparse
 import logging
 import difflib
-import syslog
 import sys
 import datetime
 import time
+import collections
 from metaswitch.clearwater.config_manager.config_type_plugin_loader import load_plugins_in_dir
 from metaswitch.common.logging_config import configure_syslog
+from metaswitch.common.user_access_control import get_user_name
+from metaswitch.common.user_access_control import audit_log
 
 # Constants
 MAXIMUM_CONFIG_SIZE = 1000000
@@ -68,6 +70,7 @@ FIRST_DOWNLOAD_WARNING = ("{} is not present in the configuration database. A "
 FILE_PERMISSIONS_WARNING = ("The file permissions may be incorrect on your "
                             "downloaded files.")
 
+CONFIG_TYPE_NOT_RECOGNIZED = "Configuration type {} not recognized"
 
 # Exceptions
 class ConfigDownloadFailed(Exception):
@@ -413,7 +416,7 @@ def main(args, config_filename):
             sys.exit(exc)
 
 
-def lookup_config_type(config_type, config_location):
+def lookup_config_type(config_type, config_location = None):
     """
     This takes the string defining the config_type and a string of the
     config_location which is where the config is downloaded to and returns
@@ -421,10 +424,9 @@ def lookup_config_type(config_type, config_location):
     """
     config_classes = load_plugins_in_dir(PLUGIN_DIR, config_location)
 
-    # There is no need for an else part as the parse_arguments function
-    # will gurantee there is always a match
-    return next(config for config in config_classes
-                if config.name == config_type)
+    # Find the config instance with matching name or return None.
+    return next((config for config in config_classes if config.name == config_type),
+                None)
 
 
 def parse_arguments():
@@ -719,30 +721,6 @@ def confirm_yn(prompt, autoskip=False):
             return supplied_input.strip().lower().startswith('y')
 
 
-def get_user_name():
-    """
-    Returns the local user name if no RADIUS server was used and returns the
-    user name that was used to authenticate with a RADIUS server, if used.
-    Note that this only works if called from the terminal.
-    """
-    # Worth noting that `whoami` behaves differently to `who am i`, we need the
-    # latter.
-    process = subprocess.check_output(["who", "am", "i"])
-    splits = process.split()
-    if splits:
-        # The format of `who am i` looks like this:
-        #
-        # clearwater      pts/1        2017-10-30 18:25 (:0)
-        #
-        # This is the login that is associated with the current user.
-        return splits[0]
-    else:
-        # `who am i` has not returned anything! This happens if the connection
-        # has been made via the console rather than over ssh. In these
-        # situations, we can use the $USER environment variable as a backup.
-        return os.getenv("USER")
-
-
 def get_user_download_dir():
     """Returns the user-specific directory for downloaded config."""
     username = get_user_name()
@@ -759,23 +737,23 @@ def get_base_download_dir():
     return os.path.join(base_dir, DOWNLOAD_DIR)
 
 
-def print_diff_and_syslog(config_type, config_1, config_2):
+def get_per_line_diffs(old_config, new_config):
+    """Generate a list of deletions, additions and moves between two blocks
+    of configuration. Returns an ordered dictionary containing any removed,
+    added or deleted lines.
     """
-    Print a readable diff of changes between two texts and log to syslog.
-    Returns True if there are changes, that need to be uploaded, or False if
-    the two are the same.
-    """
+
     # We do care about line order changes (so don't sort lines) as we want line
     # changes to count as config changes for allowing the config to upload.
-    config_lines_1 = config_1.splitlines()
-    config_lines_2 = config_2.splitlines()
+    old_config_lines = old_config.splitlines()
+    new_config_lines = new_config.splitlines()
 
     # Get a list of diffs, like the lines of the output you'd see when you
     # run `diff` on the command line:
     # * removed lines are prefixed with "- ".
     # * added lines are prefixed with "+ ".
-    difflines = list(difflib.ndiff(config_lines_1,
-                                   config_lines_2))
+    difflines = list(difflib.ndiff(old_config_lines,
+                                   new_config_lines))
 
     # We don't want to print out the '+' or '-': we have our own way of
     # describing diffs.
@@ -786,12 +764,70 @@ def print_diff_and_syslog(config_type, config_1, config_2):
 
     # If something is in both deletions and additions it means the line has
     # moved so will be in third category and removed from the other two.
-    moved = [x for x in deletions for y in additions if x == y]
+    moved = []
+    for item in additions:
+        if item in deletions:
+            deletions.remove(item)
+            moved.append(item)
+            continue
+
     for item in moved:
-        deletions.remove(item)
         additions.remove(item)
 
-    if additions or deletions or moved:
+    diff_info = collections.OrderedDict()
+
+    if deletions:
+        diff_info["Lines removed:"] = ['"' + line + '"' for line in deletions]
+    if additions:
+        diff_info["Lines added:"] = ['"' + line + '"' for line in additions]
+    if moved:
+        diff_info["Lines moved:"] = ['"' + line + '"' for line in moved]
+
+    return diff_info
+
+def get_unified_diff (old_config, new_config):
+    """Generate a unified diff of the changes between the old and new
+    configuration. Returns a new-line-separated string of the changes.
+    """
+
+    diff = difflib.unified_diff(old_config.splitlines(),
+                                new_config.splitlines(),
+                                n=3)
+    return "\n".join(diff)
+
+def use_unified_diff (config_type):
+    """Determine whether to use a unified diff for a piece of config"""
+
+    config_info = lookup_config_type(config_type)
+    if config_info:
+        log.debug("Found config type")
+        unified_diff = config_info.use_unified_diff()
+    else:
+        log.debug("No matching config type - default to unified diff")
+        unified_diff = True
+
+    return unified_diff
+
+def print_diff_and_syslog(config_type, config_1, config_2):
+    """
+    Print a readable diff of changes between two texts and log to syslog.
+    Returns True if there are changes, that need to be uploaded, or False if
+    the two are the same.
+    """
+
+    unified_diff = use_unified_diff(config_type)
+    if unified_diff:
+        log.debug("Generating unified diff")
+        unified_diff = get_unified_diff(config_1, config_2)
+        if len(unified_diff) > 0:
+            diff_info = { "Changes:" : [ unified_diff ] }
+        else:
+            diff_info = None
+    else:
+        log.debug("Generating per line diff")
+        diff_info = get_per_line_diffs(config_1, config_2)
+
+    if diff_info:
         header = "Configuration file change: user {} has modified {}.".format(
             get_user_name(),
             config_type)
@@ -799,35 +835,17 @@ def print_diff_and_syslog(config_type, config_1, config_2):
         # For the syslog, we want the diff output on one line.
         # For the UI, we want to output on multiple lines, as it's
         # much clearer.
-        syslog_str = header
         output_str = header
-        if deletions:
-            syslog_str += "Lines removed: "
-            output_str += "\n Lines removed:\n"
-            syslog_str += ", ".join(['"' + line + '"' for line in deletions])
-            output_str += "\n".join(['"' + line + '"' for line in deletions])
-        if additions:
-            syslog_str += "Lines added: "
-            output_str += "\n Lines added:\n"
-            syslog_str += ", ".join(['"' + line + '"' for line in additions])
-            output_str += "\n".join(['"' + line + '"' for line in additions])
-        if moved:
-            syslog_str += "Lines moved: "
-            output_str += "\n Lines moved:\n"
-            syslog_str += ", ".join(['"' + line + '"' for line in moved])
-            output_str += "\n".join(['"' + line + '"' for line in moved])
 
-        # Force encoding so logstr prints and syslogs nicely
-        syslog_str = syslog_str.encode("utf-8")
+        for info in diff_info:
+            output_str += "\n " + info + "\n"
+            output_str += "\n".join(diff_info[info])
 
         # Print changes to console so the user can do a sanity check
         log.info(output_str)
         print(output_str)
 
-        # Log the changes
-        syslog.openlog("audit-log", syslog.LOG_PID, facility=syslog.LOG_AUTH)
-        syslog.syslog(syslog.LOG_NOTICE, syslog_str)
-        syslog.closelog()
+        audit_log(output_str)
 
         return True
     else:
