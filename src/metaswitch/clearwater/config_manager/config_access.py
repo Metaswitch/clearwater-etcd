@@ -424,7 +424,6 @@ def lookup_config_type(config_type, config_location = None):
     an instance of the class containing data on the config type selected
     """
     config_classes = load_plugins_in_dir(PLUGIN_DIR, config_location)
-    print config_classes
 
     # Find the config instance with matching name or return None.
     return next((config for config in config_classes if config.name == config_type),
