@@ -16,6 +16,7 @@ import difflib
 import sys
 import datetime
 import time
+import locale
 import collections
 from metaswitch.clearwater.config_manager.config_type_plugin_loader import load_plugins_in_dir
 from metaswitch.common.logging_config import configure_syslog

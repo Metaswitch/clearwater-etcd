@@ -43,10 +43,9 @@ class ConfigType:
 
     def __init__(self, configpath):
         """
-        self.scripts - A list of lists, this is needed because the lists are
-        passed into subprocess.call to run the validation script. They are in
-        a list as multiple validation scripts can be available for a
-        configuration type.
+        self.scripts - A dict, this is needed because the dict values are
+        passed into subprocess.call to run the validation script. Multiple
+        validation scripts can be available for a configuration type.
         The config types can be broken down into categories and depending on
         which category the validation scripts are a certain style.
         self.configfile - The path to the config file to be validated.
