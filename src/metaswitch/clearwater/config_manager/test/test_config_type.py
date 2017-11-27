@@ -18,6 +18,7 @@ from clearwater_etcd_plugins.clearwater_config_access import shared_ifcs_config_
 from clearwater_etcd_plugins.clearwater_config_access import scscf_json_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import fallback_ifcs_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import enum_json_config_plugin
+from clearwater_etcd_plugins.clearwater_config_access import rph_json_config_plugin
 
 
 class TestClass(config_type_class_plugin.ConfigType):
@@ -141,6 +142,33 @@ class TestDiffType(unittest.TestCase):
 
         answer = fallback_ifcs.use_unified_diff()
         self.assertIs(answer, True)
+
+
+# Once the technical debt in config_type_class_plugin.py has been addressed, so
+# that RphJson does not need a custom validate() function, then this test can
+# be removed.
+@mock.patch('metaswitch.clearwater.config_manager.config_type_class_plugin.os.access')
+@mock.patch('metaswitch.clearwater.config_manager.config_type_class_plugin.subprocess.check_output')
+class TestRphValidation(unittest.TestCase):
+    config_location = "/some/dir/rph.json"
+
+    def test_rph_script_found_ok(self,
+                                 mock_subprocess,
+                                 mock_access):
+        """Check that we run the correct rph validation script."""
+        rph_config = rph_json_config_plugin.RphJson(self.config_location)
+        rph_config.validate()
+        # One script should have been executed.
+        self.assertEqual(len(mock_subprocess.call_args_list), 1)
+        # We should be calling the custom rph config validation script here.
+        self.assertEqual(
+                mock.call(["python",
+                           os.path.join(config_type_class_plugin.VALIDATION_SCRIPTS_FOLDER,
+                                        "rph_validation.py"),
+                           os.path.join(config_type_class_plugin.VALIDATION_SCRIPTS_FOLDER,
+                                        "rph_schema.json"),
+                           self.config_location], stderr=-2),
+                mock_subprocess.call_args_list[0])
 
 
 @mock.patch('metaswitch.clearwater.config_manager.config_type_class_plugin.os.access')

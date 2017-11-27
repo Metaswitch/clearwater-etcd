@@ -103,6 +103,10 @@ class ConfigType:
         unified_diff = self.filetype in ['json', 'xml']
         return unified_diff
 
+    # This validation method was found to be too restrictive, and custom
+    # __init__ and validate() functions had to be written for RphJson.
+    # Editing this class to be less restrictive and changing RphJson to use
+    # this class's functions has been left as technical debt.
     def validate(self):
         """
         This method inherits the scripts to run validation against and then
