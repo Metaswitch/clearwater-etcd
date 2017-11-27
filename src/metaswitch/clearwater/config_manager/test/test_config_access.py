@@ -19,7 +19,6 @@ import etcd.client
 import metaswitch.clearwater.config_manager.config_access as config_access
 from clearwater_etcd_plugins.clearwater_config_access import shared_config_config_plugin
 
-
 class TestClass:
     """This class is used to create an instance for the mock.return_value of
     load_plugins_in_dir"""
@@ -1382,11 +1381,39 @@ class TestFixOwnership(unittest.TestCase):
         config_access.reset_file_ownership('file/path')
 
 
+class MockConfigPlugin:
+    def __init__(self, use_unified_diff):
+        self._use_unified_diff = use_unified_diff
+
+    def use_unified_diff(self):
+        return self._use_unified_diff
+
+
+@mock.patch("metaswitch.clearwater.config_manager.config_access.lookup_config_type")
+class TestDiffType(unittest.TestCase):
+    def test_diff_type(self, mock_config_type):
+        """check that we return the correct diff type based on the underlying
+        config_type object returned.
+        """
+        shared_config = MockConfigPlugin(False)
+        json_config = MockConfigPlugin(True)
+
+        tests = { shared_config : False,
+                  json_config : True,
+                  None : True }
+        for plugin in tests.keys():
+            mock_config_type.return_value = plugin
+
+            answer = config_access.use_unified_diff("my_config_type")
+            self.assertIs(answer, tests[plugin])
+
+
 # For added realism, we use some real examples of config files in these tests.
-@mock.patch("metaswitch.clearwater.config_manager.config_access.syslog")
+@mock.patch("metaswitch.clearwater.config_manager.config_access.use_unified_diff", autospec=True)
+@mock.patch("metaswitch.clearwater.config_manager.config_access.audit_log")
 @mock.patch("metaswitch.clearwater.config_manager.config_access.get_user_name")
 class TestDiffAndSyslog(unittest.TestCase):
-    def test_check_iden(self, mock_username, mock_syslog):
+    def test_check_iden(self, mock_username, mock_syslog, mock_unified_diff):
         """check that the diff for two identical files returns false"""
         answer = config_access.print_diff_and_syslog(
             "shared_config",
@@ -1396,9 +1423,10 @@ class TestDiffAndSyslog(unittest.TestCase):
 
     @mock.patch("metaswitch.clearwater.config_manager.config_access.sys.stdout",
                 new_callable=StringIO)
-    def test_check_diff(self, mock_stdout, mock_getname, mock_syslog):
+    def test_check_diff(self, mock_stdout, mock_getname, mock_syslog, mock_unified_diff):
         """Check that for two different files with additions, deletions and
         moves the syslog_str and output_str represent the differences."""
+        mock_unified_diff.return_value = False
         mock_getname.return_value = 'name'
         string1 = """# Config for deployment, local site site1
                 sprout_hostname='sprout.site1.md6-clearwater.clearwater.test'
@@ -1490,14 +1518,14 @@ class TestDiffAndSyslog(unittest.TestCase):
  Lines added:
 "                remote_audit_logging_server="10.225.22.158:514""
  Lines moved:
-"                snmp_notification_types='enterprise'"
+"                scscf='5054'"
 "                icscf='5052'"
-"                scscf='5054'\"\n"""
+"                snmp_notification_types='enterprise'\"\n"""
         self.assertMultiLineEqual(mock_stdout.getvalue(), textchanges)
 
-    def test_call_syslog(self, mock_getname, mock_syslog):
-        """check that syslog.openlog, syslog.syslog and syslog.closelog are
-        called"""
+    def test_call_syslog(self, mock_getname, mock_syslog, mock_unified_diff):
+        """check that we're audit logging the diffs"""
+        mock_unified_diff.return_value = False
         mock_getname.return_value = 'name'
         string1 = """# Config for deployment, local site site1
                 sprout_hostname='sprout.site1.md6-clearwater.clearwater.test'
@@ -1580,6 +1608,114 @@ class TestDiffAndSyslog(unittest.TestCase):
                 remote_audit_logging_server="10.225.22.158:514\""""
 
         config_access.print_diff_and_syslog("shared_config", string1, string2)
-        self.assertIs(mock_syslog.openlog.call_count, 1)
-        self.assertIs(mock_syslog.syslog.call_count, 1)
-        self.assertIs(mock_syslog.closelog.call_count, 1)
+        self.assertIs(mock_syslog.call_count, 1)
+
+    @mock.patch("metaswitch.clearwater.config_manager.config_access.sys.stdout",
+                new_callable=StringIO)
+    def test_duplicate_and_move(self, mock_stdout, mock_getname, mock_syslog, mock_unified_diff):
+        """Check that a moved file that is duplicated doesn't cause issues."""
+        mock_unified_diff.return_value = False
+        mock_getname.return_value = 'name'
+        string1 = """Config
+                     Line 1
+                     Line 2
+                     Line 3"""
+
+        string2 = """Config
+                     Line 2
+                     Line 3
+                     Line 1
+                     Line 1"""
+
+        answer = config_access.print_diff_and_syslog("shared_config",
+                                                     string1,
+                                                     string2)
+        self.assertIs(answer, True)
+        textchanges = """Configuration file change: user name has modified shared_config.
+ Lines added:
+"                     Line 1"
+ Lines moved:
+"                     Line 1"
+"""
+        self.assertMultiLineEqual(mock_stdout.getvalue(), textchanges)
+
+    @mock.patch("metaswitch.clearwater.config_manager.config_access.sys.stdout",
+                new_callable=StringIO)
+    def test_check_unified_diff(self, mock_stdout, mock_getname, mock_syslog, mock_unified_diff):
+        """Check unified diffs."""
+        mock_unified_diff.return_value = True
+        mock_getname.return_value = 'name'
+        string1 = """<xml>
+                       <tag1>
+                       </tag1>
+                       <tag2>
+                       </tag2>
+                       <tag3>
+                         <tag3a>
+                         </tag3a>
+                       </tag3>
+                       <tag4>
+                       </tag4>
+                       <tag5>
+                       </tag5>
+                       <tag6>
+                       </tag6>
+                  """
+
+        string2 = """<xml>
+                       <tag1>
+                       </tag1>
+                       <tag3>
+                         <tag3a>
+                           <tag3a-i>
+                           </tag3a-i>
+                           <tag3a-ii>
+                           </tag3a-ii>
+                         </tag3a>
+                         <tag3b>
+                         </tag3b>
+                       </tag3>
+                       <tag4>
+                       </tag4>
+                       <tag5>
+                       </tag5>
+                       <tag6>
+                       </tag6>
+                  """
+
+        answer = config_access.print_diff_and_syslog("xml",
+                                                     string1,
+                                                     string2)
+        self.assertIs(answer, True)
+        # Note use of escaped space to prevent editors from removing spaces.
+        textchanges = """Configuration file change: user name has modified xml.
+ Changes:
+---\x20
+
++++\x20
+
+@@ -1,11 +1,15 @@
+
+ <xml>
+                        <tag1>
+                        </tag1>
+-                       <tag2>
+-                       </tag2>
+                        <tag3>
+                          <tag3a>
++                           <tag3a-i>
++                           </tag3a-i>
++                           <tag3a-ii>
++                           </tag3a-ii>
+                          </tag3a>
++                         <tag3b>
++                         </tag3b>
+                        </tag3>
+                        <tag4>
+                        </tag4>
+"""
+        self.maxDiff = None
+        self.assertMultiLineEqual(mock_stdout.getvalue(), textchanges)
+
+
+
