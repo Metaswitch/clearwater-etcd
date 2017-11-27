@@ -815,8 +815,8 @@ def print_diff_and_syslog(config_type, config_1, config_2):
     Returns True if there are changes, that need to be uploaded, or False if
     the two are the same.
     """
-    # This makes sure that both configs strings to avoid issues with combining
-    #  unicode and strings together
+    # This makes sure that both configs are strings to avoid issues with
+    # combining unicode and strings together
     if isinstance(config_1, unicode):
         config_1 = config_1.encode('utf-8')
     if isinstance(config_1, unicode):
