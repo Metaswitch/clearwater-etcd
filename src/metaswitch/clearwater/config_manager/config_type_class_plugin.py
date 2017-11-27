@@ -97,6 +97,12 @@ class ConfigType:
                    if os.access(script, os.X_OK)}
         return scripts
 
+    def use_unified_diff(self):
+        """Returns true if diffs should be in unified diff format or false
+        if per-line."""
+        unified_diff = self.filetype in ['json', 'xml']
+        return unified_diff
+
     # This validation method was found to be too restrictive, and custom
     # __init__ and validate() functions had to be written for RphJson.
     # Editing this class to be less restrictive and changing RphJson to use

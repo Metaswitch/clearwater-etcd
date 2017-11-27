@@ -125,6 +125,24 @@ class TestGetValidationScripts(unittest.TestCase):
                                  'path', ]]
         self.assertListEqual(answer.values(), ifcs_expected_script)
 
+class TestDiffType(unittest.TestCase):
+    def test_unified_diff(self):
+        """tests that the unified diff is used for json and xml files but not for others"""
+
+        # Test one type of each config - json, xml and shared_config
+        shared_config = shared_config_config_plugin.SharedConfig('path')
+        scscf_json = scscf_json_config_plugin.ScscfJson('path')
+        fallback_ifcs = fallback_ifcs_config_plugin.FallbackIfcsXml('path')
+
+        answer = shared_config.use_unified_diff()
+        self.assertIs(answer, False)
+
+        answer = scscf_json.use_unified_diff()
+        self.assertIs(answer, True)
+
+        answer = fallback_ifcs.use_unified_diff()
+        self.assertIs(answer, True)
+
 
 # Once the technical debt in config_type_class_plugin.py has been addressed, so
 # that RphJson does not need a custom validate() function, then this test can
