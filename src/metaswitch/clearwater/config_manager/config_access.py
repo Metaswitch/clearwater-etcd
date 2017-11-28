@@ -179,6 +179,8 @@ class ConfigLoader(object):
         """Save a copy of a given config type to the specified local store.
         Raises a ConfigDownloadFailed exception if unsuccessful."""
         value, index = self.get_config_and_index(selected_config)
+        if isinstance(value, unicode):
+            value = value.encode('utf-8')
 
         # Write the config to file.
         try:
@@ -814,6 +816,12 @@ def print_diff_and_syslog(config_type, config_1, config_2):
     Returns True if there are changes, that need to be uploaded, or False if
     the two are the same.
     """
+    # This makes sure that both configs are strings to avoid issues with
+    # combining unicode and strings together
+    if isinstance(config_1, unicode):
+        config_1 = config_1.encode('utf-8')
+    if isinstance(config_1, unicode):
+        config_2 = config_2.encode('utf-8')
 
     unified_diff = use_unified_diff(config_type)
     if unified_diff:
@@ -845,6 +853,9 @@ def print_diff_and_syslog(config_type, config_1, config_2):
         log.info(output_str)
         print(output_str)
 
+        # The output_str gets encoded as 'utf-8' during audit_log() and you
+        # cannot encode utf-8 as utf-8.
+        output_str = output_str.decode('utf-8')
         audit_log(output_str)
 
         return True
