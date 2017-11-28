@@ -5,7 +5,7 @@
 # Otherwise no rights are granted except for those provided to you by
 # Metaswitch Networks in a separate written agreement.
 
-from shutil import rmtree
+from shutil import rmtree, copytree
 from .etcdserver import EtcdServer
 from metaswitch.common.logging_config import configure_test_logging
 configure_test_logging()
@@ -14,6 +14,7 @@ configure_test_logging()
 class EtcdCluster(object):
     def __init__(self, n=1):
         self.datadir = "./etcd_test_data"
+        self.backup_dir = "./debug_backup_test_data"
         self.servers = {}
         self.pool = ["127.0.0.{}".format(last_byte)  for last_byte in range (100, 150)]
         self.initialise_servers(n)
@@ -51,6 +52,20 @@ class EtcdCluster(object):
     def __del__(self):
         self.delete_datadir()
 
+    def backup_datadir(self):
+        rmtree(self.backup_dir, True)
+        copytree(self.datadir, self.backup_dir)
+
     def delete_datadir(self):
         rmtree(self.datadir, True)
 
+    def debug(self):
+        dbg = ("Cluster servers - {}\n".format(self.servers.keys()))
+        for server in self.servers.values():
+            dbg += "==============================\n"
+            dbg += repr(server)
+            dbg += "server stats - {}".format(server.getStats())
+            dbg += "isLeader - {}\n".format(server.isLeader())
+            dbg += "memberList - {}\n".format(server.memberList())
+            dbg += "isAlive - {}\n".format(server.isAlive())
+        print dbg

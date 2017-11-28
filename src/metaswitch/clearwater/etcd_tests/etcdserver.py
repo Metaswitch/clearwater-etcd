@@ -123,10 +123,13 @@ class EtcdServer(object):
         return ((rsp.status == 200) or (rsp.status == 201))
 
     def isLeader(self):
+        rsp = self.getStats()
+        return json.loads(rsp)['state'] == "StateLeader"
+
+    def getStats(self):
         cxn = httplib.HTTPConnection(self._ip, 4000)
         cxn.request("GET", "/v2/stats/self");
-        rsp = cxn.getresponse().read()
-        return json.loads(rsp)['state'] == "StateLeader"
+        return cxn.getresponse().read()
 
     def __del__(self):
         # Kill the etcd subprocess on destruction
@@ -156,3 +159,12 @@ class EtcdServer(object):
 
     def client(self):
         return etcd.Client(self._ip, port=4000)
+
+    def __repr__(self):
+        return ("IP - {}\n"
+                "'Existing' - {}\n"
+                "Name - {}\n"
+                "cmd - {}\n"
+                "subprocess - {}\n"
+                "datadir - {}\n"
+                .format(self._ip, self._existing, self._name, self._cmd, self._subprocess, self._datadir))

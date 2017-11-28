@@ -21,9 +21,12 @@ class EtcdTestBase(unittest.TestCase):
         s2_leader = s2.isLeader()
         hasOneLeader = s1_leader != s2_leader
         if not hasOneLeader:
-            print ("\ns1: {}, isLeader {}"
-                   "\ns2: {}, isLeader {}".format(s1._ip, s1_leader,
-                                                  s2._ip, s2_leader))
+            print ("Expected only one leader\n"
+                   "     s1: {}, isLeader {}\n"
+                   "     s2: {}, isLeader {}\n"
+                   "Dumping debug information:\n".format(s1._ip, s1_leader, s2._ip, s2_leader))
+            c.debug()
+            c.backup_datadir()
 
         self.assertTrue(hasOneLeader)
         self.assertTrue(s1.memberList() == s2.memberList())
