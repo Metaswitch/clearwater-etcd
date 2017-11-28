@@ -15,7 +15,7 @@ class EtcdCluster(object):
     def __init__(self, n=1):
         self.datadir = "./etcd_test_data"
         self.servers = {}
-        self.pool = ["127.0.0.{}".format(last_byte)  for last_byte in range (100, 150)]
+        self.pool = ["127.0.0.{}".format(last_byte) for last_byte in range(100, 150)]
         self.initialise_servers(n)
 
     def get_live_server(self):
@@ -54,3 +54,11 @@ class EtcdCluster(object):
     def delete_datadir(self):
         rmtree(self.datadir, True)
 
+    def debug(self):
+        print ("Server list - {}".format(self.servers.keys()))
+        for server in self.servers.values():
+            print "=============================="
+            print repr(server)
+            print "server stats - {}".format(server.getStats())
+            print "memberList - {}".format(server.memberList())
+            print "isAlive - {}".format(server.isAlive())

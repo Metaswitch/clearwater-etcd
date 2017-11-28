@@ -17,7 +17,16 @@ class EtcdTestBase(unittest.TestCase):
         c = EtcdCluster(2)
         s1, s2 = c.servers.values()
 
-        hasOneLeader = s1.isLeader() != s2.isLeader()
+        s1_leader = s1.isLeader()
+        s2_leader = s2.isLeader()
+        hasOneLeader = s1_leader != s2_leader
+        if not hasOneLeader:
+            print ("\nExpected only one leader\n"
+                   "     s1: {}, isLeader {}\n"
+                   "     s2: {}, isLeader {}\n"
+                   "Dumping debug information:\n".format(s1._ip, s1_leader,
+                                                         s2._ip, s2_leader))
+            c.debug()
 
         self.assertTrue(hasOneLeader)
         self.assertTrue(s1.memberList() == s2.memberList())
