@@ -853,9 +853,9 @@ def print_diff_and_syslog(config_type, config_1, config_2):
         log.info(output_str)
         print(output_str)
 
+        # The output_str gets encoded as 'utf-8' during audit_log() and you
+        # cannot encode utf-8 as utf-8.
         output_str = output_str.decode('utf-8')
-        # the output_str gets encoded as 'utf-8' during audit_log() and you
-        # cannot encode utf-8 as utf-8
         audit_log(output_str)
 
         return True
