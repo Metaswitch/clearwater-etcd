@@ -26,7 +26,6 @@ class EtcdTestBase(unittest.TestCase):
                    "     s2: {}, isLeader {}\n"
                    "Dumping debug information:\n".format(s1._ip, s1_leader, s2._ip, s2_leader))
             c.debug()
-            c.backup_datadir()
 
         self.assertTrue(hasOneLeader)
         self.assertTrue(s1.memberList() == s2.memberList())
