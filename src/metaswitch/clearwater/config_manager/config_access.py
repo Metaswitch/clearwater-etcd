@@ -179,7 +179,8 @@ class ConfigLoader(object):
         """Save a copy of a given config type to the specified local store.
         Raises a ConfigDownloadFailed exception if unsuccessful."""
         value, index = self.get_config_and_index(selected_config)
-        value = value.encode('utf-8')
+        if isinstance(value, unicode):
+            value = value.encode('utf-8')
 
         # Write the config to file.
         try:
