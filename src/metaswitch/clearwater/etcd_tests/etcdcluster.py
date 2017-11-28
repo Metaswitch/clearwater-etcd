@@ -15,7 +15,7 @@ class EtcdCluster(object):
     def __init__(self, n=1):
         self.datadir = "./etcd_test_data"
         self.servers = {}
-        self.pool = ["127.0.0.{}".format(last_byte)  for last_byte in range (100, 150)]
+        self.pool = ["127.0.0.{}".format(last_byte) for last_byte in range(100, 150)]
         self.initialise_servers(n)
 
     def get_live_server(self):
@@ -55,12 +55,10 @@ class EtcdCluster(object):
         rmtree(self.datadir, True)
 
     def debug(self):
-        dbg = ("Cluster servers - {}\n".format(self.servers.keys()))
+        print ("Server list - {}".format(self.servers.keys()))
         for server in self.servers.values():
-            dbg += "==============================\n"
-            dbg += repr(server)
-            dbg += "server stats - {}".format(server.getStats())
-            dbg += "isLeader - {}\n".format(server.isLeader())
-            dbg += "memberList - {}\n".format(server.memberList())
-            dbg += "isAlive - {}\n".format(server.isAlive())
-        print dbg
+            print "=============================="
+            print repr(server)
+            print "server stats - {}".format(server.getStats())
+            print "memberList - {}".format(server.memberList())
+            print "isAlive - {}".format(server.isAlive())

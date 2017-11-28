@@ -24,7 +24,8 @@ class EtcdTestBase(unittest.TestCase):
             print ("\nExpected only one leader\n"
                    "     s1: {}, isLeader {}\n"
                    "     s2: {}, isLeader {}\n"
-                   "Dumping debug information:\n".format(s1._ip, s1_leader, s2._ip, s2_leader))
+                   "Dumping debug information:\n".format(s1._ip, s1_leader,
+                                                         s2._ip, s2_leader))
             c.debug()
 
         self.assertTrue(hasOneLeader)

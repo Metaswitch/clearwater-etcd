@@ -20,6 +20,7 @@ base_cmd =              """clearwater-etcd/usr/share/clearwater/clearwater-etcd/
 first_member_cmd =      base_cmd + """ --initial-cluster-state new --initial-cluster {1}=http://{0}:2380"""
 subsequent_member_cmd = base_cmd + """ --initial-cluster-state existing --initial-cluster {3},{1}=http://{0}:2380"""
 
+
 class EtcdServer(object):
     def __init__(self, ip, datadir, existing=None, actually_start=True):
         self._ip = ip
@@ -78,7 +79,6 @@ class EtcdServer(object):
                     # https://github.com/Metaswitch/clearwater-etcd/issues/203#issuecomment-156709911
                     m['name'] = str(uuid.uuid4())
 
-
             cluster = ",".join(["{}={}".format(m['name'], m['peerURLs'][0]) for m in member_data['members'] if m['peerURLs'][0] != my_url])
             self._cmd = shlex.split(subsequent_member_cmd.format(self._ip, self._name, self._datadir, cluster))
 
@@ -96,7 +96,7 @@ class EtcdServer(object):
     def cluster_id(self):
         if self._id is None:
             # TODO: learn my ID (c.f. the code in start_process)
-            members = self.memberList() # noqa
+            members = self.memberList()  # noqa
             pass
         return self._id
 
@@ -161,10 +161,11 @@ class EtcdServer(object):
         return etcd.Client(self._ip, port=4000)
 
     def __repr__(self):
-        return ("IP - {}\n"
-                "'Existing' - {}\n"
-                "Name - {}\n"
+        return ("Name/IP - {}/{}\n"
+                "Existing nodes - {}\n"
                 "cmd - {}\n"
-                "subprocess - {}\n"
-                "datadir - {}\n"
-                .format(self._ip, self._existing, self._name, self._cmd, self._subprocess, self._datadir))
+                "datadir - {}"
+                .format(self._name, self._ip,
+                        self._existing,
+                        self._cmd,
+                        self._datadir))
