@@ -50,7 +50,7 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
             etcd_result = None
             self._abort_read = False
 
-            executor = futures.ThreadPoolExecutor(2)
+            executor = self.ThreadPoolExecutorWithExceptionHandler(2)
             fsm_timer_future = executor.submit(self.wait_for_fsm)
             etcd_future = executor.submit(self.update_from_etcd)
             futures.wait([etcd_future, fsm_timer_future], return_when=futures.FIRST_COMPLETED)

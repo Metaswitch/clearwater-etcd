@@ -30,6 +30,7 @@
 
 import etcd
 from threading import Thread
+from concurrent import futures
 from time import sleep
 from functools import wraps
 import logging
@@ -385,3 +386,17 @@ class CommonEtcdSynchronizer(object):
     def update_from_etcd(self):
         self._last_value, self._index = self.read_from_etcd(wait=True)
         return self._last_value
+    
+    # Use this class instead of the class futures.ThreadPoolExecutor to log any exceptions 
+    # that occur inside 'background-started' threads
+    class ThreadPoolExecutorWithExceptionHandler(futures.ThreadPoolExecutor):
+        def submit(self, func):
+            future = super(CommonEtcdSynchronizer.ThreadPoolExecutorWithExceptionHandler, self).submit(func)
+            future.add_done_callback(self.log_exception)
+            return future
+
+        def log_exception(self, future):
+            try:
+                future.result()
+            except Exception as e:
+                _log.exception("%s: %s", type(e).__name__, e.__str__())
