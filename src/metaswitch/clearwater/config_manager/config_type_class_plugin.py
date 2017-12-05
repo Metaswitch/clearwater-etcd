@@ -117,10 +117,17 @@ class ConfigType:
 
         failed_scripts = []
         error_lines = []
+        passed_scripts = []
+        success_lines = []
         for script in self.scripts:
             try:
                 log.debug("Running validation script %s", script)
-                subprocess.check_output(self.scripts[script], stderr=subprocess.STDOUT)
+                out_print = subprocess.check_output(self.scripts[script],
+                                                    stderr=subprocess.STDOUT)
+                if out_print:
+                    out_msg = out_print.splitlines()
+                    success_lines.extend(out_msg)
+                passed_scripts.append(script)
             except subprocess.CalledProcessError as exc:
                 log.error("Validation script %s failed", os.path.basename(script))
                 log.error("Reasons for failure:")
@@ -137,4 +144,5 @@ class ConfigType:
                 # which scripts have failed. If any scripts have failed an
                 # exception is raised from the return value
                 failed_scripts.append(script)
-        return failed_scripts, error_lines
+        return failed_scripts, error_lines, passed_scripts, success_lines
+
