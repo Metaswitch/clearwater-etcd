@@ -597,7 +597,7 @@ def validate_config(selected_config, force=False):
     (failed_scripts, error_lines,
      passed_scripts, passed_msgs) = selected_config.validate()
 
-    if passed_scripts:
+    if passed_scripts and passed_msgs:
         print ("Validation passed in scripts:\n"
                " {}\n"
                "Output from passed scripts:\n"

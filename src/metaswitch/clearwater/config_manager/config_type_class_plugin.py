@@ -122,11 +122,10 @@ class ConfigType:
         for script in self.scripts:
             try:
                 log.debug("Running validation script %s", script)
-                out_print = subprocess.check_output(self.scripts[script],
-                                                    stderr=subprocess.STDOUT)
-                if out_print:
-                    out_msg = out_print.splitlines()
-                    success_lines.extend(out_msg)
+                output = subprocess.check_output(self.scripts[script],
+                                                 stderr=subprocess.STDOUT)
+                out_msg = output.splitlines()
+                success_lines.extend(out_msg)
                 passed_scripts.append(script)
             except subprocess.CalledProcessError as exc:
                 log.error("Validation script %s failed", os.path.basename(script))
