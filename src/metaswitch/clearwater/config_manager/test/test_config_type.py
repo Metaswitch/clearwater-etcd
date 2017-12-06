@@ -53,7 +53,7 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
         shared_config.scripts = {'name1': ['script1'], 'name2': ['script2']}
         validation_error = subprocess.CalledProcessError('A', 'B')
         validation_error.output = "ERROR: Something went wrong"
-        mock_subprocess.side_effect = [None, validation_error]
+        mock_subprocess.side_effect = ["", validation_error]
         # possibly want to run this within assertRaises check as well
         answer = shared_config.validate()
 

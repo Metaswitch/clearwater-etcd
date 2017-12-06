@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Copyright (C) Metaswitch Networks 2017
 # If license terms are provided to you in a COPYING file in the root directory
 # of the source code repository by which you are accessing this code, then
@@ -144,6 +146,23 @@ class TestConfigLoader(unittest.TestCase):
 
         with self.assertRaises(config_access.ConfigDownloadFailed):
             config_loader.download_config(mock_localstore, mock_selected_config)
+
+    @mock.patch("metaswitch.clearwater.config_manager.config_access.ConfigLoader.get_config_and_index")
+    def test_download_gets_unicode(self,
+                                   mock_get_config_and_index,
+                                   mock_selected_config,
+                                   mock_localstore,
+                                   mock_healthcheck,
+                                   mock_check_connection):
+        """check that a unicode return from get_config_and_index to value is
+        able to be interpreted"""
+        etcd_client = mock.MagicMock(spec=etcd.client.Client)
+        mock_selected_config.name = "shared_config"
+        mock_get_config_and_index.return_value = (u"UNICODE YAY £☃ ", 2)
+        config_loader = config_access.ConfigLoader(etcd_client,
+                                                   "clearwater",
+                                                   "site")
+        config_loader.download_config(mock_localstore, mock_selected_config)
 
     def test_get_config(self,
                         mock_selected_config,
@@ -892,22 +911,25 @@ class TestValidation(unittest.TestCase):
 
     def test_handle_validation_error(self, mock_selected_config):
         """Test that we handle validation failure correctly."""
-        mock_selected_config.validate.return_value = (['script1'], ['ERROR: '])
-        # a script has failed and is in failed_scripts.
+        mock_selected_config.validate.return_value = (['script1'], ['ERROR: '],
+                                                      [], [])
+        # A script has failed and is in failed_scripts.
         with self.assertRaises(config_access.ConfigValidationFailed):
             config_access.validate_config(mock_selected_config, False)
 
     def test_ignore_validation_error(self, mock_selected_config):
         """Test that we ignore validation failure correctly in the force
         case."""
-        mock_selected_config.validate.return_value = (['script1'], ['ERROR: '])
+        mock_selected_config.validate.return_value = (['script1'], ['ERROR: '],
+                                                      [], [])
         # Even though subprocess raises an exception, we continue because
         # we're in force mode.
         config_access.validate_config(mock_selected_config, True)
 
     def test_no_errors(self, mock_selected_config):
         """test everything runs ok when it returns no errors"""
-        mock_selected_config.validate.return_value = ([], [])
+        mock_selected_config.validate.return_value = ([], [], ['script1'],
+                                                      ['WARN: Something'])
         config_access.validate_config(mock_selected_config, False)
 
 
@@ -1414,11 +1436,12 @@ class TestDiffType(unittest.TestCase):
 @mock.patch("metaswitch.clearwater.config_manager.config_access.get_user_name")
 class TestDiffAndSyslog(unittest.TestCase):
     def test_check_iden(self, mock_username, mock_syslog, mock_unified_diff):
-        """check that the diff for two identical files returns false"""
-        answer = config_access.print_diff_and_syslog(
-            "shared_config",
-            'string is a string \n yay',
-            'string is a string \n yay')
+        """check that the diff for two identical files returns false,
+        these are unicode strings to test that part of the code"""
+        unicode1 = u'string is a string £☃ \n yay \n These contain unicode'
+        unicode2 = u'string is a string £☃ \n yay \n These contain unicode'
+        answer = config_access.print_diff_and_syslog("shared_config", unicode1,
+                                                     unicode2)
         self.assertIs(answer, False)
 
     @mock.patch("metaswitch.clearwater.config_manager.config_access.sys.stdout",

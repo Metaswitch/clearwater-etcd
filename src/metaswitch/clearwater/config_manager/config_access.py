@@ -594,7 +594,17 @@ def validate_config(selected_config, force=False):
 
     # selected_config is an instance of the ConfigType class. validate() uses
     # different scripts to validate against for different ConfigType classes.
-    failed_scripts, error_lines = selected_config.validate()
+    (failed_scripts, error_lines,
+     passed_scripts, passed_msgs) = selected_config.validate()
+
+    if passed_scripts and passed_msgs:
+        print ("Validation passed in scripts:\n"
+               " {}\n"
+               "Output from passed scripts:\n"
+               " {}").format("\n ".join(os.path.basename(script)
+                                        for script in passed_scripts),
+                             "\n ".join(passed_msgs))
+
 
     # In the forcing case, we proceed even if there have been failures, but
     # otherwise we want to bail out at this point.
@@ -787,7 +797,8 @@ def get_per_line_diffs(old_config, new_config):
 
     return diff_info
 
-def get_unified_diff (old_config, new_config):
+
+def get_unified_diff(old_config, new_config):
     """Generate a unified diff of the changes between the old and new
     configuration. Returns a new-line-separated string of the changes.
     """
@@ -797,7 +808,8 @@ def get_unified_diff (old_config, new_config):
                                 n=3)
     return "\n".join(diff)
 
-def use_unified_diff (config_type):
+
+def use_unified_diff(config_type):
     """Determine whether to use a unified diff for a piece of config"""
 
     config_info = lookup_config_type(config_type)
@@ -810,6 +822,7 @@ def use_unified_diff (config_type):
 
     return unified_diff
 
+
 def print_diff_and_syslog(config_type, config_1, config_2):
     """
     Print a readable diff of changes between two texts and log to syslog.
@@ -820,7 +833,7 @@ def print_diff_and_syslog(config_type, config_1, config_2):
     # combining unicode and strings together
     if isinstance(config_1, unicode):
         config_1 = config_1.encode('utf-8')
-    if isinstance(config_1, unicode):
+    if isinstance(config_2, unicode):
         config_2 = config_2.encode('utf-8')
 
     unified_diff = use_unified_diff(config_type)
@@ -828,7 +841,7 @@ def print_diff_and_syslog(config_type, config_1, config_2):
         log.debug("Generating unified diff")
         unified_diff = get_unified_diff(config_1, config_2)
         if len(unified_diff) > 0:
-            diff_info = { "Changes:" : [ unified_diff ] }
+            diff_info = {"Changes:": [unified_diff]}
         else:
             diff_info = None
     else:
@@ -885,6 +898,7 @@ def read_from_file(file_path):
         raise
 
     return contents
+
 
 def reset_file_ownership(filepath):
     """If a user runs this module with `sudo`, any created files or directories
