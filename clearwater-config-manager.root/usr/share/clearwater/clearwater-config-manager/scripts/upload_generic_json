@@ -7,6 +7,8 @@
 # Otherwise no rights are granted except for those provided to you by
 # Metaswitch Networks in a separate written agreement.
 
+. /usr/share/clearwater/utils/check-root-permissions 2
+
 local_site_name=site1
 . /etc/clearwater/config
 
