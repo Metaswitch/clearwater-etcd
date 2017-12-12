@@ -384,7 +384,7 @@ do_start()
         #   0 if daemon has been started
         #   1 if daemon was already running
         #   2 if daemon could not be started
-        start-stop-daemon --start --quiet --pidfile $PIDFILE --name $NAME --startas $DAEMONWRAPPER --test > /dev/null \
+        start-stop-daemon --start --quiet --pidfile $PIDFILE --name $(basename $DAEMON) --startas $DAEMONWRAPPER --test > /dev/null \
                 || return 1
 
         ETCD_NAME=${advertisement_ip//./-}
@@ -551,7 +551,7 @@ do_reload() {
         # restarting (for example, when it is sent a SIGHUP),
         # then implement that here.
         #
-        start-stop-daemon --stop --signal 1 --quiet --pidfile $PIDFILE --name $NAME
+        start-stop-daemon --stop --signal 1 --quiet --pidfile $PIDFILE --name $(basename $DAEMON)
         return 0
 }
 
