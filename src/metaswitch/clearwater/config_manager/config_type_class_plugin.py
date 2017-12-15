@@ -73,7 +73,9 @@ class ConfigType:
     def get_json_validation(self):
         """Returns the scripts to be used for json file validation."""
         scripts = {}
-        scripts[self.schema] = ['python', JSON_GENERIC_VALIDATE, self.schema,
+        scripts[self.schema] = ['/usr/share/clearwater/clearwater-config-manager/env/bin/python', 
+                                JSON_GENERIC_VALIDATE, 
+                                self.schema,
                                 self.configfile]
         # to add more validation scripts add to the dict of scripts
         return scripts
