@@ -47,6 +47,10 @@ case "$1" in
         chown -R $NAME:adm /var/log/$NAME
         chmod g+s /var/log/$NAME
 
+        # Need to fix up the permission on the queue operation file if it
+        # already exists
+        chmod g+w /var/log/clearwater-queue-manager/queue_operation.log
+
         # Set up the virtual env
         rm -rf $BASE_DIR/env
         virtualenv --python=$(which python) $BASE_DIR/env
