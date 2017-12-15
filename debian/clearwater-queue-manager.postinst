@@ -49,7 +49,9 @@ case "$1" in
 
         # Need to fix up the permission on the queue operation file if it
         # already exists
-        chmod g+w /var/log/clearwater-queue-manager/queue_operation.log
+        if [ -f /var/log/clearwater-queue-manager/queue_operation.log ]; then
+          chmod g+w /var/log/clearwater-queue-manager/queue_operation.log
+        fi
 
         # Set up the virtual env
         rm -rf $BASE_DIR/env
