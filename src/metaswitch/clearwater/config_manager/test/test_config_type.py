@@ -107,7 +107,7 @@ class TestGetValidationScripts(unittest.TestCase):
         # currently only one
         scscf_json = scscf_json_config_plugin.ScscfJson('path')
         answer = scscf_json.get_json_validation()
-        scscsf_expected_script = [['python',
+        scscsf_expected_script = [['/usr/share/clearwater/clearwater-config-manager/env/bin/python',
                                    '/usr/share/clearwater/clearwater-config-manager/scripts/validate_json.py',
                                    '/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/scscf_schema.json',
                                    'path']]
