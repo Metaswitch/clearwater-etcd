@@ -145,16 +145,15 @@ class TestDiffType(unittest.TestCase):
 
 
 # Once the technical debt in config_type_class_plugin.py has been addressed, so
-# that RphJson does not need a custom validate() function, then this test can
+# that RphJson does not need a custom validate() function, then these tests can
 # be removed.
+@mock.patch('clearwater_etcd_plugins.clearwater_config_access.rph_json_config_plugin.log')
 @mock.patch('metaswitch.clearwater.config_manager.config_type_class_plugin.os.access')
 @mock.patch('metaswitch.clearwater.config_manager.config_type_class_plugin.subprocess.check_output')
 class TestRphValidation(unittest.TestCase):
     config_location = "/some/dir/rph.json"
 
-    def test_rph_script_found_ok(self,
-                                 mock_subprocess,
-                                 mock_access):
+    def test_rph_script_found_ok(self, mock_subprocess, mock_access, mock_log):
         """Check that we run the correct rph validation script."""
         rph_config = rph_json_config_plugin.RphJson(self.config_location)
         rph_config.validate()
@@ -169,6 +168,23 @@ class TestRphValidation(unittest.TestCase):
                                         "rph_schema.json"),
                            self.config_location], stderr=-2),
                 mock_subprocess.call_args_list[0])
+
+    def test_validate_fails(self, mock_subprocess, mock_access, mock_log):
+        """Use RphJson.validate and get subprocess to raise a exception and
+         check log reports this and failed scripts is not empty."""
+        rph_config = rph_json_config_plugin.RphJson(self.config_location)
+        validation_error = subprocess.CalledProcessError('A', 'B')
+        validation_error.output = "ERROR: Something went wrong"
+        mock_subprocess.side_effect = [validation_error]
+        answer = rph_config.validate()
+
+        self.assertIs(mock_log.error.call_count, 3)
+        self.assertIs(mock_log.debug.call_count, 1)
+        self.assertListEqual(answer[0], ['rph_validation.py'])
+        self.assertListEqual(answer[1], ["ERROR: Something went wrong"])
+        self.assertListEqual(answer[2], [])
+        self.assertListEqual(answer[3], [])
+        self.assertIs(mock_subprocess.call_count, 1)
 
 
 @mock.patch('metaswitch.clearwater.config_manager.config_type_class_plugin.os.access')
