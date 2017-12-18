@@ -169,7 +169,6 @@ class TestRphValidation(unittest.TestCase):
                            self.config_location], stderr=-2),
                 mock_subprocess.call_args_list[0])
 
-
     def test_validate_fails(self, mock_subprocess, mock_access, mock_log):
         """Use RphJson.validate and get subprocess to raise a exception and
          check log reports this and failed scripts is not empty."""
