@@ -18,6 +18,7 @@
 /build/
 /htmlcov/
 /src/*.egg-info/
+*_eggs/
 coverage.xml
 
 # Alarm constants generated from JSON files

@@ -5,7 +5,7 @@
 # Otherwise no rights are granted except for those provided to you by
 # Metaswitch Networks in a separate written agreement.
 
-from hashlib import md5
+from hashlib import sha512
 
 from .pdlogs import FILE_CHANGED
 from metaswitch.clearwater.etcd_shared.common_etcd_synchronizer import CommonEtcdSynchronizer
@@ -34,10 +34,10 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
                 break
 
             if value and value != old_value:
-                _log.info("Got new config value from etcd - filename {}, file size {}, MD5 hash {}".format(
+                _log.info("Got new config value from etcd - filename {}, file size {}, SHA512 hash {}".format(
                     self._plugin.file(),
                     len(value),
-                    md5(utils.safely_encode(value)).hexdigest()))
+                    sha512(utils.safely_encode(value)).hexdigest()))
                 _log.debug("Got new config value from etcd:\n{}".format(
                            utils.safely_encode(value)))
                 self._plugin.on_config_changed(value, self._alarm)
