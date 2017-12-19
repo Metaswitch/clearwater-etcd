@@ -32,7 +32,7 @@ try:
     # it is syntactically marked for shell injection risk, while using a literal
     # string as command does not actually pose a risk of it.
     desc_cluster_output = subprocess.check_output(command, shell=True)  # nosec
-    doc = yaml.load(desc_cluster_output)
+    doc = yaml.safe_load(desc_cluster_output)
     servers = doc["Cluster Information"]["Schema versions"].values()[0]
     data = json.dumps({server: "normal" for server in servers})
 
