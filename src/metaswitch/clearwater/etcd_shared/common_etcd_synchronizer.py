@@ -386,8 +386,8 @@ class CommonEtcdSynchronizer(object):
     def update_from_etcd(self):
         self._last_value, self._index = self.read_from_etcd(wait=True)
         return self._last_value
-    
-    # Use this class instead of the class futures.ThreadPoolExecutor to log any exceptions 
+
+    # Use this class instead of the class futures.ThreadPoolExecutor to log any exceptions
     # that occur inside 'background-started' threads
     class ThreadPoolExecutorWithExceptionHandler(futures.ThreadPoolExecutor):
         def submit(self, func):
@@ -398,5 +398,5 @@ class CommonEtcdSynchronizer(object):
         def log_exception(self, future):
             try:
                 future.result()
-            except Exception as e:
+            except Exception as e: #pragma: no cover
                 _log.exception("%s: %s", type(e).__name__, e.__str__())
