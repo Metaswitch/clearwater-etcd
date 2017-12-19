@@ -34,11 +34,10 @@ class EtcdSynchronizer(CommonEtcdSynchronizer):
                 break
 
             if value and value != old_value:
-                _log.info("Got new config value from etcd - filename {}, file
-                        size {}, SHA512 hash {}".format(
-                            self._plugin.file(),
-                            len(value),
-                            sha512(utils.safely_encode(value)).hexdigest()))
+                _log.info("Got new config value from etcd - filename {}, file size {}, SHA512 hash {}".format(
+                    self._plugin.file(),
+                    len(value),
+                    sha512(utils.safely_encode(value)).hexdigest()))
                 _log.debug("Got new config value from etcd:\n{}".format(
                            utils.safely_encode(value)))
                 self._plugin.on_config_changed(value, self._alarm)
