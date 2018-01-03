@@ -47,6 +47,20 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
         self.assertListEqual(answer[1], [])
         self.assertIs(mock_subprocess.call_count, 1)
 
+    def test_bgcf_validate_passes(self, mock_subprocess, mock_log):
+        """uses script from BgcfJson to ConfigType.validate and check log
+         and subprocess called properly, check failed_scripts is empty
+         at end of process"""
+        bgcf_config = bgcf_json_config_plugin.BgcfJson('path')
+        answer = bgcf_config.validate()
+
+        self.assertIs(mock_log.debug.call_count, 1)
+        self.assertIs(mock_log.error.call_count, 0)
+        self.assertListEqual(answer[0], [])
+        self.assertListEqual(answer[1], [])
+        self.assertIs(mock_subprocess.call_count, 1)
+
+
     def test_validate_fails(self, mock_subprocess, mock_log):
         """use ConfigType.validate and get subprocess to raise a exception and
          check log reports this and failed scripts is not empty"""
