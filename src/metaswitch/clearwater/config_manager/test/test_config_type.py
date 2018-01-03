@@ -60,7 +60,6 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
         self.assertListEqual(answer[1], [])
         self.assertIs(mock_subprocess.call_count, 1)
 
-
     def test_validate_fails(self, mock_subprocess, mock_log):
         """use ConfigType.validate and get subprocess to raise a exception and
          check log reports this and failed scripts is not empty"""
