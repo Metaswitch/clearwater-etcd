@@ -23,6 +23,18 @@ ALARM_TO_RAISE_FILE="/tmp/.clearwater_etcd_alarm_to_raise"
 
 . /etc/clearwater/config
 
+
+
+log_bad_poll()
+{
+  # We log the bad poll and truncate if necessary to keep the file size bounded
+  echo $(date) >> "/var/log/clearwater-etcd/etcd_cluster_bad_polls.txt"
+  echo $1 >> "/var/log/clearwater-etcd/etcd_cluster_bad_polls.txt"
+  tail -n 1000 "/var/log/clearwater-etcd/etcd_cluster_bad_polls.txt" > "/var/log/clearwater-etcd/etcd_cluster_bad_polls.txt.tmp"
+  mv -f "/var/log/clearwater-etcd/etcd_cluster_bad_polls.txt.tmp" "/var/log/clearwater-etcd/etcd_cluster_bad_polls.txt"
+}
+
+
 # Return state of the etcd cluster, 0 if all nodes are up, 1 if some nodes are
 # down, 2 if quorum has failed.
 cluster_state()
@@ -35,14 +47,14 @@ cluster_state()
       local unhealthy_cluster_state_regex="cluster is unhealthy"
       if [[ $out =~ $unhealthy_cluster_state_regex ]]
       then
-        echo $out > "/var/log/clearwater-etcd/last_bad_cluster_poll.sh"
+        log_bad_poll $out
         return 2
       fi
 
       local maybe_unhealthy_cluster_state_regex="cluster may be unhealthy"
       if [[ $out =~ $maybe_unhealthy_cluster_state_regex ]]
       then
-        echo $out > "/var/log/clearwater-etcd/last_bad_cluster_poll.sh"
+        log_bad_poll $out
         return 2
       fi
 
@@ -73,7 +85,7 @@ cluster_state()
 
       if [ $unhealthy_members ]
       then
-        echo $out > "/var/log/clearwater-etcd/last_bad_cluster_poll.sh"
+        log_bad_poll $out
         return 1
       fi
     fi
