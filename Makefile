@@ -43,12 +43,12 @@ $1_BUILD_DIRS = T
 $$(eval $$(call python_component,$1))
 
 # Add a target that builds the python-common wheel into the correct wheelhouse
-$${$1_WHEELHOUSE}/.$1_build_common_wheel: $(shell find common/metaswitch -type f -not -name "*.pyc") $${$1_WHEELHOUSE}/.$1-clean-wheels
+$${$1_WHEELHOUSE}/.$1_build_common_wheel: $(shell find common/metaswitch -type f -not -name "*.pyc") $${$1_WHEELHOUSE}/.clean-wheels
 	cd common && WHEELHOUSE=../$1_wheelhouse make build_common_wheel
 	touch $$@
 
 # Add dependency to the build-wheels to ensure we also build the python-common wheel
-${ENV_DIR}/.$1-build-wheels: $${$1_WHEELHOUSE}/.$1_build_common_wheel
+$${$1_WHEELHOUSE}/.$1-build-wheels: $${$1_WHEELHOUSE}/.$1_build_common_wheel
 
 # Test definition
 .PHONY: test_$1
