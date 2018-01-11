@@ -48,7 +48,7 @@ $${$1_WHEELHOUSE}/.$1_build_common_wheel: $(shell find common/metaswitch -type f
 	touch $$@
 
 # Add dependency to the build-wheels to ensure we also build the python-common wheel
-$${$1_WHEELHOUSE}/.$1-build-wheels: $${$1_WHEELHOUSE}/.$1_build_common_wheel
+$${$1_WHEELHOUSE}/.build-wheels: $${$1_WHEELHOUSE}/.$1_build_common_wheel
 
 # Test definition
 .PHONY: test_$1
@@ -63,7 +63,7 @@ src/metaswitch/clearwater/$$(subst mgr,manager,$1)/alarm_constants.py: clearwate
 	python common/metaswitch/common/alarms_writer.py --json-file="clearwater-$$(subst _,-,$$(subst mgr,manager,$1)).root/usr/share/clearwater/infrastructure/alarms/clearwater_$$(subst mgr,manager,$1)_alarms.json" --constants-file=$$@
 
 # Add a dependency to the build-wheels targets for the alarm constants
-${ENV_DIR}/.$1-build-wheels: src/metaswitch/clearwater/$$(subst mgr,manager,$1)/alarm_constants.py
+$${$1_WHEELHOUSE}/.build-wheels: src/metaswitch/clearwater/$$(subst mgr,manager,$1)/alarm_constants.py
 
 endef
 
