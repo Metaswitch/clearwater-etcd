@@ -12,9 +12,8 @@ X86_64_ONLY=0
 
 .DEFAULT_GOAL = deb
 
-TEST_SETUP_PY = cluster_mgr_setup.py queue_mgr_setup.py config_mgr_setup.py plugins_setup.py
+COVERAGE_SETUP_PY = cluster_mgr_setup.py queue_mgr_setup.py config_mgr_setup.py plugins_setup.py
 TEST_PYTHON_PATH = src:common
-TEST_REQUIREMENTS = common/requirements-test.txt fv-requirements.txt requirements-test.txt
 CLEAN_SRC_DIR = src/
 FLAKE8_INCLUDE_DIR = src/
 FLAKE8_EXCLUDE_DIR = src/clearwater_etcd_plugins/
@@ -22,17 +21,6 @@ BANDIT_EXCLUDE_LIST = src/metaswitch/clearwater/queue_manager/test/,src/metaswit
 
 include build-infra/cw-deb.mk
 include build-infra/python.mk
-
-.PHONY: fvtest
-fvtest: fvtest_setup.py env ${ENV_DIR}/.test-requirements
-	PYTHONPATH=src:common ${PYTHON} fvtest_setup.py test -v
-
-.PHONY: test_plugins
-test_plugins: plugins_setup.py env ${ENV_DIR}/.test-requirements
-	PYTHONPATH=src:common ${PYTHON} plugins_setup.py test -v
-
-.PHONY: run_test
-run_test: test_plugins
 
 # Macro to define the various etcd targets
 #
@@ -46,6 +34,8 @@ define etcd_component
 # python_component macro
 $1_SETUP = $1_setup.py shared_setup.py
 $1_REQUIREMENTS = $1-requirements.txt common/requirements.txt shared-requirements.txt
+$1_TEST_REQUIREMENTS = common/requirements-test.txt requirements-test.txt
+$1_TEST_SETUP = $1_setup.py
 $1_SOURCES = $(shell find src/metaswitch -type f -not -name "*.pyc") $(shell find common/metaswitch -type f -not -name "*.pyc")
 $1_BUILD_DIRS = T
 
@@ -53,12 +43,12 @@ $1_BUILD_DIRS = T
 $$(eval $$(call python_component,$1))
 
 # Add a target that builds the python-common wheel into the correct wheelhouse
-${ENV_DIR}/.$1_build_common_wheel: common/requirements.txt $(shell find common/metaswitch -type f -not -name "*.pyc") ${ENV_DIR}/.wheels-cleaned
+$${$1_WHEELHOUSE}/.$1_build_common_wheel: $(shell find common/metaswitch -type f -not -name "*.pyc") $${$1_WHEELHOUSE}/.$1-clean-wheels
 	cd common && WHEELHOUSE=../$1_wheelhouse make build_common_wheel
 	touch $$@
 
-# Add dependency to the install-wheels to ensure we also install the python-common wheel
-${ENV_DIR}/.$1-install-wheels: ${ENV_DIR}/.$1_build_common_wheel
+# Add dependency to the build-wheels to ensure we also build the python-common wheel
+${ENV_DIR}/.$1-build-wheels: $${$1_WHEELHOUSE}/.$1_build_common_wheel
 
 # Test definition
 .PHONY: test_$1
@@ -82,8 +72,17 @@ $(eval $(call etcd_component,queue_mgr))
 $(eval $(call etcd_component,config_mgr))
 $(eval $(call etcd_component,cluster_mgr))
 
+# Create the fv-test and plugins-test targets
+fv_TEST_REQUIREMENTS = fv-requirements.txt requirements-test.txt
+fv_TEST_SETUP = fvtest_setup.py
+$(eval $(call python_test_component,fv))
+
+plugins_TEST_REQUIREMENTS = requirements-test.txt common/requirements-test.txt common/requirements.txt shared-requirements.txt
+plugins_TEST_SETUP = plugins_setup.py
+$(eval $(call python_test_component,plugins))
+
 .PHONY: deb
-deb: env deb-only
+deb: wheelhouses deb-only
 
 .PHONY: clean
 clean: envclean pyclean
