@@ -36,7 +36,7 @@ $1_SETUP = $1_setup.py shared_setup.py
 $1_REQUIREMENTS = $1-requirements.txt common/requirements.txt shared-requirements.txt
 $1_TEST_REQUIREMENTS = common/requirements-test.txt requirements-test.txt
 $1_TEST_SETUP = $1_setup.py
-$1_SOURCES = $(shell find src/metaswitch -type f -not -name "*.pyc") $(shell find common/metaswitch -type f -not -name "*.pyc")
+$1_SOURCES = $(shell find src/metaswitch -type f -not -name "*.pyc" -not -name "alarm_constants.py") $(shell find common/metaswitch -type f -not -name "*.pyc")
 $1_BUILD_DIRS = T
 
 # Call into the python_component macro in the common python.mk
