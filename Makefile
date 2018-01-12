@@ -38,6 +38,7 @@ $1_TEST_REQUIREMENTS = common/requirements-test.txt requirements-test.txt
 $1_TEST_SETUP = $1_setup.py
 $1_SOURCES = $(shell find src/metaswitch -type f -not -name "*.pyc" -not -name "alarm_constants.py") $(shell find common/metaswitch -type f -not -name "*.pyc")
 $1_BUILD_DIRS = T
+$1_WHEELS = clearwater_etcd_shared metaswitchcommon
 
 # Call into the python_component macro in the common python.mk
 $$(eval $$(call python_component,$1))
