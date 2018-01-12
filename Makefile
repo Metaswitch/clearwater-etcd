@@ -47,8 +47,9 @@ $${$1_WHEELHOUSE}/.$1_build_common_wheel: $(shell find common/metaswitch -type f
 	cd common && WHEELHOUSE=../$1_wheelhouse make build_common_wheel
 	touch $$@
 
-# Add dependency to the build-wheels to ensure we also build the python-common wheel
-$${$1_WHEELHOUSE}/.build-wheels: $${$1_WHEELHOUSE}/.$1_build_common_wheel
+# Add dependency to the download-wheels to ensure we've built python-common
+# before we try to install it
+$${$1_WHEELHOUSE}/.download-wheels: $${$1_WHEELHOUSE}/.$1_build_common_wheel
 
 # Test definition
 .PHONY: test_$1
