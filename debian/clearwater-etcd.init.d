@@ -32,6 +32,7 @@ DATA_DIR=/var/lib/$NAME
 JOINED_CLUSTER_SUCCESSFULLY=$DATA_DIR/clustered_successfully
 HEALTHY_CLUSTER_VIEW=$DATA_DIR/healthy_etcd_members
 PIDFILE=/var/run/$NAME/$NAME.pid
+LOCKFILE=/var/run/$NAME/$NAME-initd.lock
 USER=$NAME
 LOG_FILE=/var/log/clearwater-etcd/clearwater-etcd-initd.log
 
@@ -54,6 +55,25 @@ log_debug() {
 log_info() {
   echo "$@"
   log_debug "$@"
+}
+
+# Waits up to 60 seconds to lock $LOCKFILE, returning 0 if it succeeds and 1 if
+# it fails
+lock() {
+  # 300 is an arbitrarily-chosen file descriptor number
+  exec 300> $LOCKFILE
+
+  log_debug "Attempting to acquire lock on $LOCKFILE with 60-second timeout"
+  flock --wait 60 300
+
+  if [[ $? == 0 ]]
+  then
+    log_debug "Successfully acquired lock on $LOCKFILE"
+    return 0
+  else
+    log_debug "Failed to acquire lock on $LOCKFILE"
+    return 1
+  fi
 }
 
 # Wrapper that runs etcdctl but also logs the following to the log file:
@@ -558,6 +578,11 @@ do_reload() {
 
 log_debug "Invoked with argument '$1'"
 log_debug "Process tree: " $(pstree -p -s $MYPID)
+
+# We only want one instance of this init script to run at once, as it does
+# things like 'member add' and 'member remove' which will be unsafe if
+# duplicated.
+lock || exit 1
 
 # There should only be at most one etcd process, and it should be the one in /var/run/clearwater-etcd/clearwater-etcd.pid.
 # Sanity check this, and kill and log any leaked ones.
