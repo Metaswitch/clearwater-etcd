@@ -41,11 +41,12 @@ etcd_version=3.1.7
 
 DAEMON=/usr/share/clearwater/clearwater-etcd/$etcd_version/etcd
 DAEMONWRAPPER=/usr/share/clearwater/clearwater-etcd/$etcd_version/etcdwrapper
+MYPID=$$
 
 # Log parameters at "debug" level. These are just written to the log file (with
 # timestamps).
 log_debug() {
-  echo $(date +'%Y-%m-%d %H:%M:%S.%N') "$@" >> $LOG_FILE
+  echo $(date +'%Y-%m-%d %H:%M:%S.%N') "[$MYPID]" "$@" >> $LOG_FILE
 }
 
 # Log parameters at "info" level. These are written to the console (without
