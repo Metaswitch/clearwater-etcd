@@ -556,6 +556,9 @@ do_reload() {
         return 0
 }
 
+log_debug "Invoked with argument '$1'"
+log_debug "Process tree: " $(pstree -p -s $MYPID)
+
 # There should only be at most one etcd process, and it should be the one in /var/run/clearwater-etcd/clearwater-etcd.pid.
 # Sanity check this, and kill and log any leaked ones.
 if [ -f $PIDFILE ] ; then
