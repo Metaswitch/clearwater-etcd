@@ -12,7 +12,6 @@ X86_64_ONLY=0
 
 .DEFAULT_GOAL = deb
 
-COVERAGE_SETUP_PY = cluster_mgr_setup.py queue_mgr_setup.py config_mgr_setup.py plugins_setup.py
 TEST_PYTHON_PATH = src:common
 CLEAN_SRC_DIR = src/
 FLAKE8_INCLUDE_DIR = src/
@@ -75,14 +74,17 @@ $(eval $(call etcd_component,queue_mgr))
 $(eval $(call etcd_component,config_mgr))
 $(eval $(call etcd_component,cluster_mgr))
 
-# Create the fv-test and plugins-test targets
-fv_TEST_REQUIREMENTS = fv-requirements.txt requirements-test.txt
-fv_TEST_SETUP = fvtest_setup.py
-$(eval $(call python_test_component,fv))
-
+# Create the plugins-test target
 plugins_TEST_REQUIREMENTS = requirements-test.txt common/requirements-test.txt common/requirements.txt shared-requirements.txt
 plugins_TEST_SETUP = plugins_setup.py
 $(eval $(call python_test_component,plugins))
+
+# Create the fv_test target. Exclude it from `test` and `coverage`, but add it
+# to `full_test`
+fv_TEST_REQUIREMENTS = fv-requirements.txt requirements-test.txt
+fv_TEST_SETUP = fvtest_setup.py
+$(eval $(call python_test_component,fv,EXCLUDE_TEST))
+full_test: fv_test
 
 .PHONY: deb
 deb: wheelhouses deb-only
