@@ -32,7 +32,8 @@ DATA_DIR=/var/lib/$NAME
 JOINED_CLUSTER_SUCCESSFULLY=$DATA_DIR/clustered_successfully
 HEALTHY_CLUSTER_VIEW=$DATA_DIR/healthy_etcd_members
 PIDFILE=/var/run/$NAME/$NAME.pid
-LOCKFILE=/var/run/$NAME/$NAME-initd.lock
+LOCKFILE_DIR=/var/run/$NAME
+LOCKFILE=$LOCKFILE_DIR/$NAME-initd.lock
 USER=$NAME
 LOG_FILE=/var/log/clearwater-etcd/clearwater-etcd-initd.log
 
@@ -60,6 +61,7 @@ log_info() {
 # Waits up to 60 seconds to lock $LOCKFILE, returning 0 if it succeeds and 1 if
 # it fails
 lock() {
+  mkdir -p $LOCKFILE_DIR
   # 300 is an arbitrarily-chosen file descriptor number
   exec 300> $LOCKFILE
 
