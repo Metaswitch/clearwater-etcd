@@ -1,4 +1,4 @@
-config_mgr_wheelhouse/* usr/share/clearwater/clearwater-config-manager/wheelhouse/
+config_mgr_wheelhouse/*.whl usr/share/clearwater/clearwater-config-manager/wheelhouse/
 clearwater-config-manager.root/* /
 
 # Install the etcd plugins
