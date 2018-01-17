@@ -41,11 +41,12 @@ etcd_version=3.1.7
 
 DAEMON=/usr/share/clearwater/clearwater-etcd/$etcd_version/etcd
 DAEMONWRAPPER=/usr/share/clearwater/clearwater-etcd/$etcd_version/etcdwrapper
+MYPID=$$
 
 # Log parameters at "debug" level. These are just written to the log file (with
 # timestamps).
 log_debug() {
-  echo $(date +'%Y-%m-%d %H:%M:%S.%N') "$@" >> $LOG_FILE
+  echo $(date +'%Y-%m-%d %H:%M:%S.%N') "[$MYPID]" "$@" >> $LOG_FILE
 }
 
 # Log parameters at "info" level. These are written to the console (without
@@ -554,6 +555,9 @@ do_reload() {
         start-stop-daemon --stop --signal 1 --quiet --pidfile $PIDFILE --name $(basename $DAEMON)
         return 0
 }
+
+log_debug "Invoked with argument '$1'"
+log_debug "Process tree: " $(pstree -p -s $MYPID)
 
 # There should only be at most one etcd process, and it should be the one in /var/run/clearwater-etcd/clearwater-etcd.pid.
 # Sanity check this, and kill and log any leaked ones.
