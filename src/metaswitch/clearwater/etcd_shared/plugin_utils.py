@@ -37,7 +37,7 @@ def run_commands(list_of_command_args, namespace=None, log_error=True):
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE,
                                    close_fds=True), c)
-                 for c in namespaced_command_args]
+                 for c in list_of_namespaced_command_args]
 
     error_returncodes = []
     for p, command_args in processes:
@@ -62,7 +62,10 @@ def run_commands(list_of_command_args, namespace=None, log_error=True):
 
     # Return 0, unless any nonzero return codes are present, in which case
     # arbitrarily return the first one.
-    return next(error_returncodes, 0)
+    if error_returncodes:
+        return error_returncodes[0]
+    else:
+        return 0
 
 
 # Wrapper around run_commands which only runs a single command instead of
