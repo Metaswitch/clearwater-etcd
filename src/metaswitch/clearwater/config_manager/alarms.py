@@ -45,5 +45,6 @@ class ConfigAlarm(object):
         if all(self._files.values()):
             self._alarm.clear()
         else:
+            _log.warning("Config not in sync - status: " + str(self._files))
             self._alarm.set()
             pdlogs.NO_SHARED_CONFIG_ALARM.log()
