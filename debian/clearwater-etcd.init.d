@@ -13,8 +13,8 @@
 # Provides:          clearwater-etcd
 # Required-Start:    $remote_fs $syslog
 # Required-Stop:     $remote_fs $syslog
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
+# Default-Start:
+# Default-Stop:
 # Short-Description: Clearwater etcd package
 # Description:       Etcd package for Clearwater nodes
 ### END INIT INFO
