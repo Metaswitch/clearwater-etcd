@@ -38,7 +38,7 @@ USER=$NAME
 LOG_FILE=/var/log/clearwater-etcd/clearwater-etcd-initd.log
 
 # Default the etcd version to the latest supported etcd version.
-etcd_version=3.1.7
+etcd_version=3.2.16
 . /etc/clearwater/config
 
 DAEMON=/usr/share/clearwater/clearwater-etcd/$etcd_version/etcd
@@ -122,7 +122,7 @@ etcdctl_wrapper() {
 
 # Exit if the package is not installed
 if [ ! -x "$DAEMON" ]; then
-  log_info "Invalid etcd version: valid versions are 3.1.7 (recommended) and 2.2.5"
+  log_info "Invalid etcd version: valid versions are 3.2.16 (recommended), 3.1.7 and 2.2.5"
   exit 0
 fi
 
