@@ -15,4 +15,4 @@ if [ -z "$target_ip" ]; then
 fi
 
 # Run the real etcdctl.
-/usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl -C $target_ip:4000 "$@"
+/usr/share/clearwater/clearwater-etcd/$etcd_version/etcdctl -C http://$target_ip:4000 "$@"
