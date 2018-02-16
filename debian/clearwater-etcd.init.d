@@ -122,7 +122,7 @@ etcdctl_wrapper() {
 
 # Exit if the package is not installed
 if [ ! -x "$DAEMON" ]; then
-  log_info "Invalid etcd version: valid versions are 3.2.16 (recommended), 3.1.7 and 2.2.5"
+  log_info "Invalid etcd version: valid versions are 3.2.16 (recommended) and 3.1.7"
   exit 0
 fi
 
