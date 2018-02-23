@@ -1,0 +1,25 @@
+{
+  "title": "List of configured SAS servers.",
+  "type": "object",
+  "maxProperties": 1,
+  "properties": {
+    "sas_servers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "ip": {
+            "description": "IP address of a SAS server",
+            "type": "string",
+            "format": "ipv4",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        }
+      },
+      "additionalItems": false
+    }
+  },
+  "required": ["sas_servers"],
+  "additionalProperties": false
+}

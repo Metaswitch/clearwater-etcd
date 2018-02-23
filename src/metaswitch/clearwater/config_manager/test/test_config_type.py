@@ -14,6 +14,7 @@ import metaswitch.clearwater.config_manager.config_type_class_plugin as config_t
 import metaswitch.clearwater.config_manager.config_type_plugin_loader as config_type_plugin_loader
 from clearwater_etcd_plugins.clearwater_config_access import bgcf_json_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import dns_json_config_plugin
+from clearwater_etcd_plugins.clearwater_config_access import sas_json_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import shared_config_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import shared_ifcs_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import scscf_json_config_plugin
@@ -53,6 +54,19 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
          at end of process"""
         bgcf_config = bgcf_json_config_plugin.BgcfJson('path')
         answer = bgcf_config.validate()
+
+        self.assertIs(mock_log.debug.call_count, 1)
+        self.assertIs(mock_log.error.call_count, 0)
+        self.assertListEqual(answer[0], [])
+        self.assertListEqual(answer[1], [])
+        self.assertIs(mock_subprocess.call_count, 1)
+
+    def test_sas_validate_passes(self, mock_subprocess, mock_log):
+        """uses script from SasJson to ConfigType.validate and check log
+         and subprocess called properly, check failed_scripts is empty
+         at end of process"""
+        sas_config = sas_json_config_plugin.SasJson('path')
+        answer = sas_config.validate()
 
         self.assertIs(mock_log.debug.call_count, 1)
         self.assertIs(mock_log.error.call_count, 0)
