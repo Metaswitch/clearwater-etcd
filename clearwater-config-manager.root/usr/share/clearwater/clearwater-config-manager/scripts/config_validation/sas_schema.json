@@ -9,13 +9,13 @@
         "type": "object",
         "properties": {
           "ip": {
-            "description": "IP address of a SAS server",
+            "description": "IPv4 address of a SAS server",
             "type": "string",
-            "format": "ipv4",
             "minLength": 1,
             "maxLength": 256
           }
-        }
+        },
+        "additionalProperties": false
       },
       "additionalItems": false
     }
