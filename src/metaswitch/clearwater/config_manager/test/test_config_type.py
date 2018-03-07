@@ -31,7 +31,7 @@ class TestClass(config_type_class_plugin.ConfigType):
 
 
 @mock.patch("metaswitch.clearwater.config_manager.config_type_class_plugin.log")
-@mock.patch("metaswitch.clearwater.config_manager.config_type_class_plugin.subprocess.check_output")
+@mock.patch("metaswitch.clearwater.config_manager.config_type_class_plugin.subprocess.check_call")
 class TestConfigTypeClassPlugin(unittest.TestCase):
 
     def test_validate_passes(self, mock_subprocess, mock_log):
@@ -41,23 +41,9 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
         dns_config = dns_json_config_plugin.DnsJson('path')
         answer = dns_config.validate()
 
-        self.assertIs(mock_log.debug.call_count, 1)
-        self.assertIs(mock_log.error.call_count, 0)
+        # We expect that no scripts failed, and the dns_schema script passed
         self.assertListEqual(answer[0], [])
-        self.assertListEqual(answer[1], [])
-        self.assertIs(mock_subprocess.call_count, 1)
-
-    def test_bgcf_validate_passes(self, mock_subprocess, mock_log):
-        """uses script from BgcfJson to ConfigType.validate and check log
-         and subprocess called properly, check failed_scripts is empty
-         at end of process"""
-        bgcf_config = bgcf_json_config_plugin.BgcfJson('path')
-        answer = bgcf_config.validate()
-
-        self.assertIs(mock_log.debug.call_count, 1)
-        self.assertIs(mock_log.error.call_count, 0)
-        self.assertListEqual(answer[0], [])
-        self.assertListEqual(answer[1], [])
+        self.assertListEqual(answer[1], ["/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/dns_schema.json"])
         self.assertIs(mock_subprocess.call_count, 1)
 
     def test_validate_fails(self, mock_subprocess, mock_log):
@@ -67,14 +53,14 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
         shared_config.scripts = {'name1': ['script1'], 'name2': ['script2']}
         validation_error = subprocess.CalledProcessError('A', 'B')
         validation_error.output = "ERROR: Something went wrong"
+
+        # The first validation script passes, the second raises an exception
         mock_subprocess.side_effect = ["", validation_error]
+
         # possibly want to run this within assertRaises check as well
         answer = shared_config.validate()
 
-        self.assertIs(mock_log.debug.call_count, 2)
-        self.assertIs(mock_log.error.call_count, 3)
         self.assertListEqual(answer[0], ['name1'])
-        self.assertListEqual(answer[1], ["ERROR: Something went wrong"])
         self.assertIs(mock_subprocess.call_count, 2)
 
     @mock.patch("metaswitch.clearwater.config_manager.config_type_class_plugin.ConfigType.get_json_validation")
@@ -204,7 +190,7 @@ class TestRphValidation(unittest.TestCase):
 @mock.patch('metaswitch.clearwater.config_manager.config_type_class_plugin.os.access')
 @mock.patch('metaswitch.clearwater.config_manager.config_type_class_plugin.os.listdir',
             return_value=["clearwater-core-validate-config", "other-script"])
-@mock.patch('metaswitch.clearwater.config_manager.config_type_class_plugin.subprocess.check_output')
+@mock.patch('metaswitch.clearwater.config_manager.config_type_class_plugin.subprocess.check_call')
 class TestSharedValidation(unittest.TestCase):
     config_location = "/some/dir/shared_config"
 

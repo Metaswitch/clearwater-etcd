@@ -911,8 +911,8 @@ class TestValidation(unittest.TestCase):
 
     def test_handle_validation_error(self, mock_selected_config):
         """Test that we handle validation failure correctly."""
-        mock_selected_config.validate.return_value = (['script1'], ['ERROR: '],
-                                                      [], [])
+        mock_selected_config.validate.return_value = (['script1'], [])
+
         # A script has failed and is in failed_scripts.
         with self.assertRaises(config_access.ConfigValidationFailed):
             config_access.validate_config(mock_selected_config, False)
@@ -920,16 +920,14 @@ class TestValidation(unittest.TestCase):
     def test_ignore_validation_error(self, mock_selected_config):
         """Test that we ignore validation failure correctly in the force
         case."""
-        mock_selected_config.validate.return_value = (['script1'], ['ERROR: '],
-                                                      [], [])
+        mock_selected_config.validate.return_value = (['script1'], [])
         # Even though subprocess raises an exception, we continue because
         # we're in force mode.
         config_access.validate_config(mock_selected_config, True)
 
     def test_no_errors(self, mock_selected_config):
         """test everything runs ok when it returns no errors"""
-        mock_selected_config.validate.return_value = ([], [], ['script1'],
-                                                      ['WARN: Something'])
+        mock_selected_config.validate.return_value = ([], ['script1'])
         config_access.validate_config(mock_selected_config, False)
 
 
