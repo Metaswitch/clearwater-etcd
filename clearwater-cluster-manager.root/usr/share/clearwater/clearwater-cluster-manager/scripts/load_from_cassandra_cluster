@@ -11,8 +11,6 @@
 
 set -ue
 
-. /usr/share/clearwater/utils/check-root-permissions 1
-
 etcd_key=clearwater
 . /etc/clearwater/config
 
