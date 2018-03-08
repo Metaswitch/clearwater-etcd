@@ -38,7 +38,8 @@ class TestSASJSONPlugin(unittest.TestCase):
         # Test assertions
         mock_open.assert_called_once_with(plugin.file(), "r")
         mock_safely_write.assert_called_once_with(plugin.file(), new_config_string)
-        mock_run_command.assert_called_once_with(["/usr/share/clearwater/bin/reload_sas_json"])
+        mock_run_command.assert_any_call(["/usr/share/clearwater/infrastructure/scripts/sas_socket_factory"])
+        mock_run_command.assert_any_call(["/usr/share/clearwater/bin/reload_sas_json"])
         mock_alarm.update_file.assert_called_once_with(plugin.file())
 
     @mock.patch('clearwater_etcd_plugins.clearwater_config_manager.sas_json_plugin.safely_write')
@@ -84,6 +85,6 @@ class TestSASJSONPlugin(unittest.TestCase):
         # Test assertions
         mock_open.assert_called_once_with(plugin.file(), "r")
         mock_safely_write.assert_called_once_with(plugin.file(), plugin.default_value())
-        mock_run_command.assert_called_once_with(["/usr/share/clearwater/bin/reload_sas_json"])
+        mock_run_command.assert_any_call(["/usr/share/clearwater/infrastructure/scripts/sas_socket_factory"])
+        mock_run_command.assert_any_call(["/usr/share/clearwater/bin/reload_sas_json"])
         mock_alarm.update_file.assert_called_once_with(plugin.file())
-
