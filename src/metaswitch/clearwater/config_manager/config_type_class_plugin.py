@@ -125,13 +125,15 @@ class ConfigType:
             try:
                 msg = "Running validation script {}".format(os.path.basename(script))
                 log.debug(msg)
-                print("{}\n".format(msg))
+                print(msg)
                 subprocess.check_call(self.scripts[script],
                                       stderr=subprocess.STDOUT)
                 passed_scripts.append(script)
 
             except subprocess.CalledProcessError as exc:
-                log.error("Validation script {} failed".format(os.path.basename(script)))
+                rc = exc.returncode
+                log.error("Validation script {} failed with code {}".format(
+                    os.path.basename(script), rc))
 
                 # We want to run through all the validation scripts so we can
                 # tell the user all of the problems with their config changes,
