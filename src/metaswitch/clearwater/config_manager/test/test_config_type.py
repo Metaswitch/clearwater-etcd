@@ -46,6 +46,11 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
         self.assertListEqual(answer[1], ["/usr/share/clearwater/clearwater-config-manager/scripts/config_validation/dns_schema.json"])
         self.assertIs(mock_subprocess.call_count, 1)
 
+    def test_bgcf_plugin_creatable(self, mock_subprocess, mock_log):
+        """Just loads the BGCF plugin and checks it can be created."""
+        bgcf_config = bgcf_json_config_plugin.BgcfJson('path')
+        self.assertIsNotNone(bgcf_config)
+
     def test_validate_fails(self, mock_subprocess, mock_log):
         """use ConfigType.validate and get subprocess to raise a exception and
          check log reports this and failed scripts is not empty"""
