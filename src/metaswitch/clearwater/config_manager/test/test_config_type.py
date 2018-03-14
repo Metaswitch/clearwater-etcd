@@ -176,13 +176,14 @@ class TestRphValidation(unittest.TestCase):
 
     def test_validate_fails(self, mock_subprocess, mock_access, mock_log):
         """Use RphJson.validate and get subprocess to raise a exception and
-         check log reports this and failed scripts is not empty."""
+         check failed scripts is not empty."""
         rph_config = rph_json_config_plugin.RphJson(self.config_location)
         validation_error = subprocess.CalledProcessError('A', 'B')
-        validation_error.output = "ERROR: Something went wrong"
         mock_subprocess.side_effect = [validation_error]
         answer = rph_config.validate()
 
+        # The list of failed scripts should contain 'rph_validation.py', and the
+        # list of passed scripts should be empty
         self.assertListEqual(answer[0], ['rph_validation.py'])
         self.assertListEqual(answer[1], [])
         self.assertIs(mock_subprocess.call_count, 1)
