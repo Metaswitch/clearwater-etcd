@@ -154,7 +154,7 @@ class TestDiffType(unittest.TestCase):
 # be removed.
 @mock.patch('clearwater_etcd_plugins.clearwater_config_access.rph_json_config_plugin.log')
 @mock.patch('metaswitch.clearwater.config_manager.config_type_class_plugin.os.access')
-@mock.patch('metaswitch.clearwater.config_manager.config_type_class_plugin.subprocess.check_output')
+@mock.patch('metaswitch.clearwater.config_manager.config_type_class_plugin.subprocess.check_call')
 class TestRphValidation(unittest.TestCase):
     config_location = "/some/dir/rph.json"
 
@@ -183,12 +183,8 @@ class TestRphValidation(unittest.TestCase):
         mock_subprocess.side_effect = [validation_error]
         answer = rph_config.validate()
 
-        self.assertIs(mock_log.error.call_count, 3)
-        self.assertIs(mock_log.debug.call_count, 1)
         self.assertListEqual(answer[0], ['rph_validation.py'])
-        self.assertListEqual(answer[1], ["ERROR: Something went wrong"])
-        self.assertListEqual(answer[2], [])
-        self.assertListEqual(answer[3], [])
+        self.assertListEqual(answer[1], [])
         self.assertIs(mock_subprocess.call_count, 1)
 
 
