@@ -14,6 +14,7 @@ import metaswitch.clearwater.config_manager.config_type_class_plugin as config_t
 import metaswitch.clearwater.config_manager.config_type_plugin_loader as config_type_plugin_loader
 from clearwater_etcd_plugins.clearwater_config_access import bgcf_json_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import dns_json_config_plugin
+from clearwater_etcd_plugins.clearwater_config_access import sas_json_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import shared_config_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import shared_ifcs_config_plugin
 from clearwater_etcd_plugins.clearwater_config_access import scscf_json_config_plugin
@@ -50,6 +51,11 @@ class TestConfigTypeClassPlugin(unittest.TestCase):
         """Just loads the BGCF plugin and checks it can be created."""
         bgcf_config = bgcf_json_config_plugin.BgcfJson('path')
         self.assertIsNotNone(bgcf_config)
+
+    def test_sas_validate_passes(self, mock_subprocess, mock_log):
+        """Just loads the SAS plugin and checks it can be created."""
+        sas_config = sas_json_config_plugin.SasJson('path')
+        self.assertIsNotNone(sas_config)
 
     def test_validate_fails(self, mock_subprocess, mock_log):
         """use ConfigType.validate and get subprocess to raise a exception and
