@@ -594,16 +594,12 @@ def validate_config(selected_config, force=False):
 
     # selected_config is an instance of the ConfigType class. validate() uses
     # different scripts to validate against for different ConfigType classes.
-    (failed_scripts, error_lines,
-     passed_scripts, passed_msgs) = selected_config.validate()
+    (failed_scripts, passed_scripts) = selected_config.validate()
 
-    if passed_scripts and passed_msgs:
+    if passed_scripts:
         print ("Validation passed in scripts:\n"
-               " {}\n"
-               "Output from passed scripts:\n"
-               " {}").format("\n ".join(os.path.basename(script)
-                                        for script in passed_scripts),
-                             "\n ".join(passed_msgs))
+               " {}\n".format("\n ".join(os.path.basename(script)
+                                         for script in passed_scripts)))
 
 
     # In the forcing case, we proceed even if there have been failures, but
@@ -612,11 +608,8 @@ def validate_config(selected_config, force=False):
         log.error("One or more validation scripts have failed, aborting")
         raise ConfigValidationFailed(
             "Validation failed while executing scripts:\n"
-            " {}\n"
-            "Errors:\n"
-            " {}".format("\n ".join(os.path.basename(script)
-                                    for script in failed_scripts),
-                         "\n ".join(error_lines)))
+            " {}\n".format("\n ".join(os.path.basename(script)
+                                      for script in failed_scripts)))
 
     if failed_scripts:
         # We can only get here in the forcing case.

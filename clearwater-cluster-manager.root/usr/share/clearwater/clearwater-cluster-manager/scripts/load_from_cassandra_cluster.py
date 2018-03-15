@@ -25,10 +25,10 @@ try:
     # Use nodetool describecluster to find the nodes in the existing cluster.
     # This returns a yaml document, but in order for pyyaml to recognise the
     # output as valid yaml, we need to use tr to replace tabs with spaces.
-    # We remove any xss=.., as this can be printed out by 
+    # We remove any xss=.., as this can be printed out by
     # cassandra-env.sh
-    command = "/usr/share/clearwater/bin/run-in-signaling-namespace nodetool describecluster | grep -v \"^xss = \" | tr \"\t\" \" \""
-    # The following line has a comment to leave it out for Bandit analysis, as 
+    command = "cw-run_in_signaling_namespace nodetool describecluster | grep -v \"^xss = \" | tr \"\t\" \" \""
+    # The following line has a comment to leave it out for Bandit analysis, as
     # it is syntactically marked for shell injection risk, while using a literal
     # string as command does not actually pose a risk of it.
     desc_cluster_output = subprocess.check_output(command, shell=True)  # nosec
