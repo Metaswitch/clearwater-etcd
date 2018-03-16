@@ -2,6 +2,8 @@ ROOT ?= ${PWD}
 ENV_DIR := $(shell pwd)/_env
 PYTHON_BIN := $(shell which python)
 
+SETUPTOOLS_VERSION=30
+
 DEB_COMPONENT := clearwater-etcd
 DEB_MAJOR_VERSION ?= 1.0${DEB_VERSION_QUALIFIER}
 DEB_NAMES := clearwater-etcd clearwater-cluster-manager clearwater-queue-manager clearwater-config-manager clearwater-management
