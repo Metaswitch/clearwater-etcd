@@ -1,2 +1,2 @@
-cluster_mgr_wheelhouse/* usr/share/clearwater/clearwater-cluster-manager/wheelhouse/
+cluster_mgr_wheelhouse/*.whl usr/share/clearwater/clearwater-cluster-manager/wheelhouse/
 clearwater-cluster-manager.root/* /

@@ -13,8 +13,8 @@
 # Provides:          clearwater-etcd
 # Required-Start:    $remote_fs $syslog
 # Required-Stop:     $remote_fs $syslog
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
+# Default-Start:
+# Default-Stop:
 # Short-Description: Clearwater etcd package
 # Description:       Etcd package for Clearwater nodes
 ### END INIT INFO
@@ -32,6 +32,8 @@ DATA_DIR=/var/lib/$NAME
 JOINED_CLUSTER_SUCCESSFULLY=$DATA_DIR/clustered_successfully
 HEALTHY_CLUSTER_VIEW=$DATA_DIR/healthy_etcd_members
 PIDFILE=/var/run/$NAME/$NAME.pid
+LOCKFILE_DIR=/var/run/$NAME
+LOCKFILE=$LOCKFILE_DIR/$NAME-initd.lock
 USER=$NAME
 LOG_FILE=/var/log/clearwater-etcd/clearwater-etcd-initd.log
 
@@ -41,11 +43,12 @@ etcd_version=3.1.7
 
 DAEMON=/usr/share/clearwater/clearwater-etcd/$etcd_version/etcd
 DAEMONWRAPPER=/usr/share/clearwater/clearwater-etcd/$etcd_version/etcdwrapper
+MYPID=$$
 
 # Log parameters at "debug" level. These are just written to the log file (with
 # timestamps).
 log_debug() {
-  echo $(date +'%Y-%m-%d %H:%M:%S.%N') "$@" >> $LOG_FILE
+  echo $(date +'%Y-%m-%d %H:%M:%S.%N') "[$MYPID]" "$@" >> $LOG_FILE
 }
 
 # Log parameters at "info" level. These are written to the console (without
@@ -53,6 +56,26 @@ log_debug() {
 log_info() {
   echo "$@"
   log_debug "$@"
+}
+
+# Waits up to 60 seconds to lock $LOCKFILE, returning 0 if it succeeds and 1 if
+# it fails
+lock() {
+  mkdir -p $LOCKFILE_DIR
+  # 300 is an arbitrarily-chosen file descriptor number
+  exec 300> $LOCKFILE
+
+  log_debug "Attempting to acquire lock on $LOCKFILE with 60-second timeout"
+  flock --wait 60 300
+
+  if [[ $? == 0 ]]
+  then
+    log_debug "Successfully acquired lock on $LOCKFILE"
+    return 0
+  else
+    log_debug "Failed to acquire lock on $LOCKFILE"
+    return 1
+  fi
 }
 
 # Wrapper that runs etcdctl but also logs the following to the log file:
@@ -554,6 +577,14 @@ do_reload() {
         start-stop-daemon --stop --signal 1 --quiet --pidfile $PIDFILE --name $(basename $DAEMON)
         return 0
 }
+
+log_debug "Invoked with argument '$1'"
+log_debug "Process tree: " $(pstree -p -s $MYPID)
+
+# We only want one instance of this init script to run at once, as it does
+# things like 'member add' and 'member remove' which will be unsafe if
+# duplicated.
+lock || exit 1
 
 # There should only be at most one etcd process, and it should be the one in /var/run/clearwater-etcd/clearwater-etcd.pid.
 # Sanity check this, and kill and log any leaked ones.

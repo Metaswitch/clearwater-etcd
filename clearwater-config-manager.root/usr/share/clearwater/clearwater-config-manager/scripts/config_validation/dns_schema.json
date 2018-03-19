@@ -19,20 +19,10 @@
             "items": {
               "title": "DNS record for a hostname",
               "type": "object",
-              "properties": {
-                "rrtype": {
-                  "type": "string",
-                  "pattern": "^CNAME$"
-                },
-                "target": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "rrtype",
-                "target"
-              ],
-              "additionalProperties": false
+              "oneOf": [
+                { "$ref": "#/definitions/ARecord"},
+                { "$ref": "#/definitions/CNAMERecord"}
+              ]
             }
           }
         },
@@ -44,5 +34,36 @@
       }
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "definitions": {
+    "ARecord": {
+      "properties": {
+        "rrtype": { "enum": ["A"] },
+        "targets": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "title": "IP address in A record",
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "rrtype",
+        "targets"
+      ],
+      "additionalProperties": false
+    },
+    "CNAMERecord": {
+      "properties": {
+        "rrtype": { "enum": ["CNAME"]},
+        "target": { "type": "string"}
+      },
+      "required": [
+        "rrtype",
+        "target"
+      ],
+      "additionalProperties": false
+    }
+  }
 }

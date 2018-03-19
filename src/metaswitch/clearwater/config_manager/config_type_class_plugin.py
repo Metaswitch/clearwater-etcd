@@ -73,8 +73,8 @@ class ConfigType:
     def get_json_validation(self):
         """Returns the scripts to be used for json file validation."""
         scripts = {}
-        scripts[self.schema] = ['/usr/share/clearwater/clearwater-config-manager/env/bin/python', 
-                                JSON_GENERIC_VALIDATE, 
+        scripts[self.schema] = ['/usr/share/clearwater/clearwater-config-manager/env/bin/python',
+                                JSON_GENERIC_VALIDATE,
                                 self.schema,
                                 self.configfile]
         # to add more validation scripts add to the dict of scripts
@@ -118,26 +118,22 @@ class ConfigType:
         """
 
         failed_scripts = []
-        error_lines = []
         passed_scripts = []
-        success_lines = []
+
+        print("")
         for script in self.scripts:
             try:
-                log.debug("Running validation script %s", script)
-                output = subprocess.check_output(self.scripts[script],
-                                                 stderr=subprocess.STDOUT)
-                out_msg = output.splitlines()
-                success_lines.extend(out_msg)
+                msg = "Running validation script {}".format(os.path.basename(script))
+                log.debug(msg)
+                print(msg)
+                subprocess.check_call(self.scripts[script],
+                                      stderr=subprocess.STDOUT)
                 passed_scripts.append(script)
+
             except subprocess.CalledProcessError as exc:
-                log.error("Validation script %s failed", os.path.basename(script))
-                log.error("Reasons for failure:")
-
-                errors = exc.output.splitlines()
-                error_lines.extend(errors)
-
-                for line in errors:
-                    log.error(line)
+                rc = exc.returncode
+                log.error("Validation script {} failed with code {}".format(
+                    os.path.basename(script), rc))
 
                 # We want to run through all the validation scripts so we can
                 # tell the user all of the problems with their config changes,
@@ -145,5 +141,7 @@ class ConfigType:
                 # which scripts have failed. If any scripts have failed an
                 # exception is raised from the return value
                 failed_scripts.append(script)
-        return failed_scripts, error_lines, passed_scripts, success_lines
+            print("")
+
+        return failed_scripts, passed_scripts
 
