@@ -23,7 +23,6 @@ ALARM_TO_RAISE_FILE="/tmp/.clearwater_etcd_alarm_to_raise"
 
 . /etc/clearwater/config
 
-
 # Return state of the etcd cluster, 0 if all nodes are up, 1 if some nodes are
 # down, 2 if quorum has failed.
 cluster_state()
