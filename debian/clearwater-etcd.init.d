@@ -682,7 +682,11 @@ case "$1" in
         fi
 
         log_daemon_msg "Decommissioning etcd"
-        do_decommission
+        if [ -n "$etcd_proxy" ]; then
+          do_stop
+        else
+          do_decommission
+        fi
         exit $?
         ;;
   abort-restart)
