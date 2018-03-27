@@ -35,12 +35,14 @@ cluster_state()
       local unhealthy_cluster_state_regex="cluster is unhealthy"
       if [[ $out =~ $unhealthy_cluster_state_regex ]]
       then
+        printf "$(date)\n$out\n" >> "/var/log/clearwater-etcd/etcd_cluster_bad_polls.log"
         return 2
       fi
 
       local maybe_unhealthy_cluster_state_regex="cluster may be unhealthy"
       if [[ $out =~ $maybe_unhealthy_cluster_state_regex ]]
       then
+        printf "$(date)\n$out\n" >> "/var/log/clearwater-etcd/etcd_cluster_bad_polls.log"
         return 2
       fi
 
@@ -71,6 +73,7 @@ cluster_state()
 
       if [ $unhealthy_members ]
       then
+        printf "$(date)\n$out\n" >> "/var/log/clearwater-etcd/etcd_cluster_bad_polls.log"
         return 1
       fi
     fi
