@@ -19,6 +19,6 @@ pycrypto==2.6.1
 python-etcd==0.4.3
 PyYAML==3.11
 pyzmq==16.0.2
-requests==2.18.4
+requests==2.20.0
 six==1.10.0
 urllib3==1.21.1
