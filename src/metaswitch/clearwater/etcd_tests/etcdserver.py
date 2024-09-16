@@ -15,7 +15,7 @@ import etcd
 from shutil import rmtree
 import uuid
 
-base_cmd =              """clearwater-etcd/usr/share/clearwater/clearwater-etcd/3.1.7/etcd --debug --listen-client-urls http://{0}:4000 --advertise-client-urls http://{0}:4000 --listen-peer-urls http://{0}:2380 --initial-advertise-peer-urls http://{0}:2380 --data-dir {2} --name {1}"""
+base_cmd =              """clearwater-etcd/usr/share/clearwater/clearwater-etcd/3.2.17/etcd --debug --listen-client-urls http://{0}:4000 --advertise-client-urls http://{0}:4000 --listen-peer-urls http://{0}:2380 --initial-advertise-peer-urls http://{0}:2380 --data-dir {2} --name {1}"""
 
 first_member_cmd =      base_cmd + """ --initial-cluster-state new --initial-cluster {1}=http://{0}:2380"""
 subsequent_member_cmd = base_cmd + """ --initial-cluster-state existing --initial-cluster {3},{1}=http://{0}:2380"""

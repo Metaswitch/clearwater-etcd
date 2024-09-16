@@ -24,6 +24,6 @@ fi
 # write to the pidfile without fear that another etcd process will start
 /usr/share/clearwater/bin/ent_log.py "etcd" CL_ETCD_STARTED
 echo $$ > $PIDFILE
-exec /usr/share/clearwater/clearwater-etcd/2.2.5/etcd $@ >> /var/log/clearwater-etcd/clearwater-etcd.log 2>&1
+exec /usr/share/clearwater/clearwater-etcd/3.2.17/etcd $@ >> /var/log/clearwater-etcd/clearwater-etcd.log 2>&1
 rm $PIDFILE
 /usr/share/clearwater/bin/ent_log.py "etcd" CL_ETCD_EXITED

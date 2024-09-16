@@ -38,7 +38,7 @@ USER=$NAME
 LOG_FILE=/var/log/clearwater-etcd/clearwater-etcd-initd.log
 
 # Default the etcd version to the latest supported etcd version.
-etcd_version=3.1.7
+etcd_version=3.2.17
 . /etc/clearwater/config
 
 DAEMON=/usr/share/clearwater/clearwater-etcd/$etcd_version/etcd
@@ -122,7 +122,7 @@ etcdctl_wrapper() {
 
 # Exit if the package is not installed
 if [ ! -x "$DAEMON" ]; then
-  log_info "Invalid etcd version: valid versions are 3.1.7 (recommended) and 2.2.5"
+  log_info "Invalid etcd version: valid versions are 3.2.17 (recommended) and 3.1.7"
   exit 0
 fi
 
@@ -234,7 +234,7 @@ setup_etcdctl_peers()
         do
             if [[ $server != $advertisement_ip ]]
             then
-                ETCDCTL_PEERS="$server:4000,$ETCDCTL_PEERS"
+                ETCDCTL_PEERS="http://$server:4000,$ETCDCTL_PEERS"
             fi
         done
 
@@ -530,7 +530,7 @@ do_decommission()
         #   0 if successful
         #   2 on error
         log_debug "Check cluster is healthy before decommissioning"
-        export ETCDCTL_PEERS=$advertisement_ip:4000
+        export ETCDCTL_PEERS=http://$advertisement_ip:4000
         health=$(etcdctl_wrapper cluster-health)
         if [[ $health =~ unhealthy ]]
         then
